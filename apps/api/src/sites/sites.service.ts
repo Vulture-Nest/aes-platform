@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { Prisma } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { LookupService } from '../settings/lookup.service';
 import { CreateSiteDto, UpdateSiteDto } from './dto/site.dto';
 
 @Injectable()
@@ -9,6 +10,7 @@ export class SitesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly lookups: LookupService,
   ) {}
 
   list() {
@@ -24,6 +26,7 @@ export class SitesService {
   }
 
   async create(dto: CreateSiteDto, actorId: string) {
+    await this.lookups.assertValid('site_type', dto.type);
     try {
       const site = await this.prisma.site.create({ data: { ...dto, createdBy: actorId } });
       await this.audit.record({
@@ -43,6 +46,9 @@ export class SitesService {
   }
 
   async update(id: string, dto: UpdateSiteDto, actorId: string) {
+    if (dto.type !== undefined) {
+      await this.lookups.assertValid('site_type', dto.type);
+    }
     const before = await this.findOne(id);
     const site = await this.prisma.site.update({
       where: { id },

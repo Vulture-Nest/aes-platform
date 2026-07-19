@@ -10,7 +10,6 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../rbac/roles.decorator';
 import { CreateOrderDto, CreateOrderReceiptDto, UpdateOrderDto } from './dto/order.dto';
@@ -23,28 +22,28 @@ export class OrdersController {
   constructor(private readonly orders: OrdersService) {}
 
   @Get()
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN, Role.AUDITOR)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN', 'AUDITOR')
   @ApiOperation({ summary: 'List orders' })
   list() {
     return this.orders.list();
   }
 
   @Get(':id')
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN, Role.AUDITOR)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN', 'AUDITOR')
   @ApiOperation({ summary: 'Get an order (with receipts and expenses)' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.orders.findOne(id);
   }
 
   @Post()
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Create an order' })
   create(@Body() dto: CreateOrderDto, @CurrentUser('id') actorId: string) {
     return this.orders.create(dto, actorId);
   }
 
   @Patch(':id')
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Update an order' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -55,7 +54,7 @@ export class OrdersController {
   }
 
   @Post(':id/receipts')
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Record a receipt against an order' })
   recordReceipt(
     @Param('id', ParseUUIDPipe) id: string,
@@ -67,7 +66,7 @@ export class OrdersController {
 
   @Post(':id/mark-serviced')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Mark an order as serviced' })
   markServiced(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('id') actorId: string) {
     return this.orders.markServiced(id, actorId);

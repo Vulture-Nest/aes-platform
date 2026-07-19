@@ -10,7 +10,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../rbac/roles.decorator';
 import { CreateRequisitionDto, DisburseRequisitionDto } from './dto/requisition.dto';
@@ -24,15 +23,15 @@ export class RequisitionsController {
 
   @Get()
   @Roles(
-    Role.SITE_CLERK,
-    Role.SITE_MANAGER,
-    Role.OPS_STAFF,
-    Role.FINANCE_OFFICER,
-    Role.FINANCE_DIRECTOR,
-    Role.OPS_DIRECTOR,
-    Role.DIRECTOR,
-    Role.SYS_ADMIN,
-    Role.AUDITOR,
+    'SITE_CLERK',
+    'SITE_MANAGER',
+    'OPS_STAFF',
+    'FINANCE_OFFICER',
+    'FINANCE_DIRECTOR',
+    'OPS_DIRECTOR',
+    'DIRECTOR',
+    'SYS_ADMIN',
+    'AUDITOR',
   )
   @ApiOperation({ summary: 'List cash requisitions (optionally filtered by status)' })
   @ApiQuery({ name: 'status', required: false })
@@ -42,15 +41,15 @@ export class RequisitionsController {
 
   @Get(':id')
   @Roles(
-    Role.SITE_CLERK,
-    Role.SITE_MANAGER,
-    Role.OPS_STAFF,
-    Role.FINANCE_OFFICER,
-    Role.FINANCE_DIRECTOR,
-    Role.OPS_DIRECTOR,
-    Role.DIRECTOR,
-    Role.SYS_ADMIN,
-    Role.AUDITOR,
+    'SITE_CLERK',
+    'SITE_MANAGER',
+    'OPS_STAFF',
+    'FINANCE_OFFICER',
+    'FINANCE_DIRECTOR',
+    'OPS_DIRECTOR',
+    'DIRECTOR',
+    'SYS_ADMIN',
+    'AUDITOR',
   )
   @ApiOperation({ summary: 'Get a cash requisition' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -72,7 +71,7 @@ export class RequisitionsController {
 
   @Post(':id/disburse')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR')
   @ApiOperation({
     summary: 'Record a disbursement: post the ledger outflow and close the requisition',
   })

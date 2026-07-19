@@ -6,19 +6,14 @@ import {
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
-import {
-  ApprovalStatus,
-  Currency,
-  DirectorWithdrawal,
-  NotificationSeverity,
-  Prisma,
-} from '@prisma/client';
+import { ApprovalStatus, DirectorWithdrawal, NotificationSeverity, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { NotificationService } from '../../notifications/notification.service';
 import { ApprovalService } from '../../approvals/approval.service';
 import { StatusTransitionRegistry } from '../../approvals/status-transition.registry';
 import { LedgerService } from '../../ledger/ledger.service';
+import { LookupService } from '../../settings/lookup.service';
 import {
   CompleteDirectorWithdrawalDto,
   CreateDirectorWithdrawalDto,
@@ -60,6 +55,7 @@ export class DirectorWithdrawalsService implements OnModuleInit {
     private readonly approvals: ApprovalService,
     private readonly transitions: StatusTransitionRegistry,
     private readonly ledger: LedgerService,
+    private readonly lookups: LookupService,
   ) {}
 
   /**
@@ -104,6 +100,7 @@ export class DirectorWithdrawalsService implements OnModuleInit {
 
   /** Raise a DRAFT withdrawal in the raising director's own name. */
   async create(dto: CreateDirectorWithdrawalDto, actorId: string): Promise<DirectorWithdrawal> {
+    await this.lookups.assertValid('currency', dto.currency);
     const withdrawal = await this.prisma.directorWithdrawal.create({
       data: {
         directorUserId: actorId,
@@ -236,7 +233,7 @@ export class DirectorWithdrawalsService implements OnModuleInit {
       {
         accountId: source.accountId,
         debit: amount,
-        currency: withdrawal.currency as Currency,
+        currency: withdrawal.currency as string,
         sourceTable: SUBJECT_TABLE,
         sourceId: id,
         entryDate: postedAt,

@@ -10,7 +10,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../rbac/roles.decorator';
 import { ListPayrollRunsQueryDto, OpenPayrollRunDto } from './dto/payroll.dto';
@@ -29,7 +28,7 @@ export class PayrollController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({
     summary: 'Open a DRAFT payroll run for a site + month (site-approved timesheet)',
   })
@@ -39,7 +38,7 @@ export class PayrollController {
 
   @Post(':id/compute')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Compute (idempotent) all pay lines for a run and set it CHECKED' })
   compute(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('id') actorId: string) {
     return this.payroll.computeRun(id, actorId);
@@ -47,21 +46,21 @@ export class PayrollController {
 
   @Post(':id/submit')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Submit a CHECKED run for Finance-Director approval' })
   submit(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('id') preparerId: string) {
     return this.payroll.submit(id, preparerId);
   }
 
   @Get()
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'List payroll runs (optionally by site and/or month)' })
   list(@Query() query: ListPayrollRunsQueryDto) {
     return this.payroll.list(query);
   }
 
   @Get(':id')
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Get a payroll run with its lines (bank accounts masked; audited)' })
   findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('id') actorId: string) {
     return this.payroll.findOne(id, actorId);
@@ -72,7 +71,7 @@ export class PayrollController {
   // ---------------------------------------------------------------------------
 
   @Get(':id/bank-schedule')
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({
     summary: 'Per-bank, per-currency net-pay disbursement schedule (accounts masked; audited)',
   })
@@ -81,7 +80,7 @@ export class PayrollController {
   }
 
   @Get(':id/payslips')
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({
     summary: 'Per-employee payslip data — gross, statutory lines, net (JSON; accounts masked)',
   })
@@ -90,7 +89,7 @@ export class PayrollController {
   }
 
   @Get(':id/sage-journal')
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({
     summary: 'Sage journal rows (salaries expense, statutory liabilities, net pay payable)',
   })
@@ -99,7 +98,7 @@ export class PayrollController {
   }
 
   @Get(':id/statutory-returns')
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({
     summary: 'Statutory-returns summary per head (PAYE, NSSA ee+er, ZIMDEF, NEC, MIPF) with totals',
   })

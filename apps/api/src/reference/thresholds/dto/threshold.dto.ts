@@ -1,16 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Currency } from '@prisma/client';
-import { IsEnum, IsNumber, IsObject, IsOptional, IsString } from 'class-validator';
+import { IsNumber, IsObject, IsOptional, IsString } from 'class-validator';
 
 export class CreateThresholdDto {
   @ApiProperty({ example: 'petty_cash_fd_threshold' })
   @IsString()
   key!: string;
 
-  @ApiPropertyOptional({ enum: Currency })
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsEnum(Currency)
-  currency?: Currency;
+  @IsString()
+  currency?: string;
 
   @ApiPropertyOptional({ example: 100, description: 'Scalar threshold value' })
   @IsOptional()

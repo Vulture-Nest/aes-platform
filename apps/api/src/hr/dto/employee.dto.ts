@@ -1,9 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { Currency, EmploymentType, PayMode } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsDate,
-  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
@@ -61,13 +59,13 @@ export class CreateEmployeeDto {
   @IsUUID()
   siteId!: string;
 
-  @ApiProperty({ enum: EmploymentType })
-  @IsEnum(EmploymentType)
-  employmentType!: EmploymentType;
+  @ApiProperty({ example: 'PERMANENT', description: 'employment_type lookup code' })
+  @IsString()
+  employmentType!: string;
 
-  @ApiProperty({ enum: PayMode })
-  @IsEnum(PayMode)
-  payMode!: PayMode;
+  @ApiProperty({ example: 'CLIENT_RATIO', description: 'pay_mode lookup code' })
+  @IsString()
+  payMode!: string;
 
   @ApiPropertyOptional({
     example: 60,
@@ -105,10 +103,10 @@ export class CreateEmployeeDto {
   @IsString()
   accountNo?: string;
 
-  @ApiPropertyOptional({ enum: Currency })
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsEnum(Currency)
-  accountCurrency?: Currency;
+  @IsString()
+  accountCurrency?: string;
 
   @ApiPropertyOptional({ example: 0, description: 'Opening leave balance (days)' })
   @IsOptional()
@@ -144,8 +142,8 @@ export class ListEmployeesQueryDto {
   @IsUUID()
   siteId?: string;
 
-  @ApiPropertyOptional({ enum: EmploymentType })
+  @ApiPropertyOptional({ example: 'PERMANENT', description: 'employment_type lookup code' })
   @IsOptional()
-  @IsEnum(EmploymentType)
-  employmentType?: EmploymentType;
+  @IsString()
+  employmentType?: string;
 }

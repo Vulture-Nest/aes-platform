@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Currency, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { InterestMethod, LoanInterestService } from '../../financial/domain/loan-interest.service';
 import { ZimraReconciliationService } from '../../financial/domain/zimra-reconciliation.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -34,7 +34,7 @@ export interface DebtInterestWatchParams {
 export interface LoanDebtLine {
   loanId: string;
   lender: string;
-  currency: Currency;
+  currency: string;
   /** Original loan principal. */
   principal: number;
   /** Principal repaid so far (USD-equivalent terms). */
@@ -52,7 +52,7 @@ export interface ZimraDebtLine {
   source: 'other_tax_debt' | 'zimra_assessment';
   id: string;
   taxType: string;
-  currency: Currency;
+  currency: string;
   /** Outstanding principal / assessed amount. */
   principal: number;
   /** Accrued overdue interest (0 for assessments without a rate). */

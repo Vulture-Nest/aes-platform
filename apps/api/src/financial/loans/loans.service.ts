@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../../audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { LookupService } from '../../settings/lookup.service';
 import { CreateLoanDto, CreateLoanRepaymentDto } from './dto/loan.dto';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class LoansService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly lookups: LookupService,
   ) {}
 
   list() {
@@ -26,6 +28,7 @@ export class LoansService {
   }
 
   async create(dto: CreateLoanDto, actorId: string) {
+    await this.lookups.assertValid('currency', dto.currency);
     const loan = await this.prisma.loan.create({
       data: {
         lender: dto.lender,

@@ -12,7 +12,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../rbac/roles.decorator';
 import { CreateLookupDto, UpdateLookupDto } from './dto/lookup.dto';
@@ -37,14 +36,14 @@ export class SettingsController {
   }
 
   @Post()
-  @Roles(Role.SYS_ADMIN)
+  @Roles('SYS_ADMIN')
   @ApiOperation({ summary: 'Add a configurable value to a category' })
   create(@Body() dto: CreateLookupDto, @CurrentUser('id') actorId: string) {
     return this.lookups.create(dto, actorId);
   }
 
   @Patch(':id')
-  @Roles(Role.SYS_ADMIN)
+  @Roles('SYS_ADMIN')
   @ApiOperation({ summary: 'Update / enable / disable a value' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -55,7 +54,7 @@ export class SettingsController {
   }
 
   @Delete(':id')
-  @Roles(Role.SYS_ADMIN)
+  @Roles('SYS_ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a non-system value' })
   remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('id') actorId: string) {

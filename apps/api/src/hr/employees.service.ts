@@ -4,9 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Employee, PayMode, Prisma, Role } from '@prisma/client';
+import { Employee, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { LookupService } from '../settings/lookup.service';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { CreateEmployeeDto, ListEmployeesQueryDto, UpdateEmployeeDto } from './dto/employee.dto';
 
@@ -30,6 +31,7 @@ export class EmployeesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly lookups: LookupService,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -96,6 +98,8 @@ export class EmployeesService {
 
   async create(dto: CreateEmployeeDto, actorId: string): Promise<EmployeeView> {
     await this.assertSiteExists(dto.siteId);
+    await this.lookups.assertValid('employment_type', dto.employmentType);
+    await this.lookups.assertValid('pay_mode', dto.payMode);
     this.assertPayModeConsistency(dto.payMode, dto.fixedUsdPct ?? null);
 
     if (dto.userId) {
@@ -149,6 +153,12 @@ export class EmployeesService {
 
     if (dto.siteId) {
       await this.assertSiteExists(dto.siteId);
+    }
+    if (dto.employmentType !== undefined) {
+      await this.lookups.assertValid('employment_type', dto.employmentType);
+    }
+    if (dto.payMode !== undefined) {
+      await this.lookups.assertValid('pay_mode', dto.payMode);
     }
     const payMode = dto.payMode ?? existing.payMode;
     const fixedUsdPct =
@@ -239,11 +249,11 @@ export class EmployeesService {
   }
 
   /** FIXED_SPLIT requires a fixedUsdPct; CLIENT_RATIO must not carry one. */
-  private assertPayModeConsistency(payMode: PayMode, fixedUsdPct: number | null): void {
-    if (payMode === PayMode.FIXED_SPLIT && (fixedUsdPct == null || Number.isNaN(fixedUsdPct))) {
+  private assertPayModeConsistency(payMode: string, fixedUsdPct: number | null): void {
+    if (payMode === 'FIXED_SPLIT' && (fixedUsdPct == null || Number.isNaN(fixedUsdPct))) {
       throw new BadRequestException('fixedUsdPct is required when payMode is FIXED_SPLIT');
     }
-    if (payMode === PayMode.CLIENT_RATIO && fixedUsdPct != null) {
+    if (payMode === 'CLIENT_RATIO' && fixedUsdPct != null) {
       throw new BadRequestException('fixedUsdPct must be omitted when payMode is CLIENT_RATIO');
     }
   }
@@ -254,18 +264,18 @@ export class EmployeesService {
    * limited to the sites their role is assigned to.
    */
   private siteScopeFor(user: AuthenticatedUser): string[] | null {
-    const unscopedRoles: Role[] = [
-      Role.FINANCE_OFFICER,
-      Role.FINANCE_DIRECTOR,
-      Role.SYS_ADMIN,
-      Role.DIRECTOR,
+    const unscopedRoles: string[] = [
+      'FINANCE_OFFICER',
+      'FINANCE_DIRECTOR',
+      'SYS_ADMIN',
+      'DIRECTOR',
     ];
     const hasUnscoped = user.roles.some((r) => unscopedRoles.includes(r.role));
     if (hasUnscoped) {
       return null;
     }
     const siteIds = user.roles
-      .filter((r) => r.role === Role.SITE_MANAGER && r.siteId !== null)
+      .filter((r) => r.role === 'SITE_MANAGER' && r.siteId !== null)
       .map((r) => r.siteId as string);
     return [...new Set(siteIds)];
   }

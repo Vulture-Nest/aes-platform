@@ -1,16 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { Currency } from '@prisma/client';
 import { Type } from 'class-transformer';
-import {
-  IsDate,
-  IsEnum,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Min,
-  MinLength,
-} from 'class-validator';
+import { IsDate, IsNumber, IsOptional, IsString, IsUUID, Min, MinLength } from 'class-validator';
 
 export class CreateOrderDto {
   @ApiProperty()
@@ -33,9 +23,9 @@ export class CreateOrderDto {
   @Min(0)
   valueExVat!: number;
 
-  @ApiProperty({ enum: Currency })
-  @IsEnum(Currency)
-  currency!: Currency;
+  @ApiProperty()
+  @IsString()
+  currency!: string;
 
   @ApiPropertyOptional({ description: 'FX rate row used to convert this money' })
   @IsOptional()
@@ -63,9 +53,9 @@ export class CreateOrderReceiptDto {
   @Min(0)
   amount!: number;
 
-  @ApiProperty({ enum: Currency })
-  @IsEnum(Currency)
-  currency!: Currency;
+  @ApiProperty()
+  @IsString()
+  currency!: string;
 
   @ApiPropertyOptional({ description: 'FX rate row used to convert this money' })
   @IsOptional()

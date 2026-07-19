@@ -10,7 +10,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../rbac/roles.decorator';
 import { CreateBudgetDto, ReviseBudgetDto } from './dto/budget.dto';
@@ -23,14 +22,7 @@ export class BudgetsController {
   constructor(private readonly budgets: BudgetsService) {}
 
   @Get()
-  @Roles(
-    Role.FINANCE_OFFICER,
-    Role.FINANCE_DIRECTOR,
-    Role.OPS_DIRECTOR,
-    Role.DIRECTOR,
-    Role.SYS_ADMIN,
-    Role.AUDITOR,
-  )
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN', 'AUDITOR')
   @ApiOperation({ summary: 'List budgets (optionally filtered by status)' })
   @ApiQuery({ name: 'status', required: false })
   list(@Query('status') status?: string) {
@@ -38,21 +30,14 @@ export class BudgetsController {
   }
 
   @Get(':id')
-  @Roles(
-    Role.FINANCE_OFFICER,
-    Role.FINANCE_DIRECTOR,
-    Role.OPS_DIRECTOR,
-    Role.DIRECTOR,
-    Role.SYS_ADMIN,
-    Role.AUDITOR,
-  )
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN', 'AUDITOR')
   @ApiOperation({ summary: 'Get a budget with its lines and actuals-vs-budget' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.budgets.findOne(id);
   }
 
   @Post()
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR')
   @ApiOperation({ summary: 'Create a budget with lines (DRAFT)' })
   create(@Body() dto: CreateBudgetDto, @CurrentUser('id') actorId: string) {
     return this.budgets.create(dto, actorId);
@@ -60,7 +45,7 @@ export class BudgetsController {
 
   @Post(':id/submit')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR')
   @ApiOperation({
     summary: 'Submit a budget for PARALLEL co-approval by the Ops Director and Finance Director',
   })
@@ -70,7 +55,7 @@ export class BudgetsController {
 
   @Post(':id/revise')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR')
   @ApiOperation({
     summary: 'Revise an active budget: clone to a new version (a fresh dual-approval subject)',
   })

@@ -9,7 +9,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../rbac/roles.decorator';
 import { AlertService } from './alert.service';
@@ -22,14 +21,7 @@ export class AlertsController {
   constructor(private readonly alerts: AlertService) {}
 
   @Get()
-  @Roles(
-    Role.FINANCE_OFFICER,
-    Role.FINANCE_DIRECTOR,
-    Role.OPS_DIRECTOR,
-    Role.DIRECTOR,
-    Role.SYS_ADMIN,
-    Role.AUDITOR,
-  )
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN', 'AUDITOR')
   @ApiOperation({ summary: 'List alerts (optionally active-only / by severity)' })
   list(@Query() query: ListAlertsQueryDto) {
     return this.alerts.list({ activeOnly: query.activeOnly, severity: query.severity });
@@ -37,13 +29,7 @@ export class AlertsController {
 
   @Post(':id/ack')
   @HttpCode(HttpStatus.OK)
-  @Roles(
-    Role.FINANCE_OFFICER,
-    Role.FINANCE_DIRECTOR,
-    Role.OPS_DIRECTOR,
-    Role.DIRECTOR,
-    Role.SYS_ADMIN,
-  )
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Acknowledge an alert' })
   ack(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('id') actorId: string) {
     return this.alerts.ack(id, actorId);

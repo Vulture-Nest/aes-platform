@@ -1,6 +1,5 @@
 import { Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { Roles } from '../../rbac/roles.decorator';
 import { DangerEngineService } from './danger-engine.service';
 
@@ -12,7 +11,7 @@ export class DangerEngineController {
 
   @Post('evaluate')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.SYS_ADMIN)
+  @Roles('SYS_ADMIN')
   @ApiOperation({ summary: 'Manually trigger a danger-engine evaluation pass (testing)' })
   evaluate() {
     return this.engine.evaluate();

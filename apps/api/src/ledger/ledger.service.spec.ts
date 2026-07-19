@@ -1,4 +1,4 @@
-import { Currency, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { LedgerService } from './ledger.service';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -38,13 +38,13 @@ describe('LedgerService.post', () => {
       {
         accountId: 'acc-1',
         credit: 500,
-        currency: Currency.USD,
+        currency: 'USD',
         sourceTable: 'order_receipts',
         sourceId: 'r1',
         description: 'receipt',
         createdBy: 'u1',
       },
-      { accountId: 'acc-1', debit: 200, currency: Currency.USD },
+      { accountId: 'acc-1', debit: 200, currency: 'USD' },
     ]);
 
     expect(rows).toHaveLength(2);
@@ -85,9 +85,9 @@ describe('LedgerService.cashPosition', () => {
   it('returns per-account balances and per-currency totals', async () => {
     const { service, prisma } = makeService();
     prisma.account.findMany.mockResolvedValue([
-      { id: 'a1', name: 'Bank USD', type: 'BANK', currency: Currency.USD },
-      { id: 'a2', name: 'Bank ZWG', type: 'BANK', currency: Currency.ZWG },
-      { id: 'a3', name: 'Petty Cash', type: 'PETTY_CASH', currency: Currency.USD },
+      { id: 'a1', name: 'Bank USD', type: 'BANK', currency: 'USD' },
+      { id: 'a2', name: 'Bank ZWG', type: 'BANK', currency: 'ZWG' },
+      { id: 'a3', name: 'Petty Cash', type: 'PETTY_CASH', currency: 'USD' },
     ]);
     prisma.ledgerEntry.groupBy.mockResolvedValue([
       { accountId: 'a1', _sum: { credit: dec(1000), debit: dec(200) } },
@@ -98,13 +98,13 @@ describe('LedgerService.cashPosition', () => {
     const result = await service.cashPosition();
 
     expect(result.accounts).toEqual([
-      { accountId: 'a1', name: 'Bank USD', type: 'BANK', currency: Currency.USD, balance: 800 },
-      { accountId: 'a2', name: 'Bank ZWG', type: 'BANK', currency: Currency.ZWG, balance: 4000 },
+      { accountId: 'a1', name: 'Bank USD', type: 'BANK', currency: 'USD', balance: 800 },
+      { accountId: 'a2', name: 'Bank ZWG', type: 'BANK', currency: 'ZWG', balance: 4000 },
       {
         accountId: 'a3',
         name: 'Petty Cash',
         type: 'PETTY_CASH',
-        currency: Currency.USD,
+        currency: 'USD',
         balance: 0,
       },
     ]);

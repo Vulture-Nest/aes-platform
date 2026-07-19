@@ -10,7 +10,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../rbac/roles.decorator';
 import {
@@ -31,7 +30,7 @@ export class PettyCashController {
   // ---- Floats ------------------------------------------------------------
 
   @Post('floats')
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Open a petty-cash float for a site + currency with a custodian' })
   createFloat(@Body() dto: CreateFloatDto, @CurrentUser('id') actorId: string) {
     return this.pettyCash.createFloat(dto, actorId);
@@ -39,15 +38,15 @@ export class PettyCashController {
 
   @Get('floats')
   @Roles(
-    Role.SITE_CLERK,
-    Role.SITE_MANAGER,
-    Role.OPS_STAFF,
-    Role.FINANCE_OFFICER,
-    Role.FINANCE_DIRECTOR,
-    Role.OPS_DIRECTOR,
-    Role.DIRECTOR,
-    Role.SYS_ADMIN,
-    Role.AUDITOR,
+    'SITE_CLERK',
+    'SITE_MANAGER',
+    'OPS_STAFF',
+    'FINANCE_OFFICER',
+    'FINANCE_DIRECTOR',
+    'OPS_DIRECTOR',
+    'DIRECTOR',
+    'SYS_ADMIN',
+    'AUDITOR',
   )
   @ApiOperation({ summary: 'List petty-cash floats (optionally filtered by site)' })
   @ApiQuery({ name: 'siteId', required: false })
@@ -57,15 +56,15 @@ export class PettyCashController {
 
   @Get('floats/:id/txns')
   @Roles(
-    Role.SITE_CLERK,
-    Role.SITE_MANAGER,
-    Role.OPS_STAFF,
-    Role.FINANCE_OFFICER,
-    Role.FINANCE_DIRECTOR,
-    Role.OPS_DIRECTOR,
-    Role.DIRECTOR,
-    Role.SYS_ADMIN,
-    Role.AUDITOR,
+    'SITE_CLERK',
+    'SITE_MANAGER',
+    'OPS_STAFF',
+    'FINANCE_OFFICER',
+    'FINANCE_DIRECTOR',
+    'OPS_DIRECTOR',
+    'DIRECTOR',
+    'SYS_ADMIN',
+    'AUDITOR',
   )
   @ApiOperation({ summary: 'List the transactions on a float' })
   listTxns(@Param('id', ParseUUIDPipe) id: string) {
@@ -75,7 +74,7 @@ export class PettyCashController {
   // ---- Withdrawals (threshold-routed) ------------------------------------
 
   @Post('floats/:id/withdrawals')
-  @Roles(Role.SITE_CLERK, Role.SITE_MANAGER, Role.OPS_STAFF)
+  @Roles('SITE_CLERK', 'SITE_MANAGER', 'OPS_STAFF')
   @ApiOperation({
     summary:
       'Raise a petty-cash withdrawal voucher (below threshold: SM confirm; at/above: FD approval)',
@@ -90,7 +89,7 @@ export class PettyCashController {
 
   @Post('withdrawals/:txnId/confirm')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.SITE_MANAGER)
+  @Roles('SITE_MANAGER')
   @ApiOperation({
     summary: 'Site Manager confirm of a below-threshold withdrawal (posts it immediately)',
   })
@@ -104,7 +103,7 @@ export class PettyCashController {
   // ---- Conversions -------------------------------------------------------
 
   @Post('floats/:id/conversions')
-  @Roles(Role.SITE_MANAGER, Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR)
+  @Roles('SITE_MANAGER', 'FINANCE_OFFICER', 'FINANCE_DIRECTOR')
   @ApiOperation({
     summary: 'Record a currency conversion as two linked legs with variance vs official',
   })
@@ -120,7 +119,7 @@ export class PettyCashController {
 
   @Post('floats/:id/count')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.SITE_MANAGER, Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR)
+  @Roles('SITE_MANAGER', 'FINANCE_OFFICER', 'FINANCE_DIRECTOR')
   @ApiOperation({
     summary: 'Record a cash count; variance beyond tolerance locks the float and alerts FD',
   })
@@ -134,7 +133,7 @@ export class PettyCashController {
 
   @Post('floats/:id/unlock')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.FINANCE_DIRECTOR)
+  @Roles('FINANCE_DIRECTOR')
   @ApiOperation({ summary: 'FD clears a reconciliation lock on a float' })
   unlockFloat(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('id') actorId: string) {
     return this.pettyCash.unlockFloat(id, actorId);
@@ -143,7 +142,7 @@ export class PettyCashController {
   // ---- Imprest top-up ----------------------------------------------------
 
   @Post('floats/:id/top-up')
-  @Roles(Role.SITE_MANAGER, Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR)
+  @Roles('SITE_MANAGER', 'FINANCE_OFFICER', 'FINANCE_DIRECTOR')
   @ApiOperation({
     summary:
       'Raise an imprest top-up (approvable; on approval moves bank -> petty cash in the ledger)',

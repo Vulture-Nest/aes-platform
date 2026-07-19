@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Currency, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   OrderFinancialsService,
   RateSettings,
@@ -51,7 +51,7 @@ export interface ReceivablesAgeingParams {
 export interface AgeingOrderLine {
   orderId: string;
   reference: string;
-  currency: Currency;
+  currency: string;
   /** Order value including VAT. */
   totalInclVat: number;
   /** Total received against the order (in the order currency). */
@@ -78,7 +78,7 @@ export interface AgeingBuckets {
 export interface ClientAgeing {
   clientId: string;
   clientName: string;
-  currency: Currency;
+  currency: string;
   /** Total outstanding for this client in this currency. */
   totalOutstanding: number;
   /** Outstanding split by bucket. */
@@ -95,11 +95,11 @@ export interface ReceivablesAgeingResult {
   /** Per (client, currency) ageing rollups, most-outstanding first. */
   clients: ClientAgeing[];
   /** Grand totals per currency. */
-  totalsByCurrency: Record<Currency, number>;
+  totalsByCurrency: Record<string, number>;
   /** Grand totals per bucket, per currency. */
-  bucketsByCurrency: Record<Currency, AgeingBuckets>;
+  bucketsByCurrency: Record<string, AgeingBuckets>;
   /** Total overdue outstanding per currency. */
-  overdueByCurrency: Record<Currency, number>;
+  overdueByCurrency: Record<string, number>;
   /**
    * A single USD-equivalent headline of all outstanding. ZWG is converted at the
    * official ZWG/USD rate as of the reference date; null when that rate is missing.
@@ -164,9 +164,9 @@ export class ReceivablesAgeingService {
 
     const totalsByCurrency = this.emptyCurrencyMap();
     const overdueByCurrency = this.emptyCurrencyMap();
-    const bucketsByCurrency: Record<Currency, AgeingBuckets> = {
-      [Currency.USD]: this.emptyBuckets(),
-      [Currency.ZWG]: this.emptyBuckets(),
+    const bucketsByCurrency: Record<string, AgeingBuckets> = {
+      ['USD']: this.emptyBuckets(),
+      ['ZWG']: this.emptyBuckets(),
     };
     let orderCount = 0;
 
@@ -320,12 +320,9 @@ export class ReceivablesAgeingService {
    * Convert the per-currency totals into one USD headline. ZWG is divided by the
    * official ZWG/USD rate; returns null when that rate is unavailable or zero.
    */
-  private async consolidateUsd(
-    totals: Record<Currency, number>,
-    asOf: Date,
-  ): Promise<number | null> {
-    const usd = totals[Currency.USD] ?? 0;
-    const zwg = totals[Currency.ZWG] ?? 0;
+  private async consolidateUsd(totals: Record<string, number>, asOf: Date): Promise<number | null> {
+    const usd = totals['USD'] ?? 0;
+    const zwg = totals['ZWG'] ?? 0;
     if (zwg === 0) {
       return round2(usd);
     }
@@ -342,8 +339,8 @@ export class ReceivablesAgeingService {
   }
 
   /** A fresh zeroed per-currency total map. */
-  private emptyCurrencyMap(): Record<Currency, number> {
-    return { [Currency.USD]: 0, [Currency.ZWG]: 0 };
+  private emptyCurrencyMap(): Record<string, number> {
+    return { ['USD']: 0, ['ZWG']: 0 };
   }
 
   /** A fresh zeroed bucket set. */

@@ -1,9 +1,9 @@
-import { Role, UserStatus } from '@prisma/client';
+import { UserStatus } from '@prisma/client';
 
 /** A single RBAC assignment. siteId null = applies across all sites. */
 export interface SiteRole {
   siteId: string | null;
-  role: Role;
+  role: string;
 }
 
 /**

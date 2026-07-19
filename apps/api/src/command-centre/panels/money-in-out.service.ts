@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Currency, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ExchangeRatesService } from '../../reference/exchange-rates/exchange-rates.service';
 import { RateType } from '../../reference/exchange-rates/rate-type.enum';
@@ -36,7 +36,7 @@ export interface MoneyInOutParams {
   /** Exclusive upper bound for all date filters. */
   to?: Date;
   /** Currency all amounts are normalised to. Defaults to USD. */
-  currency?: Currency;
+  currency?: string;
 }
 
 /** One time bucket with its inflow / outflow / net figures. */
@@ -52,7 +52,7 @@ export interface MoneyBucket {
 /** Full panel result. */
 export interface MoneyInOutResult {
   window: MoneyWindow;
-  currency: Currency;
+  currency: string;
   buckets: MoneyBucket[];
   totals: {
     inflow: number;
@@ -65,7 +65,7 @@ export interface MoneyInOutResult {
 interface Movement {
   date: Date;
   amount: number;
-  currency: Currency;
+  currency: string;
 }
 
 /** ms in one day — used for ISO-week bucketing. */
@@ -114,8 +114,8 @@ export class MoneyInOutService {
    */
   private async convert(
     amount: number,
-    currency: Currency,
-    target: Currency,
+    currency: string,
+    target: string,
     date: Date,
   ): Promise<number> {
     if (amount === 0 || currency === target) {
@@ -171,7 +171,7 @@ export class MoneyInOutService {
    */
   async compute(params: MoneyInOutParams = {}): Promise<MoneyInOutResult> {
     const window = params.window ?? MoneyWindow.MONTH;
-    const target = params.currency ?? Currency.USD;
+    const target = params.currency ?? 'USD';
     const { from, to } = params;
 
     const [inflows, outflows] = await Promise.all([

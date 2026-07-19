@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { Currency, OpportunityStage } from '@prisma/client';
+import { OpportunityStage } from '@prisma/client';
 import { ConvertTarget } from './dto/opportunity.dto';
 import { OpportunitiesService } from './opportunities.service';
 
@@ -16,8 +16,9 @@ describe('OpportunitiesService', () => {
     contract: { create: jest.fn() },
   };
   const audit = { record: jest.fn() };
+  const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const service = new OpportunitiesService(prisma as any, audit as any);
+  const service = new OpportunitiesService(prisma as any, audit as any, lookups as any);
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -133,7 +134,7 @@ describe('OpportunitiesService', () => {
       id: 'o1',
       stage: OpportunityStage.WON,
       estimatedValue: 120000,
-      currency: Currency.USD,
+      currency: 'USD',
       wonAt: new Date('2026-01-01'),
       convertedOrderId: null,
       convertedContractId: null,
@@ -147,7 +148,7 @@ describe('OpportunitiesService', () => {
         clientId: 'client1',
         reference: 'ORD-1',
         valueExVat: { toString: () => '120000' },
-        currency: Currency.USD,
+        currency: 'USD',
       });
       prisma.crmOpportunity.update.mockResolvedValue({
         id: 'o1',
@@ -169,7 +170,7 @@ describe('OpportunitiesService', () => {
             clientId: 'client1',
             reference: 'ORD-1',
             valueExVat: 120000,
-            currency: Currency.USD,
+            currency: 'USD',
           }),
         }),
       );
@@ -201,7 +202,7 @@ describe('OpportunitiesService', () => {
         clientId: 'client1',
         reference: 'CTR-1',
         valueExVat: { toString: () => '120000' },
-        currency: Currency.USD,
+        currency: 'USD',
         status: 'UPCOMING',
       });
       prisma.crmOpportunity.update.mockResolvedValue({
@@ -241,7 +242,7 @@ describe('OpportunitiesService', () => {
         clientId: 'client1',
         reference: 'ORD-2',
         valueExVat: { toString: () => '120000' },
-        currency: Currency.USD,
+        currency: 'USD',
       });
       prisma.crmOpportunity.update.mockResolvedValue({
         id: 'o1',

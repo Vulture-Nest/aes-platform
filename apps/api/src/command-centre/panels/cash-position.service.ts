@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Currency, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { ExchangeRatesService } from '../../reference/exchange-rates/exchange-rates.service';
 import { RateType } from '../../reference/exchange-rates/rate-type.enum';
 import { LedgerService } from '../../ledger/ledger.service';
@@ -36,7 +36,7 @@ export interface CashTrendWindow {
   /** Window length in days (30 / 60 / 90). */
   days: number;
   /** Net ledger movement (credit - debit) in the window, per currency. */
-  net: Record<Currency, number>;
+  net: Record<string, number>;
   /** USD-equivalent of the net movement at the OFFICIAL rate. */
   netUsdOfficial: number;
 }
@@ -64,11 +64,11 @@ export interface CashPositionPanelResult {
     accountId: string;
     name: string;
     type: string;
-    currency: Currency;
+    currency: string;
     balance: number;
   }[];
   /** Raw per-currency cash totals (no conversion). */
-  totals: Record<Currency, number>;
+  totals: Record<string, number>;
   /** USD-equivalent roll-up at both official and street (parallel) rates. */
   usdEquivalent: {
     official: UsdEquivalent;
@@ -98,9 +98,9 @@ export class CashPositionService {
     const asOf = params.asOf ?? new Date();
 
     const position = await this.ledger.cashPosition();
-    const totals: Record<Currency, number> = {
-      [Currency.USD]: position.totals[Currency.USD] ?? 0,
-      [Currency.ZWG]: position.totals[Currency.ZWG] ?? 0,
+    const totals: Record<string, number> = {
+      ['USD']: position.totals['USD'] ?? 0,
+      ['ZWG']: position.totals['ZWG'] ?? 0,
     };
 
     const officialRate = await this.rate(asOf, RateType.OFFICIAL);
@@ -138,9 +138,9 @@ export class CashPositionService {
    * USD-equivalent of the cash totals. USD is already in USD; ZWG is divided by the
    * USD/ZWG rate (guarded against divide-by-zero — a missing/zero rate contributes 0).
    */
-  private toUsdEquivalent(totals: Record<Currency, number>, rate: number): UsdEquivalent {
-    const usd = totals[Currency.USD] ?? 0;
-    const zwg = totals[Currency.ZWG] ?? 0;
+  private toUsdEquivalent(totals: Record<string, number>, rate: number): UsdEquivalent {
+    const usd = totals['USD'] ?? 0;
+    const zwg = totals['ZWG'] ?? 0;
     const zwgInUsd = rate > 0 ? zwg / rate : 0;
     return { rate, totalUsd: usd + zwgInUsd };
   }
@@ -161,18 +161,18 @@ export class CashPositionService {
 
     return TREND_WINDOWS.map((days) => {
       const windowStart = new Date(asOf.getTime() - days * MS_PER_DAY);
-      const net: Record<Currency, number> = { [Currency.USD]: 0, [Currency.ZWG]: 0 };
+      const net: Record<string, number> = { ['USD']: 0, ['ZWG']: 0 };
       for (const e of entries) {
         if (e.entryDate < windowStart) {
           continue;
         }
         net[e.currency] += num(e.credit) - num(e.debit);
       }
-      const zwgInUsd = officialRate > 0 ? net[Currency.ZWG] / officialRate : 0;
+      const zwgInUsd = officialRate > 0 ? net['ZWG'] / officialRate : 0;
       return {
         days,
         net,
-        netUsdOfficial: net[Currency.USD] + zwgInUsd,
+        netUsdOfficial: net['USD'] + zwgInUsd,
       };
     });
   }

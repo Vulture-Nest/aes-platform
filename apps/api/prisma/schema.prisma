@@ -30,28 +30,10 @@ model HealthCheck {
 // RBAC
 // ---------------------------------------------------------------------------
 
-/// Roles per spec §4. Enforced by our own guards (self-managed RBAC).
-enum Role {
-  SITE_CLERK
-  SITE_MANAGER
-  OPS_STAFF
-  FINANCE_OFFICER
-  FINANCE_DIRECTOR // FD
-  OPS_DIRECTOR // OD
-  DIRECTOR // Managing Director / Directors
-  SYS_ADMIN
-  AUDITOR // read-only
-}
-
 enum UserStatus {
   ACTIVE
   DISABLED
   INVITED
-}
-
-enum SiteType {
-  MINE_SITE
-  HEAD_OFFICE
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +89,7 @@ model UserSiteRole {
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   siteId String? @map("site_id") @db.Uuid
   site   Site?   @relation(fields: [siteId], references: [id])
-  role   Role
+  role   String
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -122,12 +104,12 @@ model UserSiteRole {
 // ---------------------------------------------------------------------------
 
 model Site {
-  id       String   @id @default(uuid()) @db.Uuid
-  name     String   @unique
-  type     SiteType
+  id       String  @id @default(uuid()) @db.Uuid
+  name     String  @unique
+  type     String
   /// Set when a site maps to a client (mine sites); null for head office.
-  clientId String?  @map("client_id") @db.Uuid
-  active   Boolean  @default(true)
+  clientId String? @map("client_id") @db.Uuid
+  active   Boolean @default(true)
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -175,11 +157,6 @@ model AuditLog {
 // Reference data — all effective-dated, append-only where noted (spec S1)
 // ---------------------------------------------------------------------------
 
-enum Currency {
-  USD
-  ZWG
-}
-
 /// Append-only, effective-dated FX rates (official + parallel/street). Never overwritten;
 /// a newer effective date supersedes. `rateAsOf(date, type)` reads the latest ≤ date.
 model ExchangeRate {
@@ -199,14 +176,14 @@ model ExchangeRate {
 /// Effective-dated statutory parameters (VAT %, ZIMRA interest %, NSSA/ZIMDEF/NEC/MIPF,
 /// PAYE bands per currency as JSON). Config, never hardcoded.
 model StatutoryRate {
-  id            String    @id @default(uuid()) @db.Uuid
+  id            String   @id @default(uuid()) @db.Uuid
   key           String // vat_pct, zimra_interest_pct, nssa_*, zimdef_pct, paye_bands, aids_levy_pct
-  currency      Currency?
-  value         Decimal?  @db.Decimal(20, 6)
+  currency      String?
+  value         Decimal? @db.Decimal(20, 6)
   params        Json?
-  dateEffective DateTime  @map("date_effective")
-  createdBy     String?   @map("created_by") @db.Uuid
-  createdAt     DateTime  @default(now()) @map("created_at")
+  dateEffective DateTime @map("date_effective")
+  createdBy     String?  @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
 
   @@index([key, currency, dateEffective])
   @@map("statutory_rates")
@@ -215,14 +192,14 @@ model StatutoryRate {
 /// Effective-dated thresholds + tunable parameters (petty-cash FD threshold per currency,
 /// SLA timers, danger-rule params).
 model Threshold {
-  id            String    @id @default(uuid()) @db.Uuid
+  id            String   @id @default(uuid()) @db.Uuid
   key           String // petty_cash_fd_threshold, sla_reminder_hours, danger_cash_runway_weeks
-  currency      Currency?
-  value         Decimal?  @db.Decimal(20, 6)
+  currency      String?
+  value         Decimal? @db.Decimal(20, 6)
   params        Json?
-  dateEffective DateTime  @default(now()) @map("date_effective")
-  createdBy     String?   @map("created_by") @db.Uuid
-  createdAt     DateTime  @default(now()) @map("created_at")
+  dateEffective DateTime @default(now()) @map("date_effective")
+  createdBy     String?  @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
 
   @@index([key, currency, dateEffective])
   @@map("thresholds")
@@ -321,10 +298,10 @@ model ApprovalMatrix {
   module       String // e.g. "requisition", "payment"
   minAmount    Decimal?     @map("min_amount") @db.Decimal(20, 2)
   maxAmount    Decimal?     @map("max_amount") @db.Decimal(20, 2)
-  currency     Currency?
+  currency     String?
   siteId       String?      @map("site_id") @db.Uuid
   stepOrder    Int          @map("step_order")
-  approverRole Role         @map("approver_role")
+  approverRole String       @map("approver_role")
   mode         ApprovalMode @default(SEQUENTIAL)
   active       Boolean      @default(true)
 
@@ -342,7 +319,7 @@ model ApprovalChain {
   subjectTable String         @map("subject_table")
   subjectId    String         @map("subject_id") @db.Uuid
   amount       Decimal?       @db.Decimal(20, 2)
-  currency     Currency?
+  currency     String?
   siteId       String?        @map("site_id") @db.Uuid
   requesterId  String         @map("requester_id") @db.Uuid
   status       ApprovalStatus @default(PENDING)
@@ -362,7 +339,7 @@ model Approval {
   chainId         String            @map("chain_id") @db.Uuid
   chain           ApprovalChain     @relation(fields: [chainId], references: [id], onDelete: Cascade)
   step            Int
-  approverRole    Role              @map("approver_role")
+  approverRole    String            @map("approver_role")
   /// Resolved via delegation when a named approver is substituted; null = match by role.
   assignedUserId  String?           @map("assigned_user_id") @db.Uuid
   mode            ApprovalMode      @default(SEQUENTIAL)
@@ -435,7 +412,7 @@ model Contract {
   client     Client         @relation(fields: [clientId], references: [id])
   reference  String
   valueExVat Decimal        @map("value_ex_vat") @db.Decimal(20, 2)
-  currency   Currency
+  currency   String
   fxRateId   String?        @map("fx_rate_id") @db.Uuid
   rateType   String?        @map("rate_type")
   startDate  DateTime       @map("start_date")
@@ -448,7 +425,7 @@ model Contract {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   claims ContractClaim[]
-  orders Order[]        @relation("OrderContract")
+  orders Order[]         @relation("OrderContract")
 
   @@index([clientId])
   @@map("contracts")
@@ -456,14 +433,14 @@ model Contract {
 
 /// A progress claim raised against a contract. Amount is VAT-exclusive money.
 model ContractClaim {
-  id         String   @id @default(uuid()) @db.Uuid
-  contractId String   @map("contract_id") @db.Uuid
-  contract   Contract @relation(fields: [contractId], references: [id])
-  amountExVat Decimal @map("amount_ex_vat") @db.Decimal(20, 2)
-  currency   Currency
-  fxRateId   String?  @map("fx_rate_id") @db.Uuid
-  rateType   String?  @map("rate_type")
-  claimDate  DateTime @map("claim_date")
+  id          String   @id @default(uuid()) @db.Uuid
+  contractId  String   @map("contract_id") @db.Uuid
+  contract    Contract @relation(fields: [contractId], references: [id])
+  amountExVat Decimal  @map("amount_ex_vat") @db.Decimal(20, 2)
+  currency    String
+  fxRateId    String?  @map("fx_rate_id") @db.Uuid
+  rateType    String?  @map("rate_type")
+  claimDate   DateTime @map("claim_date")
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -476,19 +453,19 @@ model ContractClaim {
 
 /// A work order for a client, optionally tied to a contract. Value is VAT-exclusive money.
 model Order {
-  id         String    @id @default(uuid()) @db.Uuid
-  clientId   String    @map("client_id") @db.Uuid
-  client     Client    @relation(fields: [clientId], references: [id])
-  contractId String?   @map("contract_id") @db.Uuid
-  contract   Contract? @relation("OrderContract", fields: [contractId], references: [id])
-  reference  String
-  valueExVat Decimal   @map("value_ex_vat") @db.Decimal(20, 2)
-  currency   Currency
-  fxRateId   String?   @map("fx_rate_id") @db.Uuid
-  rateType   String?   @map("rate_type")
+  id          String    @id @default(uuid()) @db.Uuid
+  clientId    String    @map("client_id") @db.Uuid
+  client      Client    @relation(fields: [clientId], references: [id])
+  contractId  String?   @map("contract_id") @db.Uuid
+  contract    Contract? @relation("OrderContract", fields: [contractId], references: [id])
+  reference   String
+  valueExVat  Decimal   @map("value_ex_vat") @db.Decimal(20, 2)
+  currency    String
+  fxRateId    String?   @map("fx_rate_id") @db.Uuid
+  rateType    String?   @map("rate_type")
   closingDate DateTime? @map("closing_date")
-  serviced   Boolean   @default(false)
-  servicedAt DateTime? @map("serviced_at")
+  serviced    Boolean   @default(false)
+  servicedAt  DateTime? @map("serviced_at")
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -509,7 +486,7 @@ model OrderReceipt {
   orderId      String   @map("order_id") @db.Uuid
   order        Order    @relation(fields: [orderId], references: [id])
   amount       Decimal  @db.Decimal(20, 2)
-  currency     Currency
+  currency     String
   fxRateId     String?  @map("fx_rate_id") @db.Uuid
   rateType     String?  @map("rate_type")
   receivedDate DateTime @map("received_date")
@@ -526,15 +503,15 @@ model OrderReceipt {
 
 /// A cost booked against an order. Amount is money; VAT may be claimable.
 model OrderExpense {
-  id            String   @id @default(uuid()) @db.Uuid
-  orderId       String   @map("order_id") @db.Uuid
-  order         Order    @relation(fields: [orderId], references: [id])
-  amount        Decimal  @db.Decimal(20, 2)
-  currency      Currency
-  fxRateId      String?  @map("fx_rate_id") @db.Uuid
-  rateType      String?  @map("rate_type")
-  vatClaimable  Boolean  @default(false) @map("vat_claimable")
-  description   String?
+  id           String  @id @default(uuid()) @db.Uuid
+  orderId      String  @map("order_id") @db.Uuid
+  order        Order   @relation(fields: [orderId], references: [id])
+  amount       Decimal @db.Decimal(20, 2)
+  currency     String
+  fxRateId     String? @map("fx_rate_id") @db.Uuid
+  rateType     String? @map("rate_type")
+  vatClaimable Boolean @default(false) @map("vat_claimable")
+  description  String?
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -549,7 +526,7 @@ model OrderExpense {
 model GeneralExpense {
   id           String   @id @default(uuid()) @db.Uuid
   amount       Decimal  @db.Decimal(20, 2)
-  currency     Currency
+  currency     String
   fxRateId     String?  @map("fx_rate_id") @db.Uuid
   rateType     String?  @map("rate_type")
   vatClaimable Boolean  @map("vat_claimable")
@@ -566,13 +543,13 @@ model GeneralExpense {
 
 /// A recurring/periodic overhead cost. Amount is money.
 model Overhead {
-  id          String   @id @default(uuid()) @db.Uuid
-  amount      Decimal  @db.Decimal(20, 2)
-  currency    Currency
-  fxRateId    String?  @map("fx_rate_id") @db.Uuid
-  rateType    String?  @map("rate_type")
+  id          String  @id @default(uuid()) @db.Uuid
+  amount      Decimal @db.Decimal(20, 2)
+  currency    String
+  fxRateId    String? @map("fx_rate_id") @db.Uuid
+  rateType    String? @map("rate_type")
   category    String?
-  periodMonth String?  @map("period_month")
+  periodMonth String? @map("period_month")
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -587,7 +564,7 @@ model Loan {
   id             String             @id @default(uuid()) @db.Uuid
   lender         String
   principal      Decimal            @db.Decimal(20, 2)
-  currency       Currency
+  currency       String
   fxRateId       String?            @map("fx_rate_id") @db.Uuid
   rateType       String?            @map("rate_type")
   weeklyRatePct  Decimal            @map("weekly_rate_pct") @db.Decimal(20, 6)
@@ -612,7 +589,7 @@ model LoanRepayment {
   loanId     String   @map("loan_id") @db.Uuid
   loan       Loan     @relation(fields: [loanId], references: [id])
   amount     Decimal  @db.Decimal(20, 2)
-  currency   Currency
+  currency   String
   fxRateId   String?  @map("fx_rate_id") @db.Uuid
   rateType   String?  @map("rate_type")
   repaidDate DateTime @map("repaid_date")
@@ -633,7 +610,7 @@ model LoanInterest {
   loan        Loan     @relation(fields: [loanId], references: [id])
   accrualDate DateTime @map("accrual_date") @db.Date
   amount      Decimal  @db.Decimal(20, 2)
-  currency    Currency
+  currency    String
   createdAt   DateTime @default(now()) @map("created_at")
 
   @@unique([loanId, accrualDate])
@@ -646,7 +623,7 @@ model Account {
   id       String      @id @default(uuid()) @db.Uuid
   name     String
   type     AccountType
-  currency Currency
+  currency String
   siteId   String?     @map("site_id") @db.Uuid
 
   createdBy String?  @map("created_by") @db.Uuid
@@ -666,7 +643,7 @@ model LedgerEntry {
   account     Account  @relation(fields: [accountId], references: [id])
   debit       Decimal  @default(0) @db.Decimal(20, 2)
   credit      Decimal  @default(0) @db.Decimal(20, 2)
-  currency    Currency
+  currency    String
   sourceTable String?  @map("source_table")
   sourceId    String?  @map("source_id") @db.Uuid
   entryDate   DateTime @map("entry_date")
@@ -681,12 +658,12 @@ model LedgerEntry {
 
 /// Running tax obligation per type + period (VAT/PAYE). Amounts are money.
 model TaxLedger {
-  id          String   @id @default(uuid()) @db.Uuid
-  taxType     TaxType  @map("tax_type")
-  periodMonth String   @map("period_month")
-  amountDue   Decimal  @map("amount_due") @db.Decimal(20, 2)
-  amountPaid  Decimal  @default(0) @map("amount_paid") @db.Decimal(20, 2)
-  currency    Currency
+  id          String  @id @default(uuid()) @db.Uuid
+  taxType     TaxType @map("tax_type")
+  periodMonth String  @map("period_month")
+  amountDue   Decimal @map("amount_due") @db.Decimal(20, 2)
+  amountPaid  Decimal @default(0) @map("amount_paid") @db.Decimal(20, 2)
+  currency    String
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -701,7 +678,7 @@ model OtherTaxDebt {
   id        String   @id @default(uuid()) @db.Uuid
   taxType   TaxType  @map("tax_type")
   principal Decimal  @db.Decimal(20, 2)
-  currency  Currency
+  currency  String
   dueDate   DateTime @map("due_date")
   ratePct   Decimal  @map("rate_pct") @db.Decimal(20, 6)
 
@@ -718,7 +695,7 @@ model ZimraAssessment {
   id             String   @id @default(uuid()) @db.Uuid
   taxType        TaxType  @map("tax_type")
   assessedAmount Decimal  @map("assessed_amount") @db.Decimal(20, 2)
-  currency       Currency
+  currency       String
   dueDate        DateTime @map("due_date")
 
   createdBy String?  @map("created_by") @db.Uuid
@@ -738,24 +715,24 @@ model ZimraAssessment {
 /// APPROVED_PENDING_FUNDS -> DISBURSED -> CLOSED. Approval is merit-only; funds
 /// availability never blocks approval, it only picks READY_TO_PAY vs PENDING_FUNDS.
 model Requisition {
-  id             String    @id @default(uuid()) @db.Uuid
-  purpose        String
-  amount         Decimal   @db.Decimal(20, 2)
-  currency       Currency
-  requiredByDate DateTime  @map("required_by_date")
+  id                    String    @id @default(uuid()) @db.Uuid
+  purpose               String
+  amount                Decimal   @db.Decimal(20, 2)
+  currency              String
+  requiredByDate        DateTime  @map("required_by_date")
   /// Optional link to the order this requisition funds.
-  orderId        String?   @map("order_id") @db.Uuid
-  attachmentKey  String?   @map("attachment_key")
-  siteId         String?   @map("site_id") @db.Uuid
-  requesterId    String    @map("requester_id") @db.Uuid
-  status         String    @default("DRAFT")
+  orderId               String?   @map("order_id") @db.Uuid
+  attachmentKey         String?   @map("attachment_key")
+  siteId                String?   @map("site_id") @db.Uuid
+  requesterId           String    @map("requester_id") @db.Uuid
+  status                String    @default("DRAFT")
   /// Cash position captured at the moment the funds check ran.
-  cashSnapshot   Json?     @map("cash_snapshot")
+  cashSnapshot          Json?     @map("cash_snapshot")
   /// Amount by which the chosen account fell short at funds-check time (PENDING_FUNDS only).
-  shortfall      Decimal?  @db.Decimal(20, 2)
-  disbursementAccountId String? @map("disbursement_account_id") @db.Uuid
-  disbursementReference String? @map("disbursement_reference")
-  disbursedAt    DateTime? @map("disbursed_at")
+  shortfall             Decimal?  @db.Decimal(20, 2)
+  disbursementAccountId String?   @map("disbursement_account_id") @db.Uuid
+  disbursementReference String?   @map("disbursement_reference")
+  disbursedAt           DateTime? @map("disbursed_at")
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -779,7 +756,7 @@ model TravelRate {
   id               String   @id @default(uuid()) @db.Uuid
   grade            String
   destinationClass String   @map("destination_class")
-  currency         Currency
+  currency         String
   dailyRate        Decimal  @map("daily_rate") @db.Decimal(20, 2)
   effectiveDate    DateTime @map("effective_date")
 
@@ -810,7 +787,7 @@ model TravelRequest {
   days             Int
   /// Total advance requested = perDiem * days.
   advanceAmount    Decimal  @map("advance_amount") @db.Decimal(20, 2)
-  currency         Currency
+  currency         String
   siteId           String?  @map("site_id") @db.Uuid
   requesterId      String   @map("requester_id") @db.Uuid
   status           String   @default("DRAFT")
@@ -851,14 +828,14 @@ model TravelRequest {
 /// replenish it). `locked` is set by reconciliation when a cash count reveals a variance
 /// beyond tolerance and blocks further withdrawals until an FD clears it.
 model PettyCashFloat {
-  id               String   @id @default(uuid()) @db.Uuid
-  siteId           String   @map("site_id") @db.Uuid
-  currency         Currency
-  custodianUserId  String   @map("custodian_user_id") @db.Uuid
+  id              String  @id @default(uuid()) @db.Uuid
+  siteId          String  @map("site_id") @db.Uuid
+  currency        String
+  custodianUserId String  @map("custodian_user_id") @db.Uuid
   /// The imprest/nominal float amount this custodian is entrusted with.
-  floatAmount      Decimal  @map("float_amount") @db.Decimal(20, 2)
+  floatAmount     Decimal @map("float_amount") @db.Decimal(20, 2)
   /// Set true by reconciliation when a counted variance exceeds tolerance; blocks withdrawals.
-  locked           Boolean  @default(false)
+  locked          Boolean @default(false)
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -879,24 +856,24 @@ model PettyCashFloat {
 /// (DRAFT/SUBMITTED/APPROVED.../POSTED) — below-threshold withdrawals post immediately after a
 /// Site Manager confirm; at/above threshold they require FD approval before cash leaves.
 model PettyCashTxn {
-  id       String         @id @default(uuid()) @db.Uuid
-  floatId  String         @map("float_id") @db.Uuid
-  float    PettyCashFloat @relation(fields: [floatId], references: [id])
-  type     String // WITHDRAWAL | TOP_UP | CONVERSION_OUT | CONVERSION_IN
-  amount   Decimal        @db.Decimal(20, 2)
-  currency Currency
-  purpose  String?
+  id                 String         @id @default(uuid()) @db.Uuid
+  floatId            String         @map("float_id") @db.Uuid
+  float              PettyCashFloat @relation(fields: [floatId], references: [id])
+  type               String // WITHDRAWAL | TOP_UP | CONVERSION_OUT | CONVERSION_IN
+  amount             Decimal        @db.Decimal(20, 2)
+  currency           String
+  purpose            String?
   /// Optional link to the order this petty-cash spend relates to.
-  orderId  String?        @map("order_id") @db.Uuid
+  orderId            String?        @map("order_id") @db.Uuid
   /// Storage key of the receipt photo/attachment supporting the voucher.
-  receiptKey          String?  @map("receipt_key")
+  receiptKey         String?        @map("receipt_key")
   /// Conversions only: the rate actually achieved on the street for the swap.
-  achievedRate        Decimal? @map("achieved_rate") @db.Decimal(20, 6)
+  achievedRate       Decimal?       @map("achieved_rate") @db.Decimal(20, 6)
   /// Conversions only: achievedRate minus the official rate of the day (loss/gain signal).
-  varianceVsOfficial  Decimal? @map("variance_vs_official") @db.Decimal(20, 6)
+  varianceVsOfficial Decimal?       @map("variance_vs_official") @db.Decimal(20, 6)
   /// The paired conversion leg (OUT <-> IN).
-  linkedTxnId         String?  @map("linked_txn_id") @db.Uuid
-  status              String   @default("DRAFT")
+  linkedTxnId        String?        @map("linked_txn_id") @db.Uuid
+  status             String         @default("DRAFT")
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -921,14 +898,14 @@ model PettyCashTxn {
 /// 85% and alerting at 100% (thresholds configurable). Revisions clone the budget to a new
 /// version (a fresh approvable); Budget Change Requests reuse the same dual-approval path.
 model Budget {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String
+  id             String  @id @default(uuid()) @db.Uuid
+  name           String
   /// Optional budget period, stored as an ISO month string e.g. "2026-07".
-  periodMonth String?  @map("period_month")
-  siteId      String?  @map("site_id") @db.Uuid
-  currency    Currency
-  status      String   @default("DRAFT")
-  version     Int      @default(1)
+  periodMonth    String? @map("period_month")
+  siteId         String? @map("site_id") @db.Uuid
+  currency       String
+  status         String  @default("DRAFT")
+  version        Int     @default(1)
   /// When a revision clones this budget, the clone points back at its predecessor.
   parentBudgetId String? @map("parent_budget_id") @db.Uuid
 
@@ -947,13 +924,13 @@ model Budget {
 
 /// A single category line of a budget carrying the budgeted amount for that category.
 model BudgetLine {
-  id          String   @id @default(uuid()) @db.Uuid
-  budgetId    String   @map("budget_id") @db.Uuid
-  budget      Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  id          String  @id @default(uuid()) @db.Uuid
+  budgetId    String  @map("budget_id") @db.Uuid
+  budget      Budget  @relation(fields: [budgetId], references: [id], onDelete: Cascade)
   category    String
   description String?
-  amount      Decimal  @db.Decimal(20, 2)
-  currency    Currency
+  amount      Decimal @db.Decimal(20, 2)
+  currency    String
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -976,13 +953,13 @@ model BudgetLine {
 /// (which must be a different user than the requester) to record the method/reference and
 /// close it.
 model DirectorWithdrawal {
-  id                 String   @id @default(uuid()) @db.Uuid
-  directorUserId     String   @map("director_user_id") @db.Uuid
-  amount             Decimal  @db.Decimal(20, 2)
-  currency           Currency
-  destinationAccount String   @map("destination_account")
+  id                 String  @id @default(uuid()) @db.Uuid
+  directorUserId     String  @map("director_user_id") @db.Uuid
+  amount             Decimal @db.Decimal(20, 2)
+  currency           String
+  destinationAccount String  @map("destination_account")
   reason             String
-  status             String   @default("DRAFT")
+  status             String  @default("DRAFT")
 
   transferMethod    String?   @map("transfer_method")
   transferReference String?   @map("transfer_reference")
@@ -1057,20 +1034,6 @@ model Alert {
 // HR-LITE — employee master + timesheets (spec §12 / Prompt 9)
 // ---------------------------------------------------------------------------
 
-/// How an employee is engaged. Drives statutory treatment downstream (payroll, S9+).
-enum EmploymentType {
-  PERMANENT
-  CONTRACT
-  CASUAL
-}
-
-/// How an employee's pay is split across currencies. CLIENT_RATIO follows the site's
-/// client USD/ZWG billing ratio; FIXED_SPLIT uses the per-employee `fixedUsdPct`.
-enum PayMode {
-  CLIENT_RATIO
-  FIXED_SPLIT
-}
-
 /// Lifecycle of a monthly timesheet period. OPEN accepts edits; SITE_APPROVED is set
 /// after the Site Manager approval chain resolves; LOCKED is immutable and is the only
 /// state (with SITE_APPROVED) that payroll may read from.
@@ -1083,30 +1046,30 @@ enum TimesheetPeriodStatus {
 /// HR-lite employee master. Bank account numbers are masked (last 4 only) in read DTOs;
 /// the raw value is only ever used by payroll (S9+). `userId` optionally links to a login.
 model Employee {
-  id              String          @id @default(uuid()) @db.Uuid
-  worksNo         String          @unique @map("works_no")
-  firstName       String          @map("first_name")
-  lastName        String          @map("last_name")
-  nationalId      String?         @map("national_id")
-  nssaNo          String?         @map("nssa_no")
+  id              String    @id @default(uuid()) @db.Uuid
+  worksNo         String    @unique @map("works_no")
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  nationalId      String?   @map("national_id")
+  nssaNo          String?   @map("nssa_no")
   grade           String?
-  necClass        String?         @map("nec_class")
+  necClass        String?   @map("nec_class")
   occupation      String?
-  siteId          String          @map("site_id") @db.Uuid
-  employmentType  EmploymentType  @map("employment_type")
-  payMode         PayMode         @map("pay_mode")
+  siteId          String    @map("site_id") @db.Uuid
+  employmentType  String    @map("employment_type")
+  payMode         String    @map("pay_mode")
   /// Only meaningful when payMode = FIXED_SPLIT: the fixed USD percentage (0..100).
-  fixedUsdPct     Decimal?        @map("fixed_usd_pct") @db.Decimal(5, 2)
-  hourlyRate      Decimal?        @map("hourly_rate") @db.Decimal(20, 4)
-  bankName        String?         @map("bank_name")
-  bankBranch      String?         @map("bank_branch")
-  accountNo       String?         @map("account_no")
-  accountCurrency Currency?       @map("account_currency")
-  leaveBalance    Decimal         @default(0) @map("leave_balance") @db.Decimal(10, 2)
-  startDate       DateTime        @map("start_date")
-  endDate         DateTime?       @map("end_date")
+  fixedUsdPct     Decimal?  @map("fixed_usd_pct") @db.Decimal(5, 2)
+  hourlyRate      Decimal?  @map("hourly_rate") @db.Decimal(20, 4)
+  bankName        String?   @map("bank_name")
+  bankBranch      String?   @map("bank_branch")
+  accountNo       String?   @map("account_no")
+  accountCurrency String?   @map("account_currency")
+  leaveBalance    Decimal   @default(0) @map("leave_balance") @db.Decimal(10, 2)
+  startDate       DateTime  @map("start_date")
+  endDate         DateTime? @map("end_date")
   /// Optional link to the users table (an employee that also has a login).
-  userId          String?         @map("user_id") @db.Uuid
+  userId          String?   @map("user_id") @db.Uuid
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -1121,13 +1084,13 @@ model Employee {
 
 /// A monthly timesheet period per site. One period per (site, month). Entries hang off it.
 model TimesheetPeriod {
-  id                String                @id @default(uuid()) @db.Uuid
-  siteId            String                @map("site_id") @db.Uuid
+  id               String                @id @default(uuid()) @db.Uuid
+  siteId           String                @map("site_id") @db.Uuid
   /// Calendar month in YYYY-MM.
-  month             String
-  status            TimesheetPeriodStatus @default(OPEN)
-  approvedByUserId  String?               @map("approved_by_user_id") @db.Uuid
-  lockedAt          DateTime?             @map("locked_at")
+  month            String
+  status           TimesheetPeriodStatus @default(OPEN)
+  approvedByUserId String?               @map("approved_by_user_id") @db.Uuid
+  lockedAt         DateTime?             @map("locked_at")
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -1219,28 +1182,28 @@ model PayrollRun {
 /// pay config; statutory deductions/contributions are computed per currency from effective
 /// StatutoryRate config. Net = gross - paye - aidsLevy - nssaEe - otherDeductions, split USD/ZWG.
 model PayrollLine {
-  id               String     @id @default(uuid()) @db.Uuid
-  runId            String     @map("run_id") @db.Uuid
-  run              PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
-  employeeId       String     @map("employee_id") @db.Uuid
-  basicUsd         Decimal    @default(0) @map("basic_usd") @db.Decimal(20, 2)
-  basicZwg         Decimal    @default(0) @map("basic_zwg") @db.Decimal(20, 2)
-  cola             Decimal    @default(0) @db.Decimal(20, 2)
-  ugAllowance      Decimal    @default(0) @map("ug_allowance") @db.Decimal(20, 2)
-  nightAllowance   Decimal    @default(0) @map("night_allowance") @db.Decimal(20, 2)
-  otherAllowances  Decimal    @default(0) @map("other_allowances") @db.Decimal(20, 2)
-  gross            Decimal    @default(0) @db.Decimal(20, 2)
-  paye             Decimal    @default(0) @db.Decimal(20, 2)
-  aidsLevy         Decimal    @default(0) @map("aids_levy") @db.Decimal(20, 2)
-  nssaEe           Decimal    @default(0) @map("nssa_ee") @db.Decimal(20, 2)
-  nssaEr           Decimal    @default(0) @map("nssa_er") @db.Decimal(20, 2)
-  zimdef           Decimal    @default(0) @db.Decimal(20, 2)
-  nec              Decimal    @default(0) @db.Decimal(20, 2)
-  mipf             Decimal    @default(0) @db.Decimal(20, 2)
-  nyaradzo         Decimal    @default(0) @db.Decimal(20, 2)
-  otherDeductions  Decimal    @default(0) @map("other_deductions") @db.Decimal(20, 2)
-  netUsd           Decimal    @default(0) @map("net_usd") @db.Decimal(20, 2)
-  netZwg           Decimal    @default(0) @map("net_zwg") @db.Decimal(20, 2)
+  id              String     @id @default(uuid()) @db.Uuid
+  runId           String     @map("run_id") @db.Uuid
+  run             PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  employeeId      String     @map("employee_id") @db.Uuid
+  basicUsd        Decimal    @default(0) @map("basic_usd") @db.Decimal(20, 2)
+  basicZwg        Decimal    @default(0) @map("basic_zwg") @db.Decimal(20, 2)
+  cola            Decimal    @default(0) @db.Decimal(20, 2)
+  ugAllowance     Decimal    @default(0) @map("ug_allowance") @db.Decimal(20, 2)
+  nightAllowance  Decimal    @default(0) @map("night_allowance") @db.Decimal(20, 2)
+  otherAllowances Decimal    @default(0) @map("other_allowances") @db.Decimal(20, 2)
+  gross           Decimal    @default(0) @db.Decimal(20, 2)
+  paye            Decimal    @default(0) @db.Decimal(20, 2)
+  aidsLevy        Decimal    @default(0) @map("aids_levy") @db.Decimal(20, 2)
+  nssaEe          Decimal    @default(0) @map("nssa_ee") @db.Decimal(20, 2)
+  nssaEr          Decimal    @default(0) @map("nssa_er") @db.Decimal(20, 2)
+  zimdef          Decimal    @default(0) @db.Decimal(20, 2)
+  nec             Decimal    @default(0) @db.Decimal(20, 2)
+  mipf            Decimal    @default(0) @db.Decimal(20, 2)
+  nyaradzo        Decimal    @default(0) @db.Decimal(20, 2)
+  otherDeductions Decimal    @default(0) @map("other_deductions") @db.Decimal(20, 2)
+  netUsd          Decimal    @default(0) @map("net_usd") @db.Decimal(20, 2)
+  netZwg          Decimal    @default(0) @map("net_zwg") @db.Decimal(20, 2)
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -1261,12 +1224,12 @@ model PayrollLine {
 /// threshold_key, employment_type, pay_mode, role, currency_pair). Lets the admin
 /// manage these lists without a code change; services validate inputs against active codes.
 model LookupValue {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String  @id @default(uuid()) @db.Uuid
   category  String
   code      String
   label     String
-  sortOrder Int      @default(0) @map("sort_order")
-  active    Boolean  @default(true)
+  sortOrder Int     @default(0) @map("sort_order")
+  active    Boolean @default(true)
   /// Behavioural metadata, e.g. site_type {isMineSite:true}, pay_mode {splitMode:'client_ratio'},
   /// currency_pair {base:'USD', quote:'ZWG'}. System entries are marked {system:true}.
   metadata  Json?
@@ -1385,7 +1348,7 @@ model CrmOpportunity {
   contactId           String?          @map("contact_id") @db.Uuid
   stage               OpportunityStage @default(CONTACT)
   estimatedValue      Decimal?         @map("estimated_value") @db.Decimal(20, 2)
-  currency            Currency?
+  currency            String?
   ownerUserId         String?          @map("owner_user_id") @db.Uuid
   expectedCloseDate   DateTime?        @map("expected_close_date")
   wonAt               DateTime?        @map("won_at")

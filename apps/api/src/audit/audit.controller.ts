@@ -1,13 +1,13 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Prisma, Role } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { Roles } from '../rbac/roles.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditQueryDto } from './dto/audit-query.dto';
 
 @ApiTags('audit')
 @ApiBearerAuth()
-@Roles(Role.SYS_ADMIN, Role.AUDITOR)
+@Roles('SYS_ADMIN', 'AUDITOR')
 @Controller({ path: 'audit', version: '1' })
 export class AuditController {
   constructor(private readonly prisma: PrismaService) {}

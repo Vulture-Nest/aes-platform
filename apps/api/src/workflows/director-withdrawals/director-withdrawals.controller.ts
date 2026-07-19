@@ -10,7 +10,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../rbac/roles.decorator';
 import {
@@ -26,7 +25,7 @@ export class DirectorWithdrawalsController {
   constructor(private readonly withdrawals: DirectorWithdrawalsService) {}
 
   @Get()
-  @Roles(Role.DIRECTOR, Role.SYS_ADMIN, Role.AUDITOR)
+  @Roles('DIRECTOR', 'SYS_ADMIN', 'AUDITOR')
   @ApiOperation({ summary: 'List director withdrawals (optionally filtered by status)' })
   @ApiQuery({ name: 'status', required: false })
   list(@Query('status') status?: string) {
@@ -34,14 +33,14 @@ export class DirectorWithdrawalsController {
   }
 
   @Get(':id')
-  @Roles(Role.DIRECTOR, Role.SYS_ADMIN, Role.AUDITOR)
+  @Roles('DIRECTOR', 'SYS_ADMIN', 'AUDITOR')
   @ApiOperation({ summary: 'Get a director withdrawal' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.withdrawals.findOne(id);
   }
 
   @Post()
-  @Roles(Role.DIRECTOR, Role.SYS_ADMIN)
+  @Roles('DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Raise a director withdrawal (DRAFT)' })
   create(@Body() dto: CreateDirectorWithdrawalDto, @CurrentUser('id') actorId: string) {
     return this.withdrawals.create(dto, actorId);
@@ -49,7 +48,7 @@ export class DirectorWithdrawalsController {
 
   @Post(':id/submit')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.DIRECTOR, Role.SYS_ADMIN)
+  @Roles('DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Submit for co-approval by a SECOND director (merit-only)' })
   submit(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('id') requesterId: string) {
     return this.withdrawals.submit(id, requesterId);
@@ -57,7 +56,7 @@ export class DirectorWithdrawalsController {
 
   @Post(':id/complete')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.DIRECTOR, Role.SYS_ADMIN)
+  @Roles('DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({
     summary:
       'Record the human transfer that completes a posted withdrawal (completer != requester)',

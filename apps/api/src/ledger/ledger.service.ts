@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Currency, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
@@ -11,7 +11,7 @@ export interface LedgerPostEntry {
   accountId: string;
   debit?: number;
   credit?: number;
-  currency: Currency;
+  currency: string;
   sourceTable?: string;
   sourceId?: string;
   entryDate?: Date;
@@ -23,13 +23,13 @@ export interface AccountBalance {
   accountId: string;
   name: string;
   type: string;
-  currency: Currency;
+  currency: string;
   balance: number;
 }
 
 export interface CashPosition {
   accounts: AccountBalance[];
-  totals: Record<Currency, number>;
+  totals: Record<string, number>;
 }
 
 /**
@@ -108,7 +108,7 @@ export class LedgerService {
       grouped.map((g) => [g.accountId, this.toNumber(g._sum.credit) - this.toNumber(g._sum.debit)]),
     );
 
-    const totals: Record<Currency, number> = { [Currency.USD]: 0, [Currency.ZWG]: 0 };
+    const totals: Record<string, number> = { ['USD']: 0, ['ZWG']: 0 };
     const rows: AccountBalance[] = accounts.map((a) => {
       const balance = byAccount.get(a.id) ?? 0;
       totals[a.currency] += balance;

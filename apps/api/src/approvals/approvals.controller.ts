@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { Roles } from '../rbac/roles.decorator';
@@ -37,7 +36,7 @@ export class ApprovalsController {
   }
 
   @Post('submit')
-  @Roles(Role.SYS_ADMIN)
+  @Roles('SYS_ADMIN')
   @ApiOperation({ summary: 'Submit a subject into the approval engine (testing / SYS_ADMIN)' })
   submit(@Body() dto: SubmitDto) {
     return this.approvals.submit({

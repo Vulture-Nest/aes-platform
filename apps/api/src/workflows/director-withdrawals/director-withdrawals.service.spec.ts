@@ -25,6 +25,7 @@ function makeService() {
   const approvals = { submit: jest.fn().mockResolvedValue({ id: 'chain1' }) };
   const transitions = new StatusTransitionRegistry();
   const ledger = { cashPosition: jest.fn(), post: jest.fn().mockResolvedValue([]) };
+  const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
 
   const service = new DirectorWithdrawalsService(
     prisma as any,
@@ -33,6 +34,7 @@ function makeService() {
     approvals as any,
     transitions,
     ledger as any,
+    lookups as any,
   );
   service.onModuleInit();
   return { service, prisma, audit, notifications, approvals, transitions, ledger };

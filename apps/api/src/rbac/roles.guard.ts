@@ -1,6 +1,5 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role } from '@prisma/client';
 import { Request } from 'express';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { ROLES_KEY } from './roles.decorator';
@@ -21,7 +20,7 @@ export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const required = this.reflector.getAllAndOverride<Role[] | undefined>(ROLES_KEY, [
+    const required = this.reflector.getAllAndOverride<string[] | undefined>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
@@ -42,7 +41,7 @@ export class RolesGuard implements CanActivate {
       if (!required.includes(assignment.role)) {
         return false;
       }
-      if (assignment.role === Role.AUDITOR && isWrite) {
+      if (assignment.role === 'AUDITOR' && isWrite) {
         return false; // auditor is read-only
       }
       // Global assignment (site_id NULL) applies everywhere; otherwise must match the site.

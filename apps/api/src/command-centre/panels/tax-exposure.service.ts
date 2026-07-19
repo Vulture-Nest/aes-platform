@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Currency, Prisma, TaxType } from '@prisma/client';
+import { Prisma, TaxType } from '@prisma/client';
 import { PerformanceService, ExpenseBreakdown } from '../../financial/domain/performance.service';
 import { TaxLedgerConsolidationService } from '../../financial/domain/tax-ledger-consolidation.service';
 import { ZimraReconciliationService } from '../../financial/domain/zimra-reconciliation.service';
@@ -40,13 +40,13 @@ export interface TaxExposureParams {
   /** Reporting "today" for overdue-ageing (defaults to now). */
   asOf?: Date;
   /** Reporting currency for the ledger nets + provision (defaults to USD). */
-  currency?: Currency;
+  currency?: string;
 }
 
 /** A consolidated net position line for one tax head. */
 export interface TaxHeadLine {
   taxType: TaxType;
-  currency: Currency;
+  currency: string;
   /** Amount assessed/due for the head across the ledger. */
   due: number;
   /** Amount already paid against the head. */
@@ -59,7 +59,7 @@ export interface TaxHeadLine {
 export interface AssessmentExposure {
   id: string;
   taxType: TaxType;
-  currency: Currency;
+  currency: string;
   assessedAmount: number;
   dueDate: string;
   daysOverdue: number;
@@ -73,7 +73,7 @@ export interface AssessmentExposure {
 export interface CorporateIncomeTaxEstimate {
   /** Always true — this line is an ESTIMATE, never a filed/assessed liability. */
   estimate: true;
-  currency: Currency;
+  currency: string;
   /** Operating profit the estimate is based on (floored at zero). */
   operatingProfit: number;
   /** CIT rate applied (percent). */
@@ -95,7 +95,7 @@ export interface CorporateIncomeTaxEstimate {
 /** The full Panel 6 result. */
 export interface TaxExposurePanelResult {
   asOf: string;
-  currency: Currency;
+  currency: string;
   /** Net VAT line for the reporting currency. */
   vat: TaxHeadLine;
   /** Net PAYE line for the reporting currency. */
@@ -162,7 +162,7 @@ export class TaxExposureService {
    */
   async compute(params?: TaxExposureParams): Promise<TaxExposurePanelResult> {
     const asOf = params?.asOf ?? new Date();
-    const currency = params?.currency ?? Currency.USD;
+    const currency = params?.currency ?? 'USD';
 
     const [vat, paye, assessments, corporateIncomeTax] = await Promise.all([
       this.consolidateHead(TaxType.VAT, currency),
@@ -206,7 +206,7 @@ export class TaxExposureService {
    * netPaye/netVat both reduce to due - paid at the ledger level; the pure PAYE
    * consolidation is reused (no brought-forward here — that is period-scoped).
    */
-  private async consolidateHead(taxType: TaxType, currency: Currency): Promise<TaxHeadLine> {
+  private async consolidateHead(taxType: TaxType, currency: string): Promise<TaxHeadLine> {
     const rows = await this.prisma.taxLedger.findMany({ where: { taxType, currency } });
 
     const due = rows.reduce((sum, r) => sum + this.num(r.amountDue), 0);
@@ -227,7 +227,7 @@ export class TaxExposureService {
    * Outstanding ZIMRA assessments in the reporting currency, each with days
    * overdue + accrued interest at the configured ZIMRA interest rate.
    */
-  private async assessmentExposure(currency: Currency, asOf: Date): Promise<AssessmentExposure[]> {
+  private async assessmentExposure(currency: string, asOf: Date): Promise<AssessmentExposure[]> {
     const [rows, zimraRatePct] = await Promise.all([
       this.prisma.zimraAssessment.findMany({
         where: { currency },
@@ -270,7 +270,7 @@ export class TaxExposureService {
    * capital allowances, carried-forward losses, etc.
    */
   private async corporateIncomeTaxEstimate(
-    currency: Currency,
+    currency: string,
     asOf: Date,
   ): Promise<CorporateIncomeTaxEstimate> {
     const [orders, claims, orderExpenses, generalExpenses, overheads, loanInterest] =

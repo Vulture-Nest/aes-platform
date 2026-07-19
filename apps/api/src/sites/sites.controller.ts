@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../rbac/roles.decorator';
 import { CreateSiteDto, UpdateSiteDto } from './dto/site.dto';
@@ -25,14 +24,14 @@ export class SitesController {
   }
 
   @Post()
-  @Roles(Role.SYS_ADMIN)
+  @Roles('SYS_ADMIN')
   @ApiOperation({ summary: 'Create a site (admin only)' })
   create(@Body() dto: CreateSiteDto, @CurrentUser('id') actorId: string) {
     return this.sites.create(dto, actorId);
   }
 
   @Patch(':id')
-  @Roles(Role.SYS_ADMIN)
+  @Roles('SYS_ADMIN')
   @ApiOperation({ summary: 'Update a site (admin only)' })
   update(
     @Param('id', ParseUUIDPipe) id: string,

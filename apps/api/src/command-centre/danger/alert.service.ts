@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Alert, AlertSeverity, NotificationSeverity, Prisma, Role } from '@prisma/client';
+import { Alert, AlertSeverity, NotificationSeverity, Prisma } from '@prisma/client';
 import { AuditService } from '../../audit/audit.service';
 import { NotificationService } from '../../notifications/notification.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -93,17 +93,12 @@ export class AlertService {
    * Directors (and, for DANGER, all Directors regardless of prior list).
    */
   private async fanOut(alert: Alert): Promise<void> {
-    const recipientRoles: Role[] = [
-      Role.FINANCE_DIRECTOR,
-      Role.OPS_DIRECTOR,
-      Role.DIRECTOR,
-      Role.SYS_ADMIN,
-    ];
+    const recipientRoles: string[] = ['FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN'];
     const userIds = new Set(await this.userIdsWithRoles(recipientRoles));
 
     if (alert.severity === AlertSeverity.DANGER) {
       // DANGER -> notify all DIRECTOR users (in addition to the standard audience).
-      for (const id of await this.userIdsWithRoles([Role.DIRECTOR])) {
+      for (const id of await this.userIdsWithRoles(['DIRECTOR'])) {
         userIds.add(id);
       }
     }
@@ -132,7 +127,7 @@ export class AlertService {
   }
 
   /** Distinct user ids holding at least one of the given roles. */
-  private async userIdsWithRoles(roles: Role[]): Promise<string[]> {
+  private async userIdsWithRoles(roles: string[]): Promise<string[]> {
     const rows = await this.prisma.userSiteRole.findMany({
       where: { role: { in: roles } },
       select: { userId: true },

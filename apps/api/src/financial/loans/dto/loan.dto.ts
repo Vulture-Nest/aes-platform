@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { Currency, LoanInterestMethod, LoanStatus } from '@prisma/client';
+import { LoanInterestMethod, LoanStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsDate,
@@ -24,9 +24,9 @@ export class CreateLoanDto {
   @Min(0)
   principal!: number;
 
-  @ApiProperty({ enum: Currency })
-  @IsEnum(Currency)
-  currency!: Currency;
+  @ApiProperty()
+  @IsString()
+  currency!: string;
 
   @ApiPropertyOptional({ description: 'FX rate row used to convert this money' })
   @IsOptional()
@@ -69,9 +69,9 @@ export class CreateLoanRepaymentDto {
   @Min(0)
   amount!: number;
 
-  @ApiProperty({ enum: Currency })
-  @IsEnum(Currency)
-  currency!: Currency;
+  @ApiProperty()
+  @IsString()
+  currency!: string;
 
   @ApiPropertyOptional({ description: 'FX rate row used to convert this money' })
   @IsOptional()

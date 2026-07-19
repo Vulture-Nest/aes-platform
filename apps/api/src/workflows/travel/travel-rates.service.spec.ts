@@ -9,8 +9,9 @@ function makeService() {
     travelRate: { create: jest.fn(), findMany: jest.fn(), findFirst: jest.fn() },
   };
   const audit = { record: jest.fn() };
-  const service = new TravelRatesService(prisma as any, audit as any);
-  return { service, prisma, audit };
+  const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
+  const service = new TravelRatesService(prisma as any, audit as any, lookups as any);
+  return { service, prisma, audit, lookups };
 }
 
 describe('TravelRatesService.rateFor', () => {

@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../rbac/roles.decorator';
 import { CreateExchangeRateDto, RateAsOfQueryDto } from './dto/exchange-rate.dto';
@@ -14,7 +13,7 @@ export class ExchangeRatesController {
   constructor(private readonly rates: ExchangeRatesService) {}
 
   @Post()
-  @Roles(Role.FINANCE_DIRECTOR, Role.FINANCE_OFFICER, Role.SYS_ADMIN)
+  @Roles('FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Record an effective-dated FX rate (append-only)' })
   create(@Body() dto: CreateExchangeRateDto, @CurrentUser('id') actorId: string) {
     return this.rates.create(dto, actorId);

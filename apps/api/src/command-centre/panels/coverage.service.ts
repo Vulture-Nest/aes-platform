@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Currency, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ExchangeRatesService } from '../../reference/exchange-rates/exchange-rates.service';
 
@@ -26,7 +26,7 @@ const APPROVED_UNDISBURSED_STATUSES = ['APPROVED_PENDING_FUNDS', 'APPROVED_READY
 /** Optional inputs to {@link CoverageService.compute}. */
 export interface CoverageParams {
   /** Reporting currency to normalise to. Defaults to USD. */
-  currency?: Currency;
+  currency?: string;
   /** As-of date for FX conversion and the outstanding snapshot. Defaults to now. */
   asOf?: Date;
 }
@@ -46,7 +46,7 @@ export interface CoveragePanelResult {
   /** Panel identifier (stable key for the front end). */
   panel: 'orders_vs_payroll_expenses';
   /** Reporting currency all figures are expressed in. */
-  currency: Currency;
+  currency: string;
   /** Snapshot / FX as-of timestamp (ISO string). */
   asOf: string;
   /** Money we still expect to collect from outstanding orders. */
@@ -76,13 +76,13 @@ export class CoverageService {
    * handles empty data by returning zeros with a null ratio.
    */
   async compute(params?: CoverageParams): Promise<CoveragePanelResult> {
-    const currency = params?.currency ?? Currency.USD;
+    const currency = params?.currency ?? 'USD';
     const asOf = params?.asOf ?? new Date();
 
     // Cache FX rates per source currency so we hit the rate table at most once
     // per foreign currency for the whole computation.
-    const rateCache = new Map<Currency, number>();
-    const toReporting = async (amount: number, from: Currency): Promise<number> => {
+    const rateCache = new Map<string, number>();
+    const toReporting = async (amount: number, from: string): Promise<number> => {
       if (amount === 0 || from === currency) {
         return amount;
       }
@@ -124,7 +124,7 @@ export class CoverageService {
    * the count of contributing orders.
    */
   private async expectedIn(
-    toReporting: (amount: number, from: Currency) => Promise<number>,
+    toReporting: (amount: number, from: string) => Promise<number>,
   ): Promise<[number, number]> {
     const orders = await this.prisma.order.findMany({
       include: { receipts: { select: { amount: true, currency: true } } },
@@ -152,7 +152,7 @@ export class CoverageService {
    * + payroll (0 when no payroll source exists).
    */
   private async expectedOut(
-    toReporting: (amount: number, from: Currency) => Promise<number>,
+    toReporting: (amount: number, from: string) => Promise<number>,
   ): Promise<CoverageOutflowBreakdown> {
     const overheadRows = await this.prisma.overhead.findMany({
       select: { amount: true, currency: true },
@@ -190,7 +190,7 @@ export class CoverageService {
    * rate; to convert USD -> ZWG we multiply. Returns 0 on any missing/invalid
    * rate so a foreign leg contributes nothing rather than NaN/Infinity.
    */
-  private async fxRate(from: Currency, to: Currency, date: Date): Promise<number> {
+  private async fxRate(from: string, to: string, date: Date): Promise<number> {
     if (from === to) {
       return 1;
     }

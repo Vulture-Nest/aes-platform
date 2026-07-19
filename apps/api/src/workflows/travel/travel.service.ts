@@ -6,19 +6,14 @@ import {
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
-import {
-  ApprovalStatus,
-  Currency,
-  NotificationSeverity,
-  Prisma,
-  TravelRequest,
-} from '@prisma/client';
+import { ApprovalStatus, NotificationSeverity, Prisma, TravelRequest } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { NotificationService } from '../../notifications/notification.service';
 import { ApprovalService } from '../../approvals/approval.service';
 import { StatusTransitionRegistry } from '../../approvals/status-transition.registry';
 import { LedgerService } from '../../ledger/ledger.service';
+import { LookupService } from '../../settings/lookup.service';
 import { TravelRatesService } from './travel-rates.service';
 import { CreateTravelDto, DisburseTravelDto, RetireTravelDto } from './dto/travel.dto';
 
@@ -56,6 +51,7 @@ export class TravelService implements OnModuleInit {
     private readonly transitions: StatusTransitionRegistry,
     private readonly ledger: LedgerService,
     private readonly rates: TravelRatesService,
+    private readonly lookups: LookupService,
   ) {}
 
   /**
@@ -105,6 +101,7 @@ export class TravelService implements OnModuleInit {
    * matching rate row can always be looked up.
    */
   async create(dto: CreateTravelDto, actorId: string): Promise<TravelRequest> {
+    await this.lookups.assertValid('currency', dto.currency);
     if (dto.dateTo < dto.dateFrom) {
       throw new BadRequestException('dateTo cannot be before dateFrom');
     }
@@ -331,7 +328,7 @@ export class TravelService implements OnModuleInit {
       {
         accountId: dto.accountId,
         debit: travel.advanceAmount.toNumber(),
-        currency: travel.currency as Currency,
+        currency: travel.currency as string,
         sourceTable: SUBJECT_TABLE,
         sourceId: id,
         entryDate: disbursedAt,
@@ -416,7 +413,7 @@ export class TravelService implements OnModuleInit {
         {
           accountId: travel.disbursementAccountId,
           credit: dto.unspent,
-          currency: travel.currency as Currency,
+          currency: travel.currency as string,
           sourceTable: SUBJECT_TABLE,
           sourceId: id,
           entryDate: retiredAt,

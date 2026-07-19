@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Currency, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { LedgerService } from '../../ledger/ledger.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ExchangeRatesService } from '../../reference/exchange-rates/exchange-rates.service';
@@ -17,14 +17,14 @@ export interface ObligationLine {
   id: string;
   description: string;
   amount: number;
-  currency: Currency;
+  currency: string;
   requiredByDate: string | null;
   overdue: boolean;
 }
 
 /** Per-currency roll-up of obligations vs available cash. */
 export interface CurrencyObligationSummary {
-  currency: Currency;
+  currency: string;
   count: number;
   obligations: number;
   availableCash: number;
@@ -38,9 +38,9 @@ export interface PendingObligationsPanel {
   totals: {
     count: number;
     /** Per-currency obligation totals (no cross-currency mixing). */
-    obligations: Record<Currency, number>;
-    availableCash: Record<Currency, number>;
-    unfundedGap: Record<Currency, number>;
+    obligations: Record<string, number>;
+    availableCash: Record<string, number>;
+    unfundedGap: Record<string, number>;
   };
   byCurrency: CurrencyObligationSummary[];
   /**
@@ -141,23 +141,23 @@ export class PendingObligationsService {
       return b.amount - a.amount;
     });
 
-    const currencies: Currency[] = [Currency.USD, Currency.ZWG];
+    const currencies: string[] = ['USD', 'ZWG'];
 
-    const obligations: Record<Currency, number> = { [Currency.USD]: 0, [Currency.ZWG]: 0 };
-    const counts: Record<Currency, number> = { [Currency.USD]: 0, [Currency.ZWG]: 0 };
+    const obligations: Record<string, number> = { ['USD']: 0, ['ZWG']: 0 };
+    const counts: Record<string, number> = { ['USD']: 0, ['ZWG']: 0 };
     for (const line of lines) {
       obligations[line.currency] += line.amount;
       counts[line.currency] += 1;
     }
 
-    const availableCash: Record<Currency, number> = {
-      [Currency.USD]: cash.totals[Currency.USD] ?? 0,
-      [Currency.ZWG]: cash.totals[Currency.ZWG] ?? 0,
+    const availableCash: Record<string, number> = {
+      ['USD']: cash.totals['USD'] ?? 0,
+      ['ZWG']: cash.totals['ZWG'] ?? 0,
     };
 
-    const unfundedGap: Record<Currency, number> = {
-      [Currency.USD]: Math.max(0, obligations[Currency.USD] - availableCash[Currency.USD]),
-      [Currency.ZWG]: Math.max(0, obligations[Currency.ZWG] - availableCash[Currency.ZWG]),
+    const unfundedGap: Record<string, number> = {
+      ['USD']: Math.max(0, obligations['USD'] - availableCash['USD']),
+      ['ZWG']: Math.max(0, obligations['ZWG'] - availableCash['ZWG']),
     };
 
     const byCurrency: CurrencyObligationSummary[] = currencies.map((currency) => ({
@@ -190,19 +190,19 @@ export class PendingObligationsService {
    * or the rate is non-positive — never throws, so the panel degrades gracefully.
    */
   private async foldToUsd(
-    obligations: Record<Currency, number>,
-    availableCash: Record<Currency, number>,
+    obligations: Record<string, number>,
+    availableCash: Record<string, number>,
     asOf: Date,
   ): Promise<PendingObligationsPanel['usdEquivalent']> {
-    const zwgObligations = obligations[Currency.ZWG];
-    const zwgCash = availableCash[Currency.ZWG];
+    const zwgObligations = obligations['ZWG'];
+    const zwgCash = availableCash['ZWG'];
 
     // No ZWG exposure at all — the USD figures already are the combined figures.
     if (zwgObligations === 0 && zwgCash === 0) {
       return {
-        obligations: obligations[Currency.USD],
-        availableCash: availableCash[Currency.USD],
-        unfundedGap: Math.max(0, obligations[Currency.USD] - availableCash[Currency.USD]),
+        obligations: obligations['USD'],
+        availableCash: availableCash['USD'],
+        unfundedGap: Math.max(0, obligations['USD'] - availableCash['USD']),
         rateUsed: null,
       };
     }
@@ -226,8 +226,8 @@ export class PendingObligationsService {
     const zwgObligationsUsd = zwgObligations / rate;
     const zwgCashUsd = zwgCash / rate;
 
-    const combinedObligations = obligations[Currency.USD] + zwgObligationsUsd;
-    const combinedCash = availableCash[Currency.USD] + zwgCashUsd;
+    const combinedObligations = obligations['USD'] + zwgObligationsUsd;
+    const combinedCash = availableCash['USD'] + zwgCashUsd;
 
     return {
       obligations: combinedObligations,

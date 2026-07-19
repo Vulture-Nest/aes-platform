@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import {
   ApprovalStatus,
-  Currency,
   NotificationSeverity,
   PettyCashFloat,
   PettyCashTxn,
@@ -23,6 +22,7 @@ import { LedgerService } from '../../ledger/ledger.service';
 import { ThresholdsService } from '../../reference/thresholds/thresholds.service';
 import { ExchangeRatesService } from '../../reference/exchange-rates/exchange-rates.service';
 import { RateType } from '../../reference/exchange-rates/rate-type.enum';
+import { LookupService } from '../../settings/lookup.service';
 import {
   CreateConversionDto,
   CreateFloatDto,
@@ -73,6 +73,7 @@ export class PettyCashService implements OnModuleInit {
     private readonly ledger: LedgerService,
     private readonly thresholds: ThresholdsService,
     private readonly exchangeRates: ExchangeRatesService,
+    private readonly lookups: LookupService,
   ) {}
 
   /**
@@ -98,6 +99,7 @@ export class PettyCashService implements OnModuleInit {
 
   /** Open a petty-cash float for a site + currency held by a custodian. */
   async createFloat(dto: CreateFloatDto, actorId: string): Promise<PettyCashFloat> {
+    await this.lookups.assertValid('currency', dto.currency);
     const float = await this.prisma.pettyCashFloat.create({
       data: {
         siteId: dto.siteId,
@@ -294,6 +296,7 @@ export class PettyCashService implements OnModuleInit {
     actorId: string,
   ): Promise<{ out: PettyCashTxn; in: PettyCashTxn; varianceVsOfficial: number }> {
     const float = await this.findFloat(floatId);
+    await this.lookups.assertValid('currency', dto.toCurrency);
     if (float.locked) {
       throw new ForbiddenException(
         'Float is locked pending reconciliation; conversions are blocked',
@@ -627,7 +630,7 @@ export class PettyCashService implements OnModuleInit {
       {
         accountId: sourceAccountId,
         debit: txn.amount.toNumber(),
-        currency: float.currency as Currency,
+        currency: float.currency as string,
         sourceTable: SUBJECT_TABLE,
         sourceId: txn.id,
         entryDate: new Date(),
@@ -642,7 +645,7 @@ export class PettyCashService implements OnModuleInit {
   // -------------------------------------------------------------------------
 
   /** True when `amount` is at or above the FD threshold for the currency. */
-  private async atOrAboveThreshold(amount: number, currency: Currency): Promise<boolean> {
+  private async atOrAboveThreshold(amount: number, currency: string): Promise<boolean> {
     const threshold = await this.thresholds.current(FD_THRESHOLD_KEY, currency);
     if (threshold.value == null) {
       // No numeric threshold configured => treat everything as below (SM-confirm) rather than

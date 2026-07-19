@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Currency, Role } from '@prisma/client';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../rbac/roles.decorator';
 import { CreateThresholdDto } from './dto/threshold.dto';
@@ -13,7 +12,7 @@ export class ThresholdsController {
   constructor(private readonly thresholds: ThresholdsService) {}
 
   @Post()
-  @Roles(Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Set a threshold / tunable parameter' })
   create(@Body() dto: CreateThresholdDto, @CurrentUser('id') actorId: string) {
     return this.thresholds.create(dto, actorId);
@@ -27,7 +26,7 @@ export class ThresholdsController {
 
   @Get('current')
   @ApiOperation({ summary: 'Current value for a threshold key' })
-  current(@Query('key') key: string, @Query('currency') currency?: Currency) {
+  current(@Query('key') key: string, @Query('currency') currency?: string) {
     return this.thresholds.current(key, currency);
   }
 }

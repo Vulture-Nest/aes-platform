@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../rbac/roles.decorator';
 import { CreateUserDto, SiteRoleAssignmentDto } from './dto/create-user.dto';
@@ -8,7 +7,7 @@ import { UsersService } from './users.service';
 
 @ApiTags('users')
 @ApiBearerAuth()
-@Roles(Role.SYS_ADMIN)
+@Roles('SYS_ADMIN')
 @Controller({ path: 'users', version: '1' })
 export class UsersController {
   constructor(private readonly users: UsersService) {}
