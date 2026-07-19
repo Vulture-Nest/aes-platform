@@ -5,7 +5,7 @@ platform for **Airflow Environmental Solutions (AES)**, a Zimbabwean mining-serv
 
 > **Status:** Stage 0 — repository & environment scaffold. No business logic yet.
 > See [`docs/AES_Build_Flow.md`](docs/AES_Build_Flow.md) for the full staged plan and
-> [`CLAUDE.md`](CLAUDE.md) for the standing project context.
+> [`CLAUDE.md`](CLAUDE.md) for the standing project context (incl. architecture decisions).
 
 ## Stack
 
@@ -15,8 +15,10 @@ platform for **Airflow Environmental Solutions (AES)**, a Zimbabwean mining-serv
 | Data | PostgreSQL 16 + Prisma |
 | Jobs / cache | Redis 7 + BullMQ |
 | File store | MinIO (local) behind a `StorageService` interface (SharePoint/Graph in prod) |
-| Client | Flutter 3 (mobile + web, one codebase), Riverpod, go_router |
-| Auth | Microsoft Entra ID (OIDC) |
+| **Mobile** | **Flutter 3 — BLoC + Cubit**, go_router, dio |
+| **Web** | **React 18 + Redux Toolkit + TypeScript** (Vite) |
+| Auth | **Local JWT (self-managed)** + self-managed RBAC — *not* a third-party IdP |
+| Deploy | Docker → GitHub Actions → DigitalOcean droplet + DO Managed PostgreSQL |
 | Analytics | Microsoft Fabric / Power BI |
 | Notifications | FCM push + Microsoft Graph (email/Teams) |
 
@@ -26,17 +28,16 @@ platform for **Airflow Environmental Solutions (AES)**, a Zimbabwean mining-serv
 .
 ├── apps/
 │   ├── api/            # NestJS API (Prisma, config, health, OpenAPI, storage)
-│   └── app/            # Flutter client (mobile + web, dev/prod flavors)
+│   ├── mobile/         # Flutter mobile client (BLoC + Cubit, dev/prod flavors)
+│   └── web/            # React + Redux + TS web client (Vite)
 ├── packages/
 │   └── shared/         # Generated API contract types (OpenAPI → TS)
+├── deploy/             # CI/CD workflows + prod compose (DigitalOcean)
 ├── docs/               # Build flow, agent prompts, system design
-├── docker-compose.dev.yml
+├── docker-compose.yml       # full local stack (api + web + infra)
+├── docker-compose.dev.yml   # infra only (run api/web from source)
 └── .env.example
 ```
-
-> **CI is not yet wired up.** A GitHub Actions workflow (API lint/test/build + Prisma
-> migrate check; Flutter analyze/test) is planned at `.github/workflows/ci.yml` and must be
-> added with a `workflow`-scoped token before branch protection can require green checks.
 
 ## Getting started
 
@@ -44,43 +45,48 @@ platform for **Airflow Environmental Solutions (AES)**, a Zimbabwean mining-serv
 
 - Node.js 20+ and npm 10+
 - Docker + Docker Compose
-- Flutter 3.19+ (for `apps/app`)
+- Flutter 3.19+ (for `apps/mobile`)
 
-### 1. Local infrastructure
+### Option A — full stack in Docker (closest to production)
 
 ```bash
 cp .env.example .env
+docker compose up --build
+#   web  → http://localhost:8080
+#   api  → http://localhost:3000  (docs at /docs, health at /health)
+```
+
+### Option B — infra in Docker, apps from source (fast iteration)
+
+```bash
 docker compose -f docker-compose.dev.yml up -d   # postgres:16, redis:7, minio
+
+# API
+cd apps/api && cp .env.example .env && npm install
+npx prisma generate && npx prisma migrate dev
+npm run start:dev            # http://localhost:3000
+
+# Web (new terminal)
+cd apps/web && npm install && npm run dev   # http://localhost:5173 (proxies /api → :3000)
+
+# Mobile (new terminal)
+cd apps/mobile && flutter pub get
+flutter run --flavor dev -t lib/main_dev.dart
 ```
 
-### 2. API
+## Deployment
 
-```bash
-cd apps/api
-cp .env.example .env
-npm install
-npx prisma generate
-npx prisma migrate dev          # applies the (empty) baseline schema
-npm run start:dev               # http://localhost:3000
-```
+Docker images built by **GitHub Actions**, deployed to a **DigitalOcean droplet** backed by
+**DO Managed PostgreSQL**. Pipeline + prod compose live in [`deploy/`](deploy/).
 
-- Health check: `GET http://localhost:3000/health`
-- OpenAPI docs: `http://localhost:3000/docs`
-
-### 3. Flutter client
-
-```bash
-cd apps/app
-flutter pub get
-flutter run --flavor dev -t lib/main_dev.dart          # mobile
-flutter run -d chrome --flavor dev -t lib/main_dev.dart # web
-```
+> The server is not provisioned yet — everything above runs and tests **locally** today.
+> The GitHub Actions YAML is staged under `deploy/github-workflows/` and must be moved to
+> `.github/workflows/` with a **`workflow`-scoped token** to activate (see [`deploy/README.md`](deploy/README.md)).
 
 ## Contributing
 
 - **Never push directly to `main`.** Branch as `stage/<n>-<name>`, open a PR, require green CI.
-- CI (lint, unit tests, Prisma migrate check, Flutter analyze/test) is planned but not yet
-  enabled — see the CI note above. Once added, it must pass before merge.
+- CI (API + web + mobile) is defined in `deploy/github-workflows/ci.yml`; activate it per above.
 - Each stage maps to a numbered prompt in [`docs/AES_Agent_Prompts.md`](docs/AES_Agent_Prompts.md).
 
 ## License

@@ -19,19 +19,23 @@ secrets/
 apps/api/prisma/*.db
 apps/api/prisma/migrations/dev/
 
-# ---- Flutter / Dart ----
-apps/app/.dart_tool/
-apps/app/.flutter-plugins
-apps/app/.flutter-plugins-dependencies
-apps/app/build/
-apps/app/.packages
-apps/app/pubspec.lock
-apps/app/ios/Pods/
-apps/app/ios/.symlinks/
-apps/app/android/.gradle/
-apps/app/android/local.properties
-apps/app/**/*.g.dart
-apps/app/**/*.freezed.dart
+# ---- Flutter / Dart (apps/mobile) ----
+apps/mobile/.dart_tool/
+apps/mobile/.flutter-plugins
+apps/mobile/.flutter-plugins-dependencies
+apps/mobile/build/
+apps/mobile/.packages
+apps/mobile/pubspec.lock
+apps/mobile/ios/Pods/
+apps/mobile/ios/.symlinks/
+apps/mobile/android/.gradle/
+apps/mobile/android/local.properties
+apps/mobile/**/*.g.dart
+apps/mobile/**/*.freezed.dart
+
+# ---- Web (apps/web) ----
+apps/web/dist/
+apps/web/.vite/
 
 # ---- Generated API contracts ----
 packages/shared/generated/

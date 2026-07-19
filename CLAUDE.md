@@ -3,16 +3,36 @@
 > This file is the standing context for every AI coding session on this repository.
 > It is **Prompt 0** from [`docs/AES_Agent_Prompts.md`](docs/AES_Agent_Prompts.md). Read it before any task.
 
+## ⚠️ Architecture decisions (override the spec PDF / agent prompts)
+
+Decisions made after the docs were written. **These win over anything in `docs/`.**
+
+1. **Auth is local JWT — NOT Microsoft Entra ID / OIDC.** (2026-07-19) We own the identity:
+   `users` table, email + password login (argon2), self-signed JWTs (access + rotating
+   refresh), admin-provisioned users with a seeded initial SysAdmin. Ignore every
+   Entra/OIDC/MSAL reference in the docs — it is superseded.
+2. **RBAC is fully self-managed** — `roles` + `user_site_roles` enforced by our own NestJS
+   guards. No third-party authorization provider. (Postgres RLS still applies, added in S3.)
+3. **Clients are split, not one Flutter codebase.** (2026-07-19)
+   - **`apps/mobile`** — Flutter (iOS/Android only), state via **BLoC + Cubit** (`flutter_bloc`).
+     No Riverpod, no Flutter web.
+   - **`apps/web`** — separate **React + Redux Toolkit + TypeScript** app (Vite).
+4. **Deployment: Docker → GitHub Actions → DigitalOcean droplet + DO Managed PostgreSQL.**
+   (2026-07-19) Pipeline in `deploy/`. Server not provisioned yet → **everything must run and
+   be tested locally**; deploy secrets/host come later. GH Actions YAML lives in
+   `deploy/github-workflows/` until a `workflow`-scoped token can push it to `.github/workflows/`.
+
 ```
 You are building the AES Operations & Finance Management System for Airflow Environmental
 Solutions, a Zimbabwean mining-services contractor. Full spec: docs/AES_System_Design.pdf.
 Repository: https://github.com/Vulture-Nest/aes-platform (private). Work on feature
 branches (stage/<n>-<name>), open PRs into main; never push directly to main.
 
-Stack: NestJS (TypeScript, REST + WebSocket, OpenAPI), Flutter (mobile + web, one codebase),
-PostgreSQL 16 + Prisma, Redis + BullMQ, Microsoft Entra ID via OIDC, FCM push, Microsoft
-Graph for email/Teams/SharePoint file storage, server-side XLSX/PDF/CSV generation.
-Monorepo: apps/api (NestJS), apps/app (Flutter), packages/shared (generated API contracts).
+Stack: NestJS (TypeScript, REST + WebSocket, OpenAPI); Flutter mobile (BLoC + Cubit) +
+React/Redux/TypeScript web (see decisions above); PostgreSQL 16 + Prisma, Redis + BullMQ,
+local JWT auth (self-managed, NOT Entra/OIDC), FCM push, Microsoft Graph for
+email/Teams/SharePoint file storage, server-side XLSX/PDF/CSV generation.
+Monorepo: apps/api (NestJS), apps/mobile (Flutter), apps/web (React), packages/shared.
 
 Non-negotiable principles:
 1. Single source of truth: PostgreSQL. Excel is an OUTPUT format only.
@@ -28,10 +48,10 @@ Non-negotiable principles:
    before/after JSONB, timestamp) on every insert/update/approval/status change.
 7. All statutory values (VAT %, PAYE bands per currency, NSSA/ZIMDEF/NEC/MIPF params,
    ZIMRA interest %) are effective-dated admin configuration, never hardcoded.
-8. RBAC per user per site, enforced in NestJS guards AND Postgres row-level security.
-   Roles: Site Clerk, Site Manager, Operations Staff, Finance Officer, Finance Director (FD),
-   Operations Director (OD), Managing Director/Directors, System Administrator,
-   Auditor (read-only). No user may ever approve their own request.
+8. RBAC per user per site, self-managed and enforced in NestJS guards AND (from S3) Postgres
+   row-level security. Roles: Site Clerk, Site Manager, Operations Staff, Finance Officer,
+   Finance Director (FD), Operations Director (OD), Managing Director/Directors, System
+   Administrator, Auditor (read-only). No user may ever approve their own request.
 9. Business logic lives in unit-tested domain services, not report-layer arithmetic.
    Appendix A of the spec is the authoritative rulebook; classic workbook rules must be
    reproduced to $0.01 before any IMPROVE variant activates.
@@ -58,7 +78,7 @@ The full stage map and per-stage acceptance gates live in
 | S4 | `stage/5-migration` | Excel data migration + parity gate |
 | S5 | `stage/6-workflows` | Requisitions, travel, petty cash, budgets, withdrawals |
 | S6 | `stage/7-command-centre` | Command Centre + danger engine |
-| S7 | `stage/8-flutter-app` | Flutter app (mobile + web) |
+| S7 | `stage/8-clients` | Client apps — Flutter mobile (BLoC) + React/Redux web |
 | S8–S11 | … | Timesheets, payroll, BI, CRM, hardening |
 
 > The design PDF referenced as `docs/AES_System_Design.pdf` should be added to the repo.
