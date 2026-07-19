@@ -1,0 +1,28 @@
+// AES platform — Prisma schema.
+//
+// Stage 0 scaffold: datasource + generator + a minimal HealthCheck model so the
+// pipeline (migrate diff, prisma generate) is exercised end to end. Domain tables
+// (users, sites, exchange_rates, audit_log, approvals, orders, …) arrive in S1+.
+//
+// Conventions for all future models (see CLAUDE.md):
+//   - UUID primary keys
+//   - created_by / created_at / updated_by / updated_at on every table
+//   - money stored as (amount, currency, fx_rate_id, rate_type) — never a bare number
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Trivial table used only to prove connectivity + migrations in the S0 scaffold.
+/// Safe to drop once the S1 foundations land.
+model HealthCheck {
+  id        String   @id @default(uuid()) @db.Uuid
+  checkedAt DateTime @default(now()) @map("checked_at")
+
+  @@map("health_check")
+}

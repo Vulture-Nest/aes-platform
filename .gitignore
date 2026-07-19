@@ -1,0 +1,50 @@
+# ---- Node / NestJS ----
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.npm/
+.eslintcache
+
+# ---- Environment / secrets ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ---- Prisma ----
+apps/api/prisma/*.db
+apps/api/prisma/migrations/dev/
+
+# ---- Flutter / Dart ----
+apps/app/.dart_tool/
+apps/app/.flutter-plugins
+apps/app/.flutter-plugins-dependencies
+apps/app/build/
+apps/app/.packages
+apps/app/pubspec.lock
+apps/app/ios/Pods/
+apps/app/ios/.symlinks/
+apps/app/android/.gradle/
+apps/app/android/local.properties
+apps/app/**/*.g.dart
+apps/app/**/*.freezed.dart
+
+# ---- Generated API contracts ----
+packages/shared/generated/
+
+# ---- Docker / local infra volumes ----
+.docker-data/
+minio-data/
+pgdata/
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log

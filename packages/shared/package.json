@@ -1,0 +1,12 @@
+{
+  "name": "@aes/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Generated API contract types shared between apps/api and apps/app tooling.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "generated/index.ts",
+  "scripts": {
+    "generate": "bash scripts/generate.sh"
+  }
+}
