@@ -49,11 +49,6 @@ enum UserStatus {
   INVITED
 }
 
-enum SiteType {
-  MINE_SITE
-  HEAD_OFFICE
-}
-
 // ---------------------------------------------------------------------------
 // Identity — local user store (we own auth; no third-party IdP)
 // ---------------------------------------------------------------------------
@@ -124,7 +119,7 @@ model UserSiteRole {
 model Site {
   id       String   @id @default(uuid()) @db.Uuid
   name     String   @unique
-  type     SiteType
+  type     String
   /// Set when a site maps to a client (mine sites); null for head office.
   clientId String?  @map("client_id") @db.Uuid
   active   Boolean  @default(true)
@@ -1057,20 +1052,6 @@ model Alert {
 // HR-LITE — employee master + timesheets (spec §12 / Prompt 9)
 // ---------------------------------------------------------------------------
 
-/// How an employee is engaged. Drives statutory treatment downstream (payroll, S9+).
-enum EmploymentType {
-  PERMANENT
-  CONTRACT
-  CASUAL
-}
-
-/// How an employee's pay is split across currencies. CLIENT_RATIO follows the site's
-/// client USD/ZWG billing ratio; FIXED_SPLIT uses the per-employee `fixedUsdPct`.
-enum PayMode {
-  CLIENT_RATIO
-  FIXED_SPLIT
-}
-
 /// Lifecycle of a monthly timesheet period. OPEN accepts edits; SITE_APPROVED is set
 /// after the Site Manager approval chain resolves; LOCKED is immutable and is the only
 /// state (with SITE_APPROVED) that payroll may read from.
@@ -1093,8 +1074,8 @@ model Employee {
   necClass        String?         @map("nec_class")
   occupation      String?
   siteId          String          @map("site_id") @db.Uuid
-  employmentType  EmploymentType  @map("employment_type")
-  payMode         PayMode         @map("pay_mode")
+  employmentType  String          @map("employment_type")
+  payMode         String          @map("pay_mode")
   /// Only meaningful when payMode = FIXED_SPLIT: the fixed USD percentage (0..100).
   fixedUsdPct     Decimal?        @map("fixed_usd_pct") @db.Decimal(5, 2)
   hourlyRate      Decimal?        @map("hourly_rate") @db.Decimal(20, 4)

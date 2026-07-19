@@ -3,7 +3,6 @@ import {
   ApprovalDecision,
   ApprovalStatus,
   Currency,
-  PayMode,
   PayrollRunStatus,
   Prisma,
   TimesheetPeriodStatus,
@@ -195,7 +194,7 @@ describe('PayrollService.computeRun', () => {
       {
         id: 'e1',
         siteId: 's1',
-        payMode: PayMode.FIXED_SPLIT,
+        payMode: 'FIXED_SPLIT',
         fixedUsdPct: dec(100),
         hourlyRate: dec(10), // gross = 160 * 10 = 1600 (all USD)
         ...employeeOverrides,

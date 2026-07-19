@@ -10,7 +10,6 @@ import {
   ApprovalStatus,
   Currency,
   Employee,
-  PayMode,
   PayrollLine,
   PayrollRun,
   PayrollRunStatus,
@@ -777,8 +776,7 @@ export class PayrollService implements OnModuleInit {
       nightHours: hours.nightHours,
       hourlyRate,
       split: {
-        mode:
-          employee.payMode === PayMode.FIXED_SPLIT ? SplitMode.FIXED_SPLIT : SplitMode.CLIENT_RATIO,
+        mode: employee.payMode === 'FIXED_SPLIT' ? SplitMode.FIXED_SPLIT : SplitMode.CLIENT_RATIO,
         usdPct,
       },
     });
@@ -840,7 +838,7 @@ export class PayrollService implements OnModuleInit {
 
   /** The USD split percentage for an employee: fixed (FIXED_SPLIT) or the client ratio. */
   private splitUsdPct(employee: Employee, clientUsdPct: number): number {
-    if (employee.payMode === PayMode.FIXED_SPLIT && employee.fixedUsdPct != null) {
+    if (employee.payMode === 'FIXED_SPLIT' && employee.fixedUsdPct != null) {
       return employee.fixedUsdPct.toNumber();
     }
     return clientUsdPct;

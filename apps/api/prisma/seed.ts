@@ -1,15 +1,15 @@
-import { AccountType, Currency, PrismaClient, Role, SiteType, UserStatus } from '@prisma/client';
+import { AccountType, Currency, PrismaClient, Role, UserStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
   // Reference sites (spec §4 / §1).
-  const sites: Array<{ name: string; type: SiteType }> = [
-    { name: 'Mimosa', type: SiteType.MINE_SITE },
-    { name: 'Unki', type: SiteType.MINE_SITE },
-    { name: 'Zimplats', type: SiteType.MINE_SITE },
-    { name: 'Head Office', type: SiteType.HEAD_OFFICE },
+  const sites: Array<{ name: string; type: string }> = [
+    { name: 'Mimosa', type: 'MINE_SITE' },
+    { name: 'Unki', type: 'MINE_SITE' },
+    { name: 'Zimplats', type: 'MINE_SITE' },
+    { name: 'Head Office', type: 'HEAD_OFFICE' },
   ];
   for (const site of sites) {
     await prisma.site.upsert({ where: { name: site.name }, update: {}, create: site });
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   // Default ledger accounts (spec §S5). Idempotent: matched by (name, currency, siteId).
   // Head-office bank accounts + one petty-cash account per mine site.
   const allSites = await prisma.site.findMany();
-  const mineSites = allSites.filter((s) => s.type === SiteType.MINE_SITE);
+  const mineSites = allSites.filter((s) => s.type === 'MINE_SITE');
   const defaultAccounts: Array<{
     name: string;
     type: AccountType;

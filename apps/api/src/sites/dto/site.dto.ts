@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { SiteType } from '@prisma/client';
-import { IsBoolean, IsEnum, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
 
 export class CreateSiteDto {
   @ApiProperty({ example: 'Mimosa' })
@@ -8,9 +7,12 @@ export class CreateSiteDto {
   @MinLength(2)
   name!: string;
 
-  @ApiProperty({ enum: SiteType })
-  @IsEnum(SiteType)
-  type!: SiteType;
+  @ApiProperty({
+    example: 'MINE_SITE',
+    description: 'Validated against the site_type lookup catalog.',
+  })
+  @IsString()
+  type!: string;
 
   @ApiPropertyOptional({ description: 'Client this site maps to (mine sites).' })
   @IsOptional()

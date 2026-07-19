@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { PayMode, Role } from '@prisma/client';
+import { Role } from '@prisma/client';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { EmployeesService, maskAccountNo } from './employees.service';
 
@@ -18,8 +18,9 @@ function makeService() {
     user: { findUnique: jest.fn() },
   };
   const audit = { record: jest.fn() };
-  const service = new EmployeesService(prisma as any, audit as any);
-  return { service, prisma, audit };
+  const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
+  const service = new EmployeesService(prisma as any, audit as any, lookups as any);
+  return { service, prisma, audit, lookups };
 }
 
 const financeUser: AuthenticatedUser = {
@@ -44,7 +45,7 @@ const baseEmployee = {
   siteId: 's1',
   accountNo: '01120345678',
   fixedUsdPct: null,
-  payMode: PayMode.CLIENT_RATIO,
+  payMode: 'CLIENT_RATIO',
 };
 
 describe('maskAccountNo', () => {
@@ -128,7 +129,7 @@ describe('EmployeesService.create pay-mode consistency', () => {
           lastName: 'B',
           siteId: 's1',
           employmentType: 'PERMANENT' as any,
-          payMode: PayMode.FIXED_SPLIT,
+          payMode: 'FIXED_SPLIT',
           startDate: new Date(),
         },
         'fin1',
@@ -146,7 +147,7 @@ describe('EmployeesService.create pay-mode consistency', () => {
           lastName: 'B',
           siteId: 's1',
           employmentType: 'PERMANENT' as any,
-          payMode: PayMode.CLIENT_RATIO,
+          payMode: 'CLIENT_RATIO',
           fixedUsdPct: 60,
           startDate: new Date(),
         },
@@ -165,7 +166,7 @@ describe('EmployeesService.create pay-mode consistency', () => {
         lastName: 'B',
         siteId: 's1',
         employmentType: 'PERMANENT' as any,
-        payMode: PayMode.FIXED_SPLIT,
+        payMode: 'FIXED_SPLIT',
         fixedUsdPct: 60,
         accountNo: '99887766',
         startDate: new Date(),
