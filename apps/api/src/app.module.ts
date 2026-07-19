@@ -29,6 +29,7 @@ import { CommandCentreModule } from './command-centre/command-centre.module';
 import { HrModule } from './hr/hr.module';
 import { TimesheetsModule } from './timesheets/timesheets.module';
 import { PayrollModule } from './payroll/payroll.module';
+import { CrmModule } from './crm/crm.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { PayrollModule } from './payroll/payroll.module';
     HrModule,
     TimesheetsModule,
     PayrollModule,
+    CrmModule,
     HealthModule,
   ],
   providers: [
