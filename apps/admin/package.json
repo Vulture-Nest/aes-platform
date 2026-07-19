@@ -1,8 +1,8 @@
 {
-  "name": "@aes/web",
+  "name": "@aes/admin",
   "version": "0.0.0",
   "private": true,
-  "description": "AES platform web client (React + Redux Toolkit + TypeScript + Ant Design)",
+  "description": "AES platform admin console (React + Redux Toolkit + TypeScript + Ant Design)",
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {

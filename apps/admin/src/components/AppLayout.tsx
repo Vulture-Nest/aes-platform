@@ -1,0 +1,113 @@
+import {
+  ApartmentOutlined,
+  AuditOutlined,
+  BankOutlined,
+  DashboardOutlined,
+  DollarOutlined,
+  LogoutOutlined,
+  PercentageOutlined,
+  SlidersOutlined,
+  TeamOutlined,
+} from '@ant-design/icons';
+import { Button, Dropdown, Layout, Menu, Typography } from 'antd';
+import { ReactNode } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useLogoutMutation } from '../api/api';
+import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { loggedOut } from '../features/auth/authSlice';
+import { hasAnyRole, type Role } from '../rbac/roles';
+
+interface NavItem {
+  key: string;
+  label: string;
+  icon: ReactNode;
+  roles?: Role[];
+}
+
+const NAV: NavItem[] = [
+  { key: '/', label: 'Dashboard', icon: <DashboardOutlined /> },
+  { key: '/users', label: 'Users & Roles', icon: <TeamOutlined />, roles: ['SYS_ADMIN'] },
+  { key: '/sites', label: 'Sites', icon: <BankOutlined />, roles: ['SYS_ADMIN'] },
+  {
+    key: '/exchange-rates',
+    label: 'Exchange Rates',
+    icon: <DollarOutlined />,
+    roles: ['FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'SYS_ADMIN'],
+  },
+  {
+    key: '/statutory-rates',
+    label: 'Statutory Rates',
+    icon: <PercentageOutlined />,
+    roles: ['FINANCE_DIRECTOR', 'SYS_ADMIN'],
+  },
+  {
+    key: '/thresholds',
+    label: 'Thresholds',
+    icon: <SlidersOutlined />,
+    roles: ['FINANCE_DIRECTOR', 'SYS_ADMIN'],
+  },
+  {
+    key: '/delegation',
+    label: 'Delegation',
+    icon: <ApartmentOutlined />,
+    roles: ['FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'SYS_ADMIN'],
+  },
+  { key: '/audit', label: 'Audit Log', icon: <AuditOutlined />, roles: ['SYS_ADMIN', 'AUDITOR'] },
+];
+
+export function AppLayout({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const user = useAppSelector((s) => s.auth.user);
+  const refreshToken = useAppSelector((s) => s.auth.refreshToken);
+  const [logout] = useLogoutMutation();
+
+  const items = NAV.filter((n) => hasAnyRole(user, n.roles ?? [])).map((n) => ({
+    key: n.key,
+    icon: n.icon,
+    label: n.label,
+  }));
+
+  const onLogout = async () => {
+    if (refreshToken) await logout({ refreshToken }).catch(() => undefined);
+    dispatch(loggedOut());
+    navigate('/login', { replace: true });
+  };
+
+  return (
+    <Layout style={{ minHeight: '100vh' }}>
+      <Layout.Sider breakpoint="lg" collapsedWidth="0" theme="dark">
+        <div style={{ color: '#fff', padding: 16, fontWeight: 700, fontSize: 18 }}>AES Admin</div>
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          items={items}
+          onClick={({ key }) => navigate(key)}
+        />
+      </Layout.Sider>
+      <Layout>
+        <Layout.Header
+          style={{ background: '#fff', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingInline: 24 }}
+        >
+          <Dropdown
+            menu={{
+              items: [{ key: 'logout', icon: <LogoutOutlined />, label: 'Sign out', onClick: onLogout }],
+            }}
+          >
+            <Button type="text">{user?.email}</Button>
+          </Dropdown>
+        </Layout.Header>
+        <Layout.Content style={{ margin: 24 }}>
+          <div style={{ background: '#fff', padding: 24, borderRadius: 8, minHeight: '100%' }}>
+            {children}
+          </div>
+        </Layout.Content>
+        <Layout.Footer style={{ textAlign: 'center' }}>
+          <Typography.Text type="secondary">AES Operations &amp; Finance — Admin</Typography.Text>
+        </Layout.Footer>
+      </Layout>
+    </Layout>
+  );
+}
