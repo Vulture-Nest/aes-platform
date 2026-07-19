@@ -8,6 +8,10 @@ import { HomePage } from './features/home/HomePage';
 import { NotificationsPage } from './features/notifications/NotificationsPage';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { RatesPage } from './features/rates/RatesPage';
+import { RequestsPage } from './features/requests/RequestsPage';
+import { ApprovalsPage } from './features/approvals/ApprovalsPage';
+import { OrdersPage } from './features/orders/OrdersPage';
+import { CommandCentrePage } from './features/command-centre/CommandCentrePage';
 
 function ProtectedLayout() {
   return (
@@ -33,6 +37,10 @@ function Shell() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/requests" element={<RequestsPage />} />
+        <Route path="/approvals" element={<ApprovalsPage />} />
+        <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/command-centre" element={<CommandCentrePage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/rates" element={<RatesPage />} />
         <Route path="/profile" element={<ProfilePage />} />
