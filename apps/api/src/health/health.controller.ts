@@ -1,6 +1,7 @@
 import { Controller, Get, VERSION_NEUTRAL } from '@nestjs/common';
 import {
   HealthCheck,
+  HealthCheckError,
   HealthCheckResult,
   HealthCheckService,
   HealthIndicatorResult,
@@ -29,9 +30,10 @@ export class HealthController {
       await this.prisma.$queryRaw`SELECT 1`;
       return { database: { status: 'up' } };
     } catch (err) {
-      return {
+      // Terminus marks the check unhealthy (-> 503) only when an indicator throws.
+      throw new HealthCheckError('Database check failed', {
         database: { status: 'down', message: err instanceof Error ? err.message : 'unknown' },
-      };
+      });
     }
   }
 }
