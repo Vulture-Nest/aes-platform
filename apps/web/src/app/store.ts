@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
-import healthReducer from '../features/health/healthSlice';
+import { api } from '../api/api';
+import authReducer from '../features/auth/authSlice';
 
 export const store = configureStore({
   reducer: {
-    health: healthReducer,
-    // S1+ feature slices (auth, sites, …) register here.
+    auth: authReducer,
+    [api.reducerPath]: api.reducer,
   },
+  middleware: (getDefault) => getDefault().concat(api.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;
