@@ -24,6 +24,10 @@ export interface AppConfig {
     seedAdminEmail: string;
     seedAdminPassword: string;
   };
+  timesheets: {
+    /** Configurable ceiling on total hours captured against a single employee-day. */
+    maxHoursPerDay: number;
+  };
 }
 
 export default (): AppConfig => ({
@@ -52,5 +56,8 @@ export default (): AppConfig => ({
     refreshTtl: parseInt(process.env.JWT_REFRESH_TTL ?? '2592000', 10),
     seedAdminEmail: process.env.SEED_ADMIN_EMAIL ?? 'admin@aes.local',
     seedAdminPassword: process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe!123',
+  },
+  timesheets: {
+    maxHoursPerDay: parseInt(process.env.TIMESHEET_MAX_HOURS_PER_DAY ?? '24', 10),
   },
 });

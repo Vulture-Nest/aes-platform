@@ -25,6 +25,9 @@ import { BudgetsModule } from './workflows/budgets/budgets.module';
 import { DirectorWithdrawalsModule } from './workflows/director-withdrawals/director-withdrawals.module';
 import { DangerModule } from './command-centre/danger/danger.module';
 import { CommandCentreModule } from './command-centre/command-centre.module';
+import { HrModule } from './hr/hr.module';
+import { TimesheetsModule } from './timesheets/timesheets.module';
+import { PayrollModule } from './payroll/payroll.module';
 
 @Module({
   imports: [
@@ -52,6 +55,9 @@ import { CommandCentreModule } from './command-centre/command-centre.module';
     DirectorWithdrawalsModule,
     DangerModule,
     CommandCentreModule,
+    HrModule,
+    TimesheetsModule,
+    PayrollModule,
     HealthModule,
   ],
   providers: [
