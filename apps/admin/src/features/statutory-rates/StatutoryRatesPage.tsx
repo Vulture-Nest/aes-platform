@@ -2,19 +2,11 @@ import { PlusOutlined } from '@ant-design/icons';
 import { App, Button, DatePicker, Form, InputNumber, Modal, Select, Space, Table, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { useState } from 'react';
-import { useCreateStatutoryRateMutation, useGetStatutoryRatesQuery } from '../../api/api';
-
-const COMMON_KEYS = [
-  'vat_pct',
-  'zimra_interest_pct',
-  'aids_levy_pct',
-  'zimdef_pct',
-  'nssa_ceiling',
-  'paye_bands',
-];
+import { useCreateStatutoryRateMutation, useGetLookupsQuery, useGetStatutoryRatesQuery } from '../../api/api';
 
 export function StatutoryRatesPage() {
   const { data, isLoading } = useGetStatutoryRatesQuery();
+  const { data: keys } = useGetLookupsQuery('statutory_key');
   const [create, createState] = useCreateStatutoryRateMutation();
   const { message } = App.useApp();
   const [open, setOpen] = useState(false);
@@ -76,7 +68,11 @@ export function StatutoryRatesPage() {
       >
         <Form form={form} layout="vertical" onFinish={submit}>
           <Form.Item name="key" label="Parameter key" rules={[{ required: true }]}>
-            <Select showSearch options={COMMON_KEYS.map((k) => ({ label: k, value: k }))} placeholder="vat_pct" />
+            <Select
+              showSearch
+              options={(keys ?? []).filter((k) => k.active).map((k) => ({ label: `${k.code} — ${k.label}`, value: k.code }))}
+              placeholder="vat_pct"
+            />
           </Form.Item>
           <Form.Item name="currency" label="Currency (optional)">
             <Select allowClear options={[{ label: 'USD', value: 'USD' }, { label: 'ZWG', value: 'ZWG' }]} />

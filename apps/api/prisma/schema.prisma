@@ -1252,3 +1252,31 @@ model PayrollLine {
   @@index([employeeId])
   @@map("payroll_lines")
 }
+
+// ---------------------------------------------------------------------------
+// Settings — admin-managed lookup catalog (configurable reference values)
+// ---------------------------------------------------------------------------
+
+/// A configurable value in a named category (currency, site_type, statutory_key,
+/// threshold_key, employment_type, pay_mode, role, currency_pair). Lets the admin
+/// manage these lists without a code change; services validate inputs against active codes.
+model LookupValue {
+  id        String   @id @default(uuid()) @db.Uuid
+  category  String
+  code      String
+  label     String
+  sortOrder Int      @default(0) @map("sort_order")
+  active    Boolean  @default(true)
+  /// Behavioural metadata, e.g. site_type {isMineSite:true}, pay_mode {splitMode:'client_ratio'},
+  /// currency_pair {base:'USD', quote:'ZWG'}. System entries are marked {system:true}.
+  metadata  Json?
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([category, code])
+  @@index([category, active])
+  @@map("lookup_values")
+}

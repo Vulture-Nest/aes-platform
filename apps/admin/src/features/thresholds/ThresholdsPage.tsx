@@ -2,19 +2,11 @@ import { PlusOutlined } from '@ant-design/icons';
 import { App, Button, Form, InputNumber, Modal, Select, Space, Table, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { useState } from 'react';
-import { useCreateThresholdMutation, useGetThresholdsQuery } from '../../api/api';
-
-const COMMON_KEYS = [
-  'petty_cash_fd_threshold',
-  'sla_reminder_hours',
-  'sla_escalation_hours',
-  'danger_cash_runway_weeks',
-  'coverage_ratio_watch',
-  'coverage_ratio_danger',
-];
+import { useCreateThresholdMutation, useGetLookupsQuery, useGetThresholdsQuery } from '../../api/api';
 
 export function ThresholdsPage() {
   const { data, isLoading } = useGetThresholdsQuery();
+  const { data: keys } = useGetLookupsQuery('threshold_key');
   const [create, createState] = useCreateThresholdMutation();
   const { message } = App.useApp();
   const [open, setOpen] = useState(false);
@@ -65,7 +57,10 @@ export function ThresholdsPage() {
       >
         <Form form={form} layout="vertical" onFinish={submit}>
           <Form.Item name="key" label="Threshold key" rules={[{ required: true }]}>
-            <Select showSearch options={COMMON_KEYS.map((k) => ({ label: k, value: k }))} />
+            <Select
+              showSearch
+              options={(keys ?? []).filter((k) => k.active).map((k) => ({ label: `${k.code} — ${k.label}`, value: k.code }))}
+            />
           </Form.Item>
           <Form.Item name="currency" label="Currency (optional)">
             <Select allowClear options={[{ label: 'USD', value: 'USD' }, { label: 'ZWG', value: 'ZWG' }]} />

@@ -101,6 +101,15 @@ export interface DangerRuleRecord {
   enabled: boolean;
   params: unknown;
 }
+export interface LookupRecord {
+  id: string;
+  category: string;
+  code: string;
+  label: string;
+  sortOrder: number;
+  active: boolean;
+  metadata: Record<string, unknown> | null;
+}
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE,
@@ -168,6 +177,7 @@ export const api = createApi({
     'Employees',
     'ApprovalMatrix',
     'DangerRules',
+    'Lookups',
   ],
   endpoints: (build) => ({
     // --- auth ---
@@ -289,6 +299,24 @@ export const api = createApi({
       query: ({ id, ...body }) => ({ url: `v1/danger-rules/${id}`, method: 'PATCH', body }),
       invalidatesTags: ['DangerRules'],
     }),
+
+    // --- settings / lookups ---
+    getLookups: build.query<LookupRecord[], string | void>({
+      query: (category) => ({ url: 'v1/settings/lookups', params: category ? { category } : undefined }),
+      providesTags: ['Lookups'],
+    }),
+    createLookup: build.mutation<LookupRecord, Partial<LookupRecord>>({
+      query: (body) => ({ url: 'v1/settings/lookups', method: 'POST', body }),
+      invalidatesTags: ['Lookups'],
+    }),
+    updateLookup: build.mutation<LookupRecord, { id: string; active?: boolean; label?: string }>({
+      query: ({ id, ...body }) => ({ url: `v1/settings/lookups/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['Lookups'],
+    }),
+    deleteLookup: build.mutation<void, string>({
+      query: (id) => ({ url: `v1/settings/lookups/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Lookups'],
+    }),
   }),
 });
 
@@ -319,4 +347,8 @@ export const {
   useCreateApprovalRuleMutation,
   useGetDangerRulesQuery,
   useUpdateDangerRuleMutation,
+  useGetLookupsQuery,
+  useCreateLookupMutation,
+  useUpdateLookupMutation,
+  useDeleteLookupMutation,
 } = api;

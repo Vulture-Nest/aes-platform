@@ -16,6 +16,7 @@ import { ApprovalMatrixPage } from './features/approval-matrix/ApprovalMatrixPag
 import { AccountsPage } from './features/accounts/AccountsPage';
 import { EmployeesPage } from './features/employees/EmployeesPage';
 import { DangerRulesPage } from './features/danger-rules/DangerRulesPage';
+import { SettingsPage } from './features/settings/SettingsPage';
 
 function ProtectedLayout() {
   return (
@@ -126,6 +127,14 @@ function Shell() {
           element={
             <ProtectedRoute roles={['SYS_ADMIN', 'AUDITOR']}>
               <AuditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute roles={['SYS_ADMIN']}>
+              <SettingsPage />
             </ProtectedRoute>
           }
         />
