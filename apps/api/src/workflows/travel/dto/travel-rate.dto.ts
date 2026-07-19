@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Currency } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsDate, IsEnum, IsNumber, IsString, Min, MinLength } from 'class-validator';
+import { IsDate, IsNumber, IsString, Min, MinLength } from 'class-validator';
 
 /** Create an effective-dated per-diem rate row (admin only). */
 export class CreateTravelRateDto {
@@ -15,9 +14,9 @@ export class CreateTravelRateDto {
   @MinLength(1)
   destinationClass!: string;
 
-  @ApiProperty({ enum: Currency })
-  @IsEnum(Currency)
-  currency!: Currency;
+  @ApiProperty()
+  @IsString()
+  currency!: string;
 
   @ApiProperty({ example: 85, description: 'Per-day allowance for this grade/class/currency' })
   @Type(() => Number)

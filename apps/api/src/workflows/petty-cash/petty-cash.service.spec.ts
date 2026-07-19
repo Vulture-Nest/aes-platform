@@ -32,6 +32,7 @@ function makeService() {
   const ledger = { post: jest.fn().mockResolvedValue([]) };
   const thresholds = { current: jest.fn() };
   const exchangeRates = { rateAsOf: jest.fn() };
+  const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
 
   const service = new PettyCashService(
     prisma as any,
@@ -42,6 +43,7 @@ function makeService() {
     ledger as any,
     thresholds as any,
     exchangeRates as any,
+    lookups as any,
   );
   service.onModuleInit();
   return {

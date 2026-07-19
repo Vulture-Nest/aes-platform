@@ -6,19 +6,14 @@ import {
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
-import {
-  ApprovalStatus,
-  Currency,
-  NotificationSeverity,
-  Prisma,
-  Requisition,
-} from '@prisma/client';
+import { ApprovalStatus, NotificationSeverity, Prisma, Requisition } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { NotificationService } from '../../notifications/notification.service';
 import { ApprovalService } from '../../approvals/approval.service';
 import { StatusTransitionRegistry } from '../../approvals/status-transition.registry';
 import { LedgerService } from '../../ledger/ledger.service';
+import { LookupService } from '../../settings/lookup.service';
 import { CreateRequisitionDto, DisburseRequisitionDto } from './dto/requisition.dto';
 
 /** Lifecycle statuses for a requisition subject (spec §S5). Query-only, so a local TS enum. */
@@ -50,6 +45,7 @@ export class RequisitionsService implements OnModuleInit {
     private readonly approvals: ApprovalService,
     private readonly transitions: StatusTransitionRegistry,
     private readonly ledger: LedgerService,
+    private readonly lookups: LookupService,
   ) {}
 
   /**
@@ -93,6 +89,7 @@ export class RequisitionsService implements OnModuleInit {
   // -------------------------------------------------------------------------
 
   async create(dto: CreateRequisitionDto, actorId: string): Promise<Requisition> {
+    await this.lookups.assertValid('currency', dto.currency);
     if (dto.orderId) {
       const order = await this.prisma.order.findUnique({ where: { id: dto.orderId } });
       if (!order) {
@@ -312,7 +309,7 @@ export class RequisitionsService implements OnModuleInit {
       {
         accountId: dto.accountId,
         debit: requisition.amount.toNumber(),
-        currency: requisition.currency as Currency,
+        currency: requisition.currency as string,
         sourceTable: SUBJECT_TABLE,
         sourceId: id,
         entryDate: disbursedAt,

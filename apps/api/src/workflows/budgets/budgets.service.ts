@@ -12,6 +12,7 @@ import { NotificationService } from '../../notifications/notification.service';
 import { ApprovalService } from '../../approvals/approval.service';
 import { StatusTransitionRegistry } from '../../approvals/status-transition.registry';
 import { ThresholdsService } from '../../reference/thresholds/thresholds.service';
+import { LookupService } from '../../settings/lookup.service';
 import { CreateBudgetDto, ReviseBudgetDto } from './dto/budget.dto';
 
 /** Lifecycle statuses for a budget subject (spec §10). Query-only, so a local TS enum. */
@@ -65,6 +66,7 @@ export class BudgetsService implements OnModuleInit {
     private readonly approvals: ApprovalService,
     private readonly transitions: StatusTransitionRegistry,
     private readonly thresholds: ThresholdsService,
+    private readonly lookups: LookupService,
   ) {}
 
   /**
@@ -113,6 +115,7 @@ export class BudgetsService implements OnModuleInit {
   // -------------------------------------------------------------------------
 
   async create(dto: CreateBudgetDto, actorId: string): Promise<BudgetWithLines> {
+    await this.lookups.assertValid('currency', dto.currency);
     const budget = await this.prisma.budget.create({
       data: {
         name: dto.name,

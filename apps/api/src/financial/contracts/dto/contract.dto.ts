@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { ContractStatus, Currency } from '@prisma/client';
+import { ContractStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsDate,
@@ -28,9 +28,9 @@ export class CreateContractDto {
   @Min(0)
   valueExVat!: number;
 
-  @ApiProperty({ enum: Currency })
-  @IsEnum(Currency)
-  currency!: Currency;
+  @ApiProperty()
+  @IsString()
+  currency!: string;
 
   @ApiPropertyOptional({ description: 'FX rate row used to convert this money' })
   @IsOptional()

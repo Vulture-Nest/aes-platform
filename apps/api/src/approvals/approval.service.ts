@@ -11,7 +11,6 @@ import {
   ApprovalMatrix,
   ApprovalMode,
   ApprovalStatus,
-  Currency,
   NotificationSeverity,
   Prisma,
 } from '@prisma/client';
@@ -26,7 +25,7 @@ export interface SubmitParams {
   subjectTable: string;
   subjectId: string;
   amount?: number | Prisma.Decimal | null;
-  currency?: Currency | null;
+  currency?: string | null;
   siteId?: string | null;
   requesterId: string;
 }

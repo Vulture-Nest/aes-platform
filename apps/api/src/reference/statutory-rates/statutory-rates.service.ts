@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Currency, Prisma, StatutoryRate } from '@prisma/client';
+import { Prisma, StatutoryRate } from '@prisma/client';
 import { AuditService } from '../../audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { LookupService } from '../../settings/lookup.service';
 import { CreateStatutoryRateDto } from './dto/statutory-rate.dto';
 
 @Injectable()
@@ -9,9 +10,13 @@ export class StatutoryRatesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly lookups: LookupService,
   ) {}
 
   async create(dto: CreateStatutoryRateDto, actorId: string): Promise<StatutoryRate> {
+    if (dto.currency) {
+      await this.lookups.assertValid('currency', dto.currency);
+    }
     const rate = await this.prisma.statutoryRate.create({
       data: {
         key: dto.key,
@@ -40,7 +45,7 @@ export class StatutoryRatesService {
   }
 
   /** The statutory parameter effective on `date` for a key (and optional currency). */
-  async valueAsOf(key: string, date = new Date(), currency?: Currency): Promise<StatutoryRate> {
+  async valueAsOf(key: string, date = new Date(), currency?: string): Promise<StatutoryRate> {
     const row = await this.prisma.statutoryRate.findFirst({
       where: { key, currency: currency ?? null, dateEffective: { lte: date } },
       orderBy: { dateEffective: 'desc' },

@@ -1,17 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Currency } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsDate, IsEnum, IsNumber, IsObject, IsOptional, IsString } from 'class-validator';
+import { IsDate, IsNumber, IsObject, IsOptional, IsString } from 'class-validator';
 
 export class CreateStatutoryRateDto {
   @ApiProperty({ example: 'vat_pct', description: 'vat_pct, zimra_interest_pct, paye_bands, …' })
   @IsString()
   key!: string;
 
-  @ApiPropertyOptional({ enum: Currency })
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsEnum(Currency)
-  currency?: Currency;
+  @IsString()
+  currency?: string;
 
   @ApiPropertyOptional({ example: 15.5, description: 'Scalar value (percent or amount)' })
   @IsOptional()
@@ -34,10 +33,10 @@ export class StatutoryValueQueryDto {
   @IsString()
   key!: string;
 
-  @ApiPropertyOptional({ enum: Currency })
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsEnum(Currency)
-  currency?: Currency;
+  @IsString()
+  currency?: string;
 
   @ApiPropertyOptional({ description: 'Defaults to now' })
   @IsOptional()

@@ -1,9 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Currency } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsDate,
-  IsEnum,
   IsInt,
   IsNumber,
   IsOptional,
@@ -53,9 +51,9 @@ export class CreateTravelDto {
   @Min(1)
   days!: number;
 
-  @ApiProperty({ enum: Currency })
-  @IsEnum(Currency)
-  currency!: Currency;
+  @ApiProperty()
+  @IsString()
+  currency!: string;
 
   @ApiPropertyOptional({ description: 'Site this trip is raised for' })
   @IsOptional()

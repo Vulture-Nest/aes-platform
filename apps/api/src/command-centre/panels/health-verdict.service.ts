@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Currency, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { HealthVerdict, HealthVerdictService } from '../../financial/domain/health-verdict.service';
 import { LoanInterestService } from '../../financial/domain/loan-interest.service';
 import { ExchangeRatesService } from '../../reference/exchange-rates/exchange-rates.service';
@@ -119,8 +119,8 @@ export class HealthVerdictPanelService {
   }
 
   /** USD equivalent of an amount in `currency` at the given USD/ZWG rate (guarded /0). */
-  private toUsd(amount: number, currency: Currency, rate: number): number {
-    if (currency === Currency.USD) {
+  private toUsd(amount: number, currency: string, rate: number): number {
+    if (currency === 'USD') {
       return amount;
     }
     // ZWG -> USD: divide by the USD/ZWG rate. A missing/zero rate contributes 0.

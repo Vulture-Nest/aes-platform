@@ -10,8 +10,9 @@ describe('OrdersService', () => {
     orderReceipt: { create: jest.fn() },
   };
   const audit = { record: jest.fn() };
+  const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const service = new OrdersService(prisma as any, audit as any);
+  const service = new OrdersService(prisma as any, audit as any, lookups as any);
 
   beforeEach(() => jest.clearAllMocks());
 

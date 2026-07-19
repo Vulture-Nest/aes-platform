@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { Currency } from '@prisma/client';
-import { IsEnum, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 /**
  * Payload other modules pass to ApprovalService.submit — also exposed as a
@@ -27,10 +26,10 @@ export class SubmitDto {
   @Min(0)
   amount?: number;
 
-  @ApiPropertyOptional({ enum: Currency })
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsEnum(Currency)
-  currency?: Currency;
+  @IsString()
+  currency?: string;
 
   @ApiPropertyOptional({ description: 'Site scope, used to select site-specific matrix rows' })
   @IsOptional()

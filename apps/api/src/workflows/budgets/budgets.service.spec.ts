@@ -29,6 +29,7 @@ function makeService(overrides: { transitions?: StatusTransitionRegistry } = {})
   const approvals = { submit: jest.fn().mockResolvedValue({ id: 'chain1' }) };
   const transitions = overrides.transitions ?? new StatusTransitionRegistry();
   const thresholds = { current: jest.fn() };
+  const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
 
   const service = new BudgetsService(
     prisma as any,
@@ -37,6 +38,7 @@ function makeService(overrides: { transitions?: StatusTransitionRegistry } = {})
     approvals as any,
     transitions,
     thresholds as any,
+    lookups as any,
   );
   service.onModuleInit();
   return { service, prisma, audit, notifications, approvals, transitions, thresholds };

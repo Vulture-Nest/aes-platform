@@ -1,4 +1,4 @@
-import { Currency, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { MoneyInOutService, MoneyWindow } from './money-in-out.service';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -31,7 +31,7 @@ describe('MoneyInOutService.compute', () => {
     const result = await service.compute();
 
     expect(result.window).toBe(MoneyWindow.MONTH);
-    expect(result.currency).toBe(Currency.USD);
+    expect(result.currency).toBe('USD');
     expect(result.buckets).toEqual([]);
     expect(result.totals).toEqual({ inflow: 0, outflow: 0, net: 0 });
   });
@@ -41,34 +41,34 @@ describe('MoneyInOutService.compute', () => {
 
     // Inflows: a receipt + a contract claim in Feb; a receipt in Mar (all USD).
     prisma.orderReceipt.findMany.mockResolvedValue([
-      { amount: dec(1000), currency: Currency.USD, receivedDate: new Date('2026-02-10T00:00:00Z') },
-      { amount: dec(500), currency: Currency.USD, receivedDate: new Date('2026-03-05T00:00:00Z') },
+      { amount: dec(1000), currency: 'USD', receivedDate: new Date('2026-02-10T00:00:00Z') },
+      { amount: dec(500), currency: 'USD', receivedDate: new Date('2026-03-05T00:00:00Z') },
     ]);
     prisma.contractClaim.findMany.mockResolvedValue([
       {
         amountExVat: dec(300),
-        currency: Currency.USD,
+        currency: 'USD',
         claimDate: new Date('2026-02-20T00:00:00Z'),
       },
     ]);
 
     // Outflows across every source, all in Feb, all USD.
     prisma.orderExpense.findMany.mockResolvedValue([
-      { amount: dec(200), currency: Currency.USD, createdAt: new Date('2026-02-11T00:00:00Z') },
+      { amount: dec(200), currency: 'USD', createdAt: new Date('2026-02-11T00:00:00Z') },
     ]);
     prisma.generalExpense.findMany.mockResolvedValue([
-      { amount: dec(100), currency: Currency.USD, expenseDate: new Date('2026-02-12T00:00:00Z') },
+      { amount: dec(100), currency: 'USD', expenseDate: new Date('2026-02-12T00:00:00Z') },
     ]);
     prisma.overhead.findMany.mockResolvedValue([
-      { amount: dec(50), currency: Currency.USD, createdAt: new Date('2026-02-13T00:00:00Z') },
+      { amount: dec(50), currency: 'USD', createdAt: new Date('2026-02-13T00:00:00Z') },
     ]);
     prisma.loanRepayment.findMany.mockResolvedValue([
-      { amount: dec(150), currency: Currency.USD, repaidDate: new Date('2026-02-14T00:00:00Z') },
+      { amount: dec(150), currency: 'USD', repaidDate: new Date('2026-02-14T00:00:00Z') },
     ]);
     prisma.taxLedger.findMany.mockResolvedValue([
-      { amountPaid: dec(80), currency: Currency.USD, updatedAt: new Date('2026-02-15T00:00:00Z') },
+      { amountPaid: dec(80), currency: 'USD', updatedAt: new Date('2026-02-15T00:00:00Z') },
       // Zero-paid tax rows must be ignored.
-      { amountPaid: dec(0), currency: Currency.USD, updatedAt: new Date('2026-02-16T00:00:00Z') },
+      { amountPaid: dec(0), currency: 'USD', updatedAt: new Date('2026-02-16T00:00:00Z') },
     ]);
 
     const result = await service.compute({ window: MoneyWindow.MONTH });
@@ -87,10 +87,10 @@ describe('MoneyInOutService.compute', () => {
     const { service, prisma, exchangeRates } = makeService();
     // 2500 ZWG @ 0.04 => 100 USD inflow.
     prisma.orderReceipt.findMany.mockResolvedValue([
-      { amount: dec(2500), currency: Currency.ZWG, receivedDate: new Date('2026-02-10T00:00:00Z') },
+      { amount: dec(2500), currency: 'ZWG', receivedDate: new Date('2026-02-10T00:00:00Z') },
     ]);
 
-    const result = await service.compute({ window: MoneyWindow.MONTH, currency: Currency.USD });
+    const result = await service.compute({ window: MoneyWindow.MONTH, currency: 'USD' });
 
     expect(exchangeRates.rateAsOf).toHaveBeenCalledWith(
       'ZWGUSD',
@@ -104,7 +104,7 @@ describe('MoneyInOutService.compute', () => {
     const { service, prisma, exchangeRates } = makeService();
     exchangeRates.rateAsOf.mockRejectedValue(new Error('no rate on file'));
     prisma.orderReceipt.findMany.mockResolvedValue([
-      { amount: dec(90), currency: Currency.ZWG, receivedDate: new Date('2026-02-10T00:00:00Z') },
+      { amount: dec(90), currency: 'ZWG', receivedDate: new Date('2026-02-10T00:00:00Z') },
     ]);
 
     const result = await service.compute();
@@ -116,9 +116,9 @@ describe('MoneyInOutService.compute', () => {
   it('buckets by day when window=day', async () => {
     const { service, prisma } = makeService();
     prisma.orderReceipt.findMany.mockResolvedValue([
-      { amount: dec(10), currency: Currency.USD, receivedDate: new Date('2026-02-10T09:00:00Z') },
-      { amount: dec(20), currency: Currency.USD, receivedDate: new Date('2026-02-10T18:00:00Z') },
-      { amount: dec(5), currency: Currency.USD, receivedDate: new Date('2026-02-11T00:00:00Z') },
+      { amount: dec(10), currency: 'USD', receivedDate: new Date('2026-02-10T09:00:00Z') },
+      { amount: dec(20), currency: 'USD', receivedDate: new Date('2026-02-10T18:00:00Z') },
+      { amount: dec(5), currency: 'USD', receivedDate: new Date('2026-02-11T00:00:00Z') },
     ]);
 
     const result = await service.compute({ window: MoneyWindow.DAY });
@@ -133,7 +133,7 @@ describe('MoneyInOutService.compute', () => {
     const { service, prisma } = makeService();
     // 2026-02-10 is a Tuesday in ISO week 07.
     prisma.orderReceipt.findMany.mockResolvedValue([
-      { amount: dec(40), currency: Currency.USD, receivedDate: new Date('2026-02-10T00:00:00Z') },
+      { amount: dec(40), currency: 'USD', receivedDate: new Date('2026-02-10T00:00:00Z') },
     ]);
 
     const result = await service.compute({ window: MoneyWindow.WEEK });

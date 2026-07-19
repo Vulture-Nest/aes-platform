@@ -1,4 +1,4 @@
-import { Currency, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { OrderFinancialsService } from '../../financial/domain/order-financials.service';
 import { ReceivablesAgeingService } from './receivables-ageing.service';
 
@@ -16,12 +16,12 @@ function order(opts: {
   clientName?: string;
   reference?: string;
   valueExVat: number;
-  currency?: Currency;
+  currency?: string;
   daysAgo: number;
-  receipts?: { amount: number; currency?: Currency }[];
+  receipts?: { amount: number; currency?: string }[];
   serviced?: boolean;
 }) {
-  const currency = opts.currency ?? Currency.USD;
+  const currency = opts.currency ?? 'USD';
   const closingDate = new Date(ASOF.getTime() - opts.daysAgo * 24 * 60 * 60 * 1000);
   return {
     id: opts.id,
@@ -97,7 +97,7 @@ describe('ReceivablesAgeingService.compute', () => {
     expect(result.clients).toHaveLength(1);
     const client = result.clients[0];
     expect(client.clientId).toBe('client-1');
-    expect(client.currency).toBe(Currency.USD);
+    expect(client.currency).toBe('USD');
     expect(client.totalOutstanding).toBe(3300);
     expect(client.overdueOutstanding).toBe(2300);
     expect(client.buckets).toEqual({ '0-30': 1000, '31-60': 0, '61-90': 0, '90+': 2300 });
@@ -167,7 +167,7 @@ describe('ReceivablesAgeingService.compute', () => {
   it('consolidates ZWG outstanding into a USD headline via the official rate', async () => {
     const { service, exchangeRates } = makeService([
       order({ id: 'U', valueExVat: 1000, daysAgo: 10 }), // USD 1150 outstanding
-      order({ id: 'Z', valueExVat: 1000, currency: Currency.ZWG, daysAgo: 10 }), // ZWG 1150
+      order({ id: 'Z', valueExVat: 1000, currency: 'ZWG', daysAgo: 10 }), // ZWG 1150
     ]);
 
     const result = await service.compute({ asOf: ASOF });
@@ -180,7 +180,7 @@ describe('ReceivablesAgeingService.compute', () => {
 
   it('returns a null USD headline when the ZWG rate is unavailable', async () => {
     const { service, exchangeRates } = makeService([
-      order({ id: 'Z', valueExVat: 1000, currency: Currency.ZWG, daysAgo: 10 }),
+      order({ id: 'Z', valueExVat: 1000, currency: 'ZWG', daysAgo: 10 }),
     ]);
     exchangeRates.rateAsOf.mockRejectedValue(new Error('no rate'));
 

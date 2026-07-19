@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import {
   ApprovalStatus,
-  Currency,
   Employee,
   PayrollLine,
   PayrollRun,
@@ -207,8 +206,8 @@ export class PayrollService implements OnModuleInit {
     // Resolve statutory config once per currency, effective on the period month.
     const effectiveDate = this.periodDate(run.month);
     const config = {
-      [Currency.USD]: await this.loadStatutoryConfig(Currency.USD, effectiveDate),
-      [Currency.ZWG]: await this.loadStatutoryConfig(Currency.ZWG, effectiveDate),
+      ['USD']: await this.loadStatutoryConfig('USD', effectiveDate),
+      ['ZWG']: await this.loadStatutoryConfig('ZWG', effectiveDate),
     };
 
     const clientUsdPct = this.clientUsdPct(run.clientRatioSnapshot);
@@ -306,7 +305,7 @@ export class PayrollService implements OnModuleInit {
       subjectTable: SUBJECT_TABLE,
       subjectId: runId,
       amount: employerCost.total,
-      currency: Currency.USD,
+      currency: 'USD',
       siteId: run.siteId,
       requesterId: preparerId,
     });
@@ -403,8 +402,8 @@ export class PayrollService implements OnModuleInit {
     for (const line of lines) {
       const employee = employeeById.get(line.employeeId);
       const bankName = employee?.bankName ?? null;
-      for (const currency of [Currency.USD, Currency.ZWG] as const) {
-        const net = currency === Currency.USD ? line.netUsd.toNumber() : line.netZwg.toNumber();
+      for (const currency of ['USD', 'ZWG'] as const) {
+        const net = currency === 'USD' ? line.netUsd.toNumber() : line.netZwg.toNumber();
         if (net <= 0) {
           continue;
         }
@@ -717,7 +716,7 @@ export class PayrollService implements OnModuleInit {
     const position = await this.ledger.cashPosition();
     const now = new Date();
 
-    for (const currency of [Currency.USD, Currency.ZWG]) {
+    for (const currency of ['USD', 'ZWG']) {
       const amount = cost.byCurrency[currency];
       if (amount <= 0) {
         continue;
@@ -762,7 +761,7 @@ export class PayrollService implements OnModuleInit {
       nightHours: number;
     },
     clientUsdPct: number,
-    config: Record<Currency, StatutoryConfig>,
+    config: Record<string, StatutoryConfig>,
     actorId: string,
   ): Prisma.PayrollLineCreateManyInput {
     const usdPct = this.splitUsdPct(employee, clientUsdPct);
@@ -786,7 +785,7 @@ export class PayrollService implements OnModuleInit {
     // Statutory is computed against the whole gross using the split-dominant currency's config.
     // A predominantly-USD split uses USD bands/rates; otherwise ZWG. Employer contributions
     // (zimdef/nec/mipf) always use the same currency config.
-    const cur: Currency = usdPct >= 50 ? Currency.USD : Currency.ZWG;
+    const cur: string = usdPct >= 50 ? 'USD' : 'ZWG';
     const cfg = config[cur];
 
     const paye = this.paye.compute({ taxableIncome: gross, bands: cfg.payeBands });
@@ -849,7 +848,7 @@ export class PayrollService implements OnModuleInit {
   // -------------------------------------------------------------------------
 
   /** Load every statutory rate needed for a currency, effective on the period date. */
-  private async loadStatutoryConfig(currency: Currency, date: Date): Promise<StatutoryConfig> {
+  private async loadStatutoryConfig(currency: string, date: Date): Promise<StatutoryConfig> {
     const payeRow = await this.statutoryRates.valueAsOf(KEY_PAYE_BANDS, date, currency);
     const payeBands = this.parseBands(payeRow.params);
 
@@ -866,7 +865,7 @@ export class PayrollService implements OnModuleInit {
   }
 
   /** Read a scalar statutory value effective on `date`, as a plain number (0 if unset). */
-  private async pct(key: string, date: Date, currency: Currency): Promise<number> {
+  private async pct(key: string, date: Date, currency: string): Promise<number> {
     const row = await this.statutoryRates.valueAsOf(key, date, currency);
     return row.value ? row.value.toNumber() : 0;
   }
@@ -900,7 +899,7 @@ export class PayrollService implements OnModuleInit {
   private async resolveClientRatio(
     siteId: string,
     month: string,
-  ): Promise<{ clientId: string; contractId: string; usdPct: number; currency: Currency } | null> {
+  ): Promise<{ clientId: string; contractId: string; usdPct: number; currency: string } | null> {
     const site = await this.prisma.site.findUnique({ where: { id: siteId } });
     if (!site?.clientId) {
       return null;
@@ -920,7 +919,7 @@ export class PayrollService implements OnModuleInit {
     return {
       clientId: site.clientId,
       contractId: contract.id,
-      usdPct: contract.currency === Currency.USD ? 100 : 0,
+      usdPct: contract.currency === 'USD' ? 100 : 0,
       currency: contract.currency,
     };
   }
@@ -949,10 +948,10 @@ export class PayrollService implements OnModuleInit {
    */
   private async employerCost(runId: string): Promise<{
     total: number;
-    byCurrency: Record<Currency, number>;
+    byCurrency: Record<string, number>;
   }> {
     const lines = await this.prisma.payrollLine.findMany({ where: { runId } });
-    const byCurrency: Record<Currency, number> = { [Currency.USD]: 0, [Currency.ZWG]: 0 };
+    const byCurrency: Record<string, number> = { ['USD']: 0, ['ZWG']: 0 };
 
     for (const line of lines) {
       const gross = line.gross.toNumber();
@@ -966,13 +965,13 @@ export class PayrollService implements OnModuleInit {
       const netZwg = line.netZwg.toNumber();
       const net = netUsd + netZwg;
       const usdShare = net > 0 ? netUsd / net : 1;
-      byCurrency[Currency.USD] += this.round2(cost * usdShare);
-      byCurrency[Currency.ZWG] += this.round2(cost * (1 - usdShare));
+      byCurrency['USD'] += this.round2(cost * usdShare);
+      byCurrency['ZWG'] += this.round2(cost * (1 - usdShare));
     }
 
-    byCurrency[Currency.USD] = this.round2(byCurrency[Currency.USD]);
-    byCurrency[Currency.ZWG] = this.round2(byCurrency[Currency.ZWG]);
-    const total = this.round2(byCurrency[Currency.USD] + byCurrency[Currency.ZWG]);
+    byCurrency['USD'] = this.round2(byCurrency['USD']);
+    byCurrency['ZWG'] = this.round2(byCurrency['ZWG']);
+    const total = this.round2(byCurrency['USD'] + byCurrency['ZWG']);
     return { total, byCurrency };
   }
 
@@ -1051,7 +1050,7 @@ export interface BankScheduleItem {
 /** A per-bank, per-currency disbursement group. */
 export interface BankScheduleGroup {
   bankName: string | null;
-  currency: Currency;
+  currency: string;
   total: number;
   count: number;
   items: BankScheduleItem[];

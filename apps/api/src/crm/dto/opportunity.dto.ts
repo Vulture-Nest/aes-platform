@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { Currency, OpportunityStage } from '@prisma/client';
+import { OpportunityStage } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsDate,
@@ -40,10 +40,10 @@ export class CreateOpportunityDto {
   @Min(0)
   estimatedValue?: number;
 
-  @ApiPropertyOptional({ enum: Currency })
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsEnum(Currency)
-  currency?: Currency;
+  @IsString()
+  currency?: string;
 
   @ApiPropertyOptional({ description: 'User who owns this deal' })
   @IsOptional()
@@ -113,12 +113,11 @@ export class ConvertOpportunityDto {
   valueExVat?: number;
 
   @ApiPropertyOptional({
-    enum: Currency,
     description: 'Currency; defaults to the opportunity currency',
   })
   @IsOptional()
-  @IsEnum(Currency)
-  currency?: Currency;
+  @IsString()
+  currency?: string;
 
   @ApiPropertyOptional({ example: '2026-12-31', description: 'Order closing date (ORDER only)' })
   @IsOptional()

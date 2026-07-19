@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Currency } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsEnum, IsNumber, IsPositive, IsString, MinLength } from 'class-validator';
+import { IsNumber, IsPositive, IsString, MinLength } from 'class-validator';
 
 /** Raise a director withdrawal (starts in DRAFT). Co-approval by a SECOND director follows. */
 export class CreateDirectorWithdrawalDto {
@@ -11,9 +10,9 @@ export class CreateDirectorWithdrawalDto {
   @IsPositive()
   amount!: number;
 
-  @ApiProperty({ enum: Currency })
-  @IsEnum(Currency)
-  currency!: Currency;
+  @ApiProperty()
+  @IsString()
+  currency!: string;
 
   @ApiProperty({
     example: 'CBZ ***4471',

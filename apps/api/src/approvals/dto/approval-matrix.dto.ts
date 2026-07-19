@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ApprovalMode, Currency } from '@prisma/client';
+import { ApprovalMode } from '@prisma/client';
 import {
   IsBoolean,
   IsEnum,
@@ -31,10 +31,10 @@ export class CreateApprovalMatrixDto {
   @Min(0)
   maxAmount?: number;
 
-  @ApiPropertyOptional({ enum: Currency })
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsEnum(Currency)
-  currency?: Currency;
+  @IsString()
+  currency?: string;
 
   @ApiPropertyOptional({ description: 'Scope to a site; omit for a global rule' })
   @IsOptional()

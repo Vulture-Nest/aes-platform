@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Currency, Prisma, Threshold } from '@prisma/client';
+import { Prisma, Threshold } from '@prisma/client';
 import { AuditService } from '../../audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { LookupService } from '../../settings/lookup.service';
 import { CreateThresholdDto } from './dto/threshold.dto';
 
 @Injectable()
@@ -9,10 +10,14 @@ export class ThresholdsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly lookups: LookupService,
   ) {}
 
   /** Records a new effective-dated threshold value (history preserved). */
   async create(dto: CreateThresholdDto, actorId: string): Promise<Threshold> {
+    if (dto.currency) {
+      await this.lookups.assertValid('currency', dto.currency);
+    }
     const threshold = await this.prisma.threshold.create({
       data: {
         key: dto.key,
@@ -40,7 +45,7 @@ export class ThresholdsService {
   }
 
   /** Current (latest effective) value for a key + optional currency. */
-  async current(key: string, currency?: Currency): Promise<Threshold> {
+  async current(key: string, currency?: string): Promise<Threshold> {
     const row = await this.prisma.threshold.findFirst({
       where: { key, currency: currency ?? null, dateEffective: { lte: new Date() } },
       orderBy: { dateEffective: 'desc' },

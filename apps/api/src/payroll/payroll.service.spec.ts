@@ -2,7 +2,6 @@ import { BadRequestException, ConflictException, ForbiddenException } from '@nes
 import {
   ApprovalDecision,
   ApprovalStatus,
-  Currency,
   PayrollRunStatus,
   Prisma,
   TimesheetPeriodStatus,
@@ -82,8 +81,8 @@ function makeService() {
     post: jest.fn().mockResolvedValue([]),
     cashPosition: jest.fn().mockResolvedValue({
       accounts: [
-        { accountId: 'acc-usd', currency: Currency.USD, balance: 100000 },
-        { accountId: 'acc-zwg', currency: Currency.ZWG, balance: 100000 },
+        { accountId: 'acc-usd', currency: 'USD', balance: 100000 },
+        { accountId: 'acc-zwg', currency: 'ZWG', balance: 100000 },
       ],
       totals: { USD: 100000, ZWG: 100000 },
     }),
@@ -138,7 +137,7 @@ describe('PayrollService.openRun', () => {
       status: TimesheetPeriodStatus.SITE_APPROVED,
     });
     prisma.payrollRun.findUnique.mockResolvedValue(null);
-    prisma.contract.findFirst.mockResolvedValue({ id: 'ctr1', currency: Currency.USD });
+    prisma.contract.findFirst.mockResolvedValue({ id: 'ctr1', currency: 'USD' });
     prisma.payrollRun.create.mockResolvedValue({ id: 'run1', status: 'DRAFT' });
 
     await service.openRun({ siteId: 's1', month: '2026-07' }, 'preparer');
@@ -150,7 +149,7 @@ describe('PayrollService.openRun', () => {
       status: PayrollRunStatus.DRAFT,
       preparedByUserId: 'preparer',
     });
-    expect(call.data.clientRatioSnapshot).toMatchObject({ usdPct: 100, currency: Currency.USD });
+    expect(call.data.clientRatioSnapshot).toMatchObject({ usdPct: 100, currency: 'USD' });
   });
 
   it('rejects a duplicate run for the same site + month', async () => {
@@ -174,7 +173,7 @@ describe('PayrollService.computeRun', () => {
       siteId: 's1',
       month: '2026-07',
       status: PayrollRunStatus.DRAFT,
-      clientRatioSnapshot: { usdPct: 100, currency: Currency.USD },
+      clientRatioSnapshot: { usdPct: 100, currency: 'USD' },
     });
     prisma.timesheetPeriod.findUnique.mockResolvedValue({
       id: 'p1',
@@ -357,7 +356,7 @@ describe('PayrollService — APPROVED transition posts to the ledger', () => {
     );
     // Employer cost (USD leg) = gross 1600 + nssaEr 72 + zimdef 16 + nec 8 = 1696.
     expect(ledger.post).toHaveBeenCalledWith([
-      expect.objectContaining({ accountId: 'acc-usd', debit: 1696, currency: Currency.USD }),
+      expect.objectContaining({ accountId: 'acc-usd', debit: 1696, currency: 'USD' }),
     ]);
   });
 
@@ -522,8 +521,8 @@ describe('PayrollService — outputs (bank schedule / payslips / Sage journal / 
     expect(result.banks).toHaveLength(2);
     const cbz = result.banks.find((b) => b.bankName === 'CBZ');
     const stanbic = result.banks.find((b) => b.bankName === 'Stanbic');
-    expect(cbz).toMatchObject({ currency: Currency.USD, total: 1404.4, count: 1 });
-    expect(stanbic).toMatchObject({ currency: Currency.ZWG, total: 955, count: 1 });
+    expect(cbz).toMatchObject({ currency: 'USD', total: 1404.4, count: 1 });
+    expect(stanbic).toMatchObject({ currency: 'ZWG', total: 955, count: 1 });
     expect(cbz?.items[0].accountNo).toBe('******7890');
     expect(audit.record).toHaveBeenCalledWith(
       expect.objectContaining({

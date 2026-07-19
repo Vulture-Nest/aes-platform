@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { CrmOpportunity, Currency, OpportunityStage, Prisma } from '@prisma/client';
+import { CrmOpportunity, OpportunityStage, Prisma } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { LookupService } from '../settings/lookup.service';
 import {
   ConvertOpportunityDto,
   ConvertTarget,
@@ -50,6 +51,7 @@ export class OpportunitiesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly lookups: LookupService,
   ) {}
 
   list(query: ListOpportunitiesQueryDto = {}) {
@@ -75,6 +77,9 @@ export class OpportunitiesService {
   }
 
   async create(dto: CreateOpportunityDto, actorId: string) {
+    if (dto.currency) {
+      await this.lookups.assertValid('currency', dto.currency);
+    }
     const opportunity = await this.prisma.crmOpportunity.create({
       data: {
         title: dto.title,
@@ -216,7 +221,7 @@ export class OpportunitiesService {
     opportunity: CrmOpportunity,
     dto: ConvertOpportunityDto,
     value: number,
-    currency: Currency,
+    currency: string,
     actorId: string,
   ) {
     const order = await this.prisma.order.create({
@@ -268,7 +273,7 @@ export class OpportunitiesService {
     opportunity: CrmOpportunity,
     dto: ConvertOpportunityDto,
     value: number,
-    currency: Currency,
+    currency: string,
     actorId: string,
   ) {
     if (!dto.startDate || !dto.endDate) {

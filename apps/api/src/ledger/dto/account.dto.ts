@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { AccountType, Currency } from '@prisma/client';
+import { AccountType } from '@prisma/client';
 import { IsEnum, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
 
 export class CreateAccountDto {
@@ -12,9 +12,9 @@ export class CreateAccountDto {
   @IsEnum(AccountType)
   type!: AccountType;
 
-  @ApiProperty({ enum: Currency })
-  @IsEnum(Currency)
-  currency!: Currency;
+  @ApiProperty()
+  @IsString()
+  currency!: string;
 
   @ApiPropertyOptional({ description: 'Site this account belongs to (e.g. per-site petty cash)' })
   @IsOptional()

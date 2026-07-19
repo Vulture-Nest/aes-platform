@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Currency, TravelRate } from '@prisma/client';
+import { TravelRate } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
+import { LookupService } from '../../settings/lookup.service';
 import { CreateTravelRateDto } from './dto/travel-rate.dto';
 
 const SUBJECT_TABLE = 'travel_rates';
@@ -15,9 +16,11 @@ export class TravelRatesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly lookups: LookupService,
   ) {}
 
   async create(dto: CreateTravelRateDto, actorId: string): Promise<TravelRate> {
+    await this.lookups.assertValid('currency', dto.currency);
     const rate = await this.prisma.travelRate.create({
       data: {
         grade: dto.grade,
@@ -63,7 +66,7 @@ export class TravelRatesService {
   async rateFor(
     grade: string,
     destinationClass: string,
-    currency: Currency,
+    currency: string,
     date: Date = new Date(),
   ): Promise<TravelRate> {
     const row = await this.prisma.travelRate.findFirst({

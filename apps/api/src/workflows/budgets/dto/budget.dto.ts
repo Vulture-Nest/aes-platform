@@ -1,10 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Currency } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
-  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
@@ -51,9 +49,9 @@ export class CreateBudgetDto {
   @IsUUID()
   siteId?: string;
 
-  @ApiProperty({ enum: Currency })
-  @IsEnum(Currency)
-  currency!: Currency;
+  @ApiProperty()
+  @IsString()
+  currency!: string;
 
   @ApiProperty({ type: [BudgetLineDto] })
   @IsArray()

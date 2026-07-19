@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../../audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { LookupService } from '../../settings/lookup.service';
 import { CreateOrderDto, CreateOrderReceiptDto, UpdateOrderDto } from './dto/order.dto';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly lookups: LookupService,
   ) {}
 
   list() {
@@ -26,6 +28,7 @@ export class OrdersService {
   }
 
   async create(dto: CreateOrderDto, actorId: string) {
+    await this.lookups.assertValid('currency', dto.currency);
     const client = await this.prisma.client.findUnique({ where: { id: dto.clientId } });
     if (!client) {
       throw new BadRequestException('Client not found');
@@ -92,6 +95,7 @@ export class OrdersService {
 
   async recordReceipt(orderId: string, dto: CreateOrderReceiptDto, actorId: string) {
     await this.findOne(orderId);
+    await this.lookups.assertValid('currency', dto.currency);
     const receipt = await this.prisma.orderReceipt.create({
       data: {
         orderId,

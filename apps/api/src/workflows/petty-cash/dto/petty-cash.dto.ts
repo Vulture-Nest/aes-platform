@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Currency } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsEnum, IsNumber, IsOptional, IsString, IsUUID, Min, MinLength } from 'class-validator';
+import { IsNumber, IsOptional, IsString, IsUUID, Min, MinLength } from 'class-validator';
 
 /** Open a petty-cash float for a site + currency, entrusted to a named custodian. */
 export class CreateFloatDto {
@@ -9,9 +8,9 @@ export class CreateFloatDto {
   @IsUUID()
   siteId!: string;
 
-  @ApiProperty({ enum: Currency })
-  @IsEnum(Currency)
-  currency!: Currency;
+  @ApiProperty()
+  @IsString()
+  currency!: string;
 
   @ApiProperty({ description: 'User who holds and is accountable for the float' })
   @IsUUID()
@@ -64,9 +63,9 @@ export class CreateConversionDto {
   @Min(0)
   amount!: number;
 
-  @ApiProperty({ enum: Currency, description: 'Currency received IN from the conversion' })
-  @IsEnum(Currency)
-  toCurrency!: Currency;
+  @ApiProperty({ description: 'Currency received IN from the conversion' })
+  @IsString()
+  toCurrency!: string;
 
   @ApiProperty({
     example: 32.5,

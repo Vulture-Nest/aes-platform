@@ -24,6 +24,7 @@ function makeService() {
   const transitions = new StatusTransitionRegistry();
   const ledger = { cashPosition: jest.fn(), post: jest.fn().mockResolvedValue([]) };
   const rates = { rateFor: jest.fn(), create: jest.fn(), list: jest.fn() };
+  const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
 
   const service = new TravelService(
     prisma as any,
@@ -33,6 +34,7 @@ function makeService() {
     transitions,
     ledger as any,
     rates as any,
+    lookups as any,
   );
   service.onModuleInit();
   return { service, prisma, audit, notifications, approvals, transitions, ledger, rates };

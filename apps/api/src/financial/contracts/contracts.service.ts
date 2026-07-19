@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../../audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { LookupService } from '../../settings/lookup.service';
 import { CreateContractDto, UpdateContractDto } from './dto/contract.dto';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class ContractsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly lookups: LookupService,
   ) {}
 
   list() {
@@ -23,6 +25,7 @@ export class ContractsService {
   }
 
   async create(dto: CreateContractDto, actorId: string) {
+    await this.lookups.assertValid('currency', dto.currency);
     const client = await this.prisma.client.findUnique({ where: { id: dto.clientId } });
     if (!client) {
       throw new BadRequestException('Client not found');
