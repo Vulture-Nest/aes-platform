@@ -7,6 +7,7 @@ import {
   IsString,
   Max,
   Min,
+  MinLength,
   validateSync,
 } from 'class-validator';
 
@@ -67,6 +68,27 @@ export class EnvironmentVariables {
 
   @IsString()
   STORAGE_BUCKET = 'aes-files';
+
+  // --- Auth (local JWT) ---
+  @IsString()
+  @MinLength(16, { message: 'JWT_SECRET must be at least 16 characters' })
+  JWT_SECRET!: string;
+
+  @IsInt()
+  @Min(60)
+  JWT_ACCESS_TTL = 900;
+
+  @IsInt()
+  @Min(300)
+  JWT_REFRESH_TTL = 2592000;
+
+  @IsString()
+  @IsOptional()
+  SEED_ADMIN_EMAIL = 'admin@aes.local';
+
+  @IsString()
+  @IsOptional()
+  SEED_ADMIN_PASSWORD = 'ChangeMe!123';
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

@@ -17,6 +17,13 @@ export interface AppConfig {
     secretKey: string;
     bucket: string;
   };
+  auth: {
+    jwtSecret: string;
+    accessTtl: number;
+    refreshTtl: number;
+    seedAdminEmail: string;
+    seedAdminPassword: string;
+  };
 }
 
 export default (): AppConfig => ({
@@ -38,5 +45,12 @@ export default (): AppConfig => ({
     accessKey: process.env.STORAGE_ACCESS_KEY as string,
     secretKey: process.env.STORAGE_SECRET_KEY as string,
     bucket: process.env.STORAGE_BUCKET ?? 'aes-files',
+  },
+  auth: {
+    jwtSecret: process.env.JWT_SECRET as string,
+    accessTtl: parseInt(process.env.JWT_ACCESS_TTL ?? '900', 10),
+    refreshTtl: parseInt(process.env.JWT_REFRESH_TTL ?? '2592000', 10),
+    seedAdminEmail: process.env.SEED_ADMIN_EMAIL ?? 'admin@aes.local',
+    seedAdminPassword: process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe!123',
   },
 });
