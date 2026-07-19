@@ -23,6 +23,8 @@ import { TravelModule } from './workflows/travel/travel.module';
 import { PettyCashModule } from './workflows/petty-cash/petty-cash.module';
 import { BudgetsModule } from './workflows/budgets/budgets.module';
 import { DirectorWithdrawalsModule } from './workflows/director-withdrawals/director-withdrawals.module';
+import { DangerModule } from './command-centre/danger/danger.module';
+import { CommandCentreModule } from './command-centre/command-centre.module';
 
 @Module({
   imports: [
@@ -48,6 +50,8 @@ import { DirectorWithdrawalsModule } from './workflows/director-withdrawals/dire
     PettyCashModule,
     BudgetsModule,
     DirectorWithdrawalsModule,
+    DangerModule,
+    CommandCentreModule,
     HealthModule,
   ],
   providers: [
