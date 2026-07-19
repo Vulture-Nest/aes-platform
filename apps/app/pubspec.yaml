@@ -1,0 +1,28 @@
+name: aes_app
+description: AES Operations & Finance Management System — Flutter client (mobile + web).
+publish_to: "none"
+version: 0.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # State management
+  flutter_riverpod: ^2.5.1
+  # Routing
+  go_router: ^13.2.0
+  # HTTP client (dio) — generated OpenAPI client wraps this in later stages
+  dio: ^5.4.0
+  # Local secure config
+  flutter_secure_storage: ^9.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
