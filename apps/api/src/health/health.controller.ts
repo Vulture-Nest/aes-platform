@@ -8,6 +8,7 @@ import {
 } from '@nestjs/terminus';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('health')
 @Controller({ path: 'health', version: VERSION_NEUTRAL })
@@ -17,6 +18,7 @@ export class HealthController {
     private readonly prisma: PrismaService,
   ) {}
 
+  @Public()
   @Get()
   @HealthCheck()
   @ApiOperation({ summary: 'Liveness + dependency health (database)' })
