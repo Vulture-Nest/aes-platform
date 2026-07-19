@@ -13,6 +13,8 @@ import { RolesGuard } from './rbac/roles.guard';
 import { AuditModule } from './audit/audit.module';
 import { UsersModule } from './users/users.module';
 import { SitesModule } from './sites/sites.module';
+import { ReferenceModule } from './reference/reference.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -25,12 +27,13 @@ import { SitesModule } from './sites/sites.module';
     PrismaModule,
     StorageModule,
     AuditModule,
+    NotificationsModule,
     AuthModule,
     UsersModule,
     SitesModule,
+    ReferenceModule,
     HealthModule,
-    // S1+ feature modules (reference-data rates, notifications, approval engine, …)
-    // register here as they land.
+    // Next: approval engine (S2), financial core (S3), …
   ],
   providers: [
     // Every route requires a valid JWT unless marked @Public(); then RBAC runs.
