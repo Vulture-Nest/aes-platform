@@ -1000,3 +1000,55 @@ model DirectorWithdrawal {
   @@index([directorUserId])
   @@map("director_withdrawals")
 }
+
+// ---------------------------------------------------------------------------
+// Command Centre — Danger Engine (spec §14.2 / Prompt 7)
+// ---------------------------------------------------------------------------
+
+/// Alert severity ladder. INFO = informational, WATCH = elevated attention,
+/// DANGER = act now (fans out to all Directors and repeats until acknowledged).
+enum AlertSeverity {
+  INFO
+  WATCH
+  DANGER
+}
+
+/// A tunable danger rule. `ruleKey` is the stable identifier the engine dispatches on
+/// (e.g. cash_runway, coverage_ratio, zimra_overdue); `params` holds the rule-specific
+/// thresholds as JSON. Seeded idempotently via DangerRulesService.seedDefaults().
+model DangerRule {
+  id       String        @id @default(uuid()) @db.Uuid
+  ruleKey  String        @unique @map("rule_key")
+  params   Json
+  severity AlertSeverity
+  enabled  Boolean       @default(true)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("danger_rules")
+}
+
+/// An alert raised by the danger engine. Deduped per (ruleKey, subjectId) while active
+/// (resolvedAt null, acknowledgedAt null) — an existing active alert is refreshed rather
+/// than duplicated. `acknowledgedByUserId`/`acknowledgedAt` capture the human ack;
+/// `resolvedAt` is set when the underlying condition clears.
+model Alert {
+  id                   String        @id @default(uuid()) @db.Uuid
+  ruleKey              String        @map("rule_key")
+  severity             AlertSeverity
+  subjectTable         String?       @map("subject_table")
+  subjectId            String?       @map("subject_id") @db.Uuid
+  message              String
+  payload              Json?
+  raisedAt             DateTime      @default(now()) @map("raised_at")
+  acknowledgedByUserId String?       @map("acknowledged_by_user_id") @db.Uuid
+  acknowledgedAt       DateTime?     @map("acknowledged_at")
+  resolvedAt           DateTime?     @map("resolved_at")
+  createdAt            DateTime      @default(now()) @map("created_at")
+
+  @@index([ruleKey, subjectId, resolvedAt])
+  @@map("alerts")
+}
