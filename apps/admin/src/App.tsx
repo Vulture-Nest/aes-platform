@@ -12,6 +12,10 @@ import { SitesPage } from './features/sites/SitesPage';
 import { StatutoryRatesPage } from './features/statutory-rates/StatutoryRatesPage';
 import { ThresholdsPage } from './features/thresholds/ThresholdsPage';
 import { UsersPage } from './features/users/UsersPage';
+import { ApprovalMatrixPage } from './features/approval-matrix/ApprovalMatrixPage';
+import { AccountsPage } from './features/accounts/AccountsPage';
+import { EmployeesPage } from './features/employees/EmployeesPage';
+import { DangerRulesPage } from './features/danger-rules/DangerRulesPage';
 
 function ProtectedLayout() {
   return (
@@ -82,6 +86,38 @@ function Shell() {
           element={
             <ProtectedRoute roles={['FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'SYS_ADMIN']}>
               <DelegationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/approval-matrix"
+          element={
+            <ProtectedRoute roles={['SYS_ADMIN', 'FINANCE_DIRECTOR']}>
+              <ApprovalMatrixPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/danger-rules"
+          element={
+            <ProtectedRoute roles={['SYS_ADMIN', 'FINANCE_DIRECTOR']}>
+              <DangerRulesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/accounts"
+          element={
+            <ProtectedRoute roles={['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER']}>
+              <AccountsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employees"
+          element={
+            <ProtectedRoute roles={['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER']}>
+              <EmployeesPage />
             </ProtectedRoute>
           }
         />

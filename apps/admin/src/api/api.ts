@@ -65,6 +65,42 @@ export interface AuditRecord {
   recordId: string | null;
   createdAt: string;
 }
+export interface AccountRecord {
+  id: string;
+  name: string;
+  type: string;
+  currency: string;
+  siteId: string | null;
+}
+export interface EmployeeRecord {
+  id: string;
+  worksNo: string;
+  firstName: string;
+  lastName: string;
+  siteId: string;
+  employmentType: string;
+  payMode: string;
+  accountNo: string | null;
+  accountCurrency: string | null;
+}
+export interface ApprovalMatrixRecord {
+  id: string;
+  module: string;
+  minAmount: string | null;
+  maxAmount: string | null;
+  currency: string | null;
+  stepOrder: number;
+  approverRole: string;
+  mode: string;
+  active: boolean;
+}
+export interface DangerRuleRecord {
+  id: string;
+  ruleKey: string;
+  severity: string;
+  enabled: boolean;
+  params: unknown;
+}
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE,
@@ -120,7 +156,19 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Users', 'Sites', 'ExchangeRates', 'StatutoryRates', 'Thresholds', 'Delegations', 'Audit'],
+  tagTypes: [
+    'Users',
+    'Sites',
+    'ExchangeRates',
+    'StatutoryRates',
+    'Thresholds',
+    'Delegations',
+    'Audit',
+    'Accounts',
+    'Employees',
+    'ApprovalMatrix',
+    'DangerRules',
+  ],
   endpoints: (build) => ({
     // --- auth ---
     login: build.mutation<Tokens, { email: string; password: string }>({
@@ -201,6 +249,46 @@ export const api = createApi({
       query: (arg) => ({ url: 'v1/audit', params: arg ?? undefined }),
       providesTags: ['Audit'],
     }),
+
+    // --- accounts (ledger) ---
+    getAccounts: build.query<AccountRecord[], void>({
+      query: () => 'v1/accounts',
+      providesTags: ['Accounts'],
+    }),
+    createAccount: build.mutation<AccountRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/accounts', method: 'POST', body }),
+      invalidatesTags: ['Accounts'],
+    }),
+
+    // --- employees (HR-lite) ---
+    getEmployees: build.query<EmployeeRecord[], void>({
+      query: () => 'v1/employees',
+      providesTags: ['Employees'],
+    }),
+    createEmployee: build.mutation<EmployeeRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/employees', method: 'POST', body }),
+      invalidatesTags: ['Employees'],
+    }),
+
+    // --- approval matrix ---
+    getApprovalMatrix: build.query<ApprovalMatrixRecord[], void>({
+      query: () => 'v1/approval-matrix',
+      providesTags: ['ApprovalMatrix'],
+    }),
+    createApprovalRule: build.mutation<ApprovalMatrixRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/approval-matrix', method: 'POST', body }),
+      invalidatesTags: ['ApprovalMatrix'],
+    }),
+
+    // --- danger rules ---
+    getDangerRules: build.query<DangerRuleRecord[], void>({
+      query: () => 'v1/danger-rules',
+      providesTags: ['DangerRules'],
+    }),
+    updateDangerRule: build.mutation<DangerRuleRecord, { id: string; enabled?: boolean; severity?: string }>({
+      query: ({ id, ...body }) => ({ url: `v1/danger-rules/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['DangerRules'],
+    }),
   }),
 });
 
@@ -223,4 +311,12 @@ export const {
   useGetDelegationsQuery,
   useCreateDelegationMutation,
   useGetAuditQuery,
+  useGetAccountsQuery,
+  useCreateAccountMutation,
+  useGetEmployeesQuery,
+  useCreateEmployeeMutation,
+  useGetApprovalMatrixQuery,
+  useCreateApprovalRuleMutation,
+  useGetDangerRulesQuery,
+  useUpdateDangerRuleMutation,
 } = api;

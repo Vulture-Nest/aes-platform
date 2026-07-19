@@ -1,13 +1,17 @@
 import {
+  AlertOutlined,
   ApartmentOutlined,
   AuditOutlined,
   BankOutlined,
   DashboardOutlined,
   DollarOutlined,
+  IdcardOutlined,
   LogoutOutlined,
+  NodeIndexOutlined,
   PercentageOutlined,
   SlidersOutlined,
   TeamOutlined,
+  WalletOutlined,
 } from '@ant-design/icons';
 import { Button, Dropdown, Layout, Menu, Typography } from 'antd';
 import { ReactNode } from 'react';
@@ -51,6 +55,30 @@ const NAV: NavItem[] = [
     label: 'Delegation',
     icon: <ApartmentOutlined />,
     roles: ['FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'SYS_ADMIN'],
+  },
+  {
+    key: '/approval-matrix',
+    label: 'Approval Matrix',
+    icon: <NodeIndexOutlined />,
+    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR'],
+  },
+  {
+    key: '/danger-rules',
+    label: 'Danger Rules',
+    icon: <AlertOutlined />,
+    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR'],
+  },
+  {
+    key: '/accounts',
+    label: 'Ledger Accounts',
+    icon: <WalletOutlined />,
+    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER'],
+  },
+  {
+    key: '/employees',
+    label: 'Employees',
+    icon: <IdcardOutlined />,
+    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER'],
   },
   { key: '/audit', label: 'Audit Log', icon: <AuditOutlined />, roles: ['SYS_ADMIN', 'AUDITOR'] },
 ];
