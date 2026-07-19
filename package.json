@@ -1,0 +1,29 @@
+{
+  "name": "aes-platform",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AES Operations & Finance Management System — monorepo",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20",
+    "npm": ">=10"
+  },
+  "workspaces": [
+    "apps/api",
+    "packages/shared"
+  ],
+  "scripts": {
+    "stack:up": "docker compose up --build -d",
+    "stack:down": "docker compose down",
+    "infra:up": "docker compose -f docker-compose.dev.yml up -d",
+    "infra:down": "docker compose -f docker-compose.dev.yml down",
+    "api": "npm --workspace apps/api run start:dev",
+    "api:test": "npm --workspace apps/api test",
+    "api:lint": "npm --workspace apps/api run lint",
+    "web": "npm --prefix apps/web run dev",
+    "web:test": "npm --prefix apps/web test",
+    "web:build": "npm --prefix apps/web run build",
+    "mobile:test": "cd apps/mobile && flutter test",
+    "shared:generate": "npm --workspace packages/shared run generate"
+  }
+}

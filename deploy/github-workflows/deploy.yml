@@ -1,0 +1,93 @@
+name: Deploy
+
+# ⚠️ Move this file to .github/workflows/deploy.yml to activate (needs a workflow-scoped token).
+#
+# Builds the API + web images, pushes them to a registry, then rolls them out on the
+# DigitalOcean droplet via docker compose against DO Managed PostgreSQL.
+#
+# Required repo secrets (add before enabling — server not provisioned yet):
+#   REGISTRY            e.g. registry.digitalocean.com/aes  or ghcr.io/vulture-nest
+#   REGISTRY_USERNAME   registry login
+#   REGISTRY_TOKEN      registry password / DO API token
+#   DO_HOST             droplet IP / hostname
+#   DO_USER             ssh user (e.g. deploy)
+#   DO_SSH_KEY          private SSH key for the droplet
+#   DATABASE_URL        DO Managed Postgres connection string (sslmode=require)
+#   JWT_SECRET          production JWT signing secret
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    name: Build & push images
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+      - name: Build & push API
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/api
+          push: true
+          tags: |
+            ${{ secrets.REGISTRY }}/aes-api:${{ github.sha }}
+            ${{ secrets.REGISTRY }}/aes-api:latest
+      - name: Build & push Web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/web
+          push: true
+          build-args: |
+            VITE_API_BASE_URL=/api
+          tags: |
+            ${{ secrets.REGISTRY }}/aes-web:${{ github.sha }}
+            ${{ secrets.REGISTRY }}/aes-web:latest
+
+  deploy:
+    name: Roll out on droplet
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy compose file to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: deploy/compose.prod.yml
+          target: /opt/aes
+          strip_components: 1
+      - name: Pull images, migrate & restart
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          envs: REGISTRY,IMAGE_TAG,DATABASE_URL,JWT_SECRET
+          script: |
+            cd /opt/aes
+            export REGISTRY="${{ secrets.REGISTRY }}"
+            export IMAGE_TAG="${{ needs.build-and-push.outputs.sha }}"
+            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            echo "${{ secrets.REGISTRY_TOKEN }}" | docker login ${{ secrets.REGISTRY }} -u ${{ secrets.REGISTRY_USERNAME }} --password-stdin
+            docker compose -f compose.prod.yml pull
+            # `api` entrypoint runs `prisma migrate deploy` against the managed DB on start.
+            docker compose -f compose.prod.yml up -d
+            docker image prune -f

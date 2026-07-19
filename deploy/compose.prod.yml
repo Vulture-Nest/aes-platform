@@ -1,0 +1,45 @@
+# Production compose for the DigitalOcean droplet.
+# Runs prebuilt images from the registry. Postgres is DO Managed PostgreSQL (external),
+# so no postgres service here — DATABASE_URL points at the managed cluster.
+#
+# Expected env on the droplet (exported by the deploy workflow):
+#   REGISTRY, IMAGE_TAG, DATABASE_URL, JWT_SECRET
+
+services:
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+
+  api:
+    image: ${REGISTRY}/aes-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      # Object storage (SharePoint/Graph or Spaces) is wired in a later stage.
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-minio}
+      STORAGE_PORT: ${STORAGE_PORT:-9000}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-aes-minio}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-changeme}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-aes-files}
+    expose:
+      - "3000"
+
+  web:
+    image: ${REGISTRY}/aes-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+
+volumes:
+  redisdata:
