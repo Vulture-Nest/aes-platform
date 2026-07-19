@@ -4,7 +4,7 @@
 // pipeline (migrate diff, prisma generate) is exercised end to end. Domain tables
 // (users, sites, exchange_rates, audit_log, approvals, orders, …) arrive in S1+.
 //
-// Conventions for all future models (see CLAUDE.md):
+// Conventions for all future models (see the README "Architecture decisions"):
 //   - UUID primary keys
 //   - created_by / created_at / updated_by / updated_at on every table
 //   - money stored as (amount, currency, fx_rate_id, rate_type) — never a bare number
