@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './rbac/roles.guard';
 import { AuditModule } from './audit/audit.module';
+import { SettingsModule } from './settings/settings.module';
 import { UsersModule } from './users/users.module';
 import { SitesModule } from './sites/sites.module';
 import { ReferenceModule } from './reference/reference.module';
@@ -40,6 +41,7 @@ import { PayrollModule } from './payroll/payroll.module';
     PrismaModule,
     StorageModule,
     AuditModule,
+    SettingsModule,
     NotificationsModule,
     AuthModule,
     UsersModule,

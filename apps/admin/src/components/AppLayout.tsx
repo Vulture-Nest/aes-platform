@@ -9,6 +9,7 @@ import {
   LogoutOutlined,
   NodeIndexOutlined,
   PercentageOutlined,
+  SettingOutlined,
   SlidersOutlined,
   TeamOutlined,
   WalletOutlined,
@@ -81,6 +82,7 @@ const NAV: NavItem[] = [
     roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER'],
   },
   { key: '/audit', label: 'Audit Log', icon: <AuditOutlined />, roles: ['SYS_ADMIN', 'AUDITOR'] },
+  { key: '/settings', label: 'Settings', icon: <SettingOutlined />, roles: ['SYS_ADMIN'] },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
