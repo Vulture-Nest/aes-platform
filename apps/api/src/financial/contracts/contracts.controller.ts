@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../rbac/roles.decorator';
 import { ContractsService } from './contracts.service';
@@ -13,28 +12,28 @@ export class ContractsController {
   constructor(private readonly contracts: ContractsService) {}
 
   @Get()
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN, Role.AUDITOR)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN', 'AUDITOR')
   @ApiOperation({ summary: 'List contracts' })
   list() {
     return this.contracts.list();
   }
 
   @Get(':id')
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN, Role.AUDITOR)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN', 'AUDITOR')
   @ApiOperation({ summary: 'Get a contract' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.contracts.findOne(id);
   }
 
   @Post()
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Create a contract' })
   create(@Body() dto: CreateContractDto, @CurrentUser('id') actorId: string) {
     return this.contracts.create(dto, actorId);
   }
 
   @Patch(':id')
-  @Roles(Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Update a contract' })
   update(
     @Param('id', ParseUUIDPipe) id: string,

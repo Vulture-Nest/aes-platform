@@ -1,6 +1,5 @@
 import { Controller, Get, Logger } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { Roles } from '../rbac/roles.decorator';
 import { CashPositionService } from './panels/cash-position.service';
 import { CoverageService } from './panels/coverage.service';
@@ -24,13 +23,7 @@ interface PanelErrorStub {
  */
 @ApiTags('command-centre')
 @ApiBearerAuth()
-@Roles(
-  Role.FINANCE_OFFICER,
-  Role.FINANCE_DIRECTOR,
-  Role.OPS_DIRECTOR,
-  Role.DIRECTOR,
-  Role.SYS_ADMIN,
-)
+@Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN')
 @Controller({ path: 'command-centre', version: '1' })
 export class CommandCentreController {
   private readonly logger = new Logger(CommandCentreController.name);

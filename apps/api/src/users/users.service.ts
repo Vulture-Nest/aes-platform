@@ -1,16 +1,17 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, Role } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { LookupService } from '../settings/lookup.service';
 import { CreateUserDto, SiteRoleAssignmentDto } from './dto/create-user.dto';
 
 /** Roles that must complete MFA (enforced at login from a later stage). */
-const MFA_REQUIRED_ROLES = new Set<Role>([
-  Role.FINANCE_DIRECTOR,
-  Role.OPS_DIRECTOR,
-  Role.DIRECTOR,
-  Role.SYS_ADMIN,
+const MFA_REQUIRED_ROLES = new Set<string>([
+  'FINANCE_DIRECTOR',
+  'OPS_DIRECTOR',
+  'DIRECTOR',
+  'SYS_ADMIN',
 ]);
 
 type UserWithRoles = Prisma.UserGetPayload<{ include: { siteRoles: true } }>;
@@ -21,6 +22,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly lookups: LookupService,
   ) {}
 
   /** Never leak the password hash over the API. */
@@ -36,6 +38,10 @@ export class UsersService {
     }
 
     const roles = dto.roles ?? [];
+    // Roles are plain strings validated against the admin-managed settings catalog.
+    for (const r of roles) {
+      await this.lookups.assertValid('role', r.role);
+    }
     const mfaRequired =
       Boolean(dto.mfaRequired) || roles.some((r) => MFA_REQUIRED_ROLES.has(r.role));
     const passwordHash = await argon2.hash(dto.password);
@@ -68,6 +74,9 @@ export class UsersService {
   }
 
   async assignRole(userId: string, dto: SiteRoleAssignmentDto, actorId: string) {
+    // Role must be an active value in the settings lookup catalog (category 'role').
+    await this.lookups.assertValid('role', dto.role);
+
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User not found');

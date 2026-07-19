@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { ApprovalDecision, ApprovalMode, ApprovalStatus, Prisma, Role } from '@prisma/client';
+import { ApprovalDecision, ApprovalMode, ApprovalStatus, Prisma } from '@prisma/client';
 import { ApprovalService } from '../../approvals/approval.service';
 import { StatusTransitionRegistry } from '../../approvals/status-transition.registry';
 import { BudgetsService, BudgetStatus } from './budgets.service';
@@ -143,7 +143,7 @@ describe('BudgetsService dual-approval gating (real engine, OD + FD PARALLEL)', 
         id: 'sOD',
         chainId: 'c1',
         step: 1,
-        approverRole: Role.OPS_DIRECTOR,
+        approverRole: 'OPS_DIRECTOR',
         mode: ApprovalMode.PARALLEL,
         decision: null,
       },
@@ -151,7 +151,7 @@ describe('BudgetsService dual-approval gating (real engine, OD + FD PARALLEL)', 
         id: 'sFD',
         chainId: 'c1',
         step: 1,
-        approverRole: Role.FINANCE_DIRECTOR,
+        approverRole: 'FINANCE_DIRECTOR',
         mode: ApprovalMode.PARALLEL,
         decision: null,
       },

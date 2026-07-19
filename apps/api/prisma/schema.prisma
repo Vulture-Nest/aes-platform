@@ -30,19 +30,6 @@ model HealthCheck {
 // RBAC
 // ---------------------------------------------------------------------------
 
-/// Roles per spec §4. Enforced by our own guards (self-managed RBAC).
-enum Role {
-  SITE_CLERK
-  SITE_MANAGER
-  OPS_STAFF
-  FINANCE_OFFICER
-  FINANCE_DIRECTOR // FD
-  OPS_DIRECTOR // OD
-  DIRECTOR // Managing Director / Directors
-  SYS_ADMIN
-  AUDITOR // read-only
-}
-
 enum UserStatus {
   ACTIVE
   DISABLED
@@ -102,7 +89,7 @@ model UserSiteRole {
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   siteId String? @map("site_id") @db.Uuid
   site   Site?   @relation(fields: [siteId], references: [id])
-  role   Role
+  role   String
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -319,7 +306,7 @@ model ApprovalMatrix {
   currency     Currency?
   siteId       String?      @map("site_id") @db.Uuid
   stepOrder    Int          @map("step_order")
-  approverRole Role         @map("approver_role")
+  approverRole String       @map("approver_role")
   mode         ApprovalMode @default(SEQUENTIAL)
   active       Boolean      @default(true)
 
@@ -357,7 +344,7 @@ model Approval {
   chainId         String            @map("chain_id") @db.Uuid
   chain           ApprovalChain     @relation(fields: [chainId], references: [id], onDelete: Cascade)
   step            Int
-  approverRole    Role              @map("approver_role")
+  approverRole    String            @map("approver_role")
   /// Resolved via delegation when a named approver is substituted; null = match by role.
   assignedUserId  String?           @map("assigned_user_id") @db.Uuid
   mode            ApprovalMode      @default(SEQUENTIAL)

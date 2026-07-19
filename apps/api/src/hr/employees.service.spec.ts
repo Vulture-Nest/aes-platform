@@ -1,5 +1,4 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { Role } from '@prisma/client';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { EmployeesService, maskAccountNo } from './employees.service';
 
@@ -27,14 +26,14 @@ const financeUser: AuthenticatedUser = {
   id: 'fin1',
   email: 'fo@aes.local',
   status: 'ACTIVE',
-  roles: [{ siteId: null, role: Role.FINANCE_OFFICER }],
+  roles: [{ siteId: null, role: 'FINANCE_OFFICER' }],
 };
 
 const siteManagerS1: AuthenticatedUser = {
   id: 'sm1',
   email: 'sm@aes.local',
   status: 'ACTIVE',
-  roles: [{ siteId: 's1', role: Role.SITE_MANAGER }],
+  roles: [{ siteId: 's1', role: 'SITE_MANAGER' }],
 };
 
 const baseEmployee = {

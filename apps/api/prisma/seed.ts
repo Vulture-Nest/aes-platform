@@ -1,4 +1,4 @@
-import { AccountType, Currency, PrismaClient, Role, UserStatus } from '@prisma/client';
+import { AccountType, Currency, PrismaClient, UserStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
@@ -55,11 +55,11 @@ async function main(): Promise<void> {
   });
 
   const hasAdminRole = await prisma.userSiteRole.findFirst({
-    where: { userId: admin.id, role: Role.SYS_ADMIN, siteId: null },
+    where: { userId: admin.id, role: 'SYS_ADMIN', siteId: null },
   });
   if (!hasAdminRole) {
     await prisma.userSiteRole.create({
-      data: { userId: admin.id, role: Role.SYS_ADMIN, siteId: null },
+      data: { userId: admin.id, role: 'SYS_ADMIN', siteId: null },
     });
   }
 

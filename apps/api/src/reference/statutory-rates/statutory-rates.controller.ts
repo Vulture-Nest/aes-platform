@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../rbac/roles.decorator';
 import { CreateStatutoryRateDto, StatutoryValueQueryDto } from './dto/statutory-rate.dto';
@@ -13,7 +12,7 @@ export class StatutoryRatesController {
   constructor(private readonly rates: StatutoryRatesService) {}
 
   @Post()
-  @Roles(Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Record an effective-dated statutory parameter' })
   create(@Body() dto: CreateStatutoryRateDto, @CurrentUser('id') actorId: string) {
     return this.rates.create(dto, actorId);

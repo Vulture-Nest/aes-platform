@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ApprovalMode, Currency, Role } from '@prisma/client';
+import { ApprovalMode, Currency } from '@prisma/client';
 import {
   IsBoolean,
   IsEnum,
@@ -47,9 +47,12 @@ export class CreateApprovalMatrixDto {
   @Min(1)
   stepOrder!: number;
 
-  @ApiProperty({ enum: Role })
-  @IsEnum(Role)
-  approverRole!: Role;
+  @ApiProperty({
+    example: 'FINANCE_DIRECTOR',
+    description: 'Approver role code; validated at runtime against the settings lookup catalog.',
+  })
+  @IsString()
+  approverRole!: string;
 
   @ApiPropertyOptional({ enum: ApprovalMode, default: ApprovalMode.SEQUENTIAL })
   @IsOptional()

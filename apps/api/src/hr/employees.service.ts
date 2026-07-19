@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Employee, Prisma, Role } from '@prisma/client';
+import { Employee, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { LookupService } from '../settings/lookup.service';
@@ -264,18 +264,18 @@ export class EmployeesService {
    * limited to the sites their role is assigned to.
    */
   private siteScopeFor(user: AuthenticatedUser): string[] | null {
-    const unscopedRoles: Role[] = [
-      Role.FINANCE_OFFICER,
-      Role.FINANCE_DIRECTOR,
-      Role.SYS_ADMIN,
-      Role.DIRECTOR,
+    const unscopedRoles: string[] = [
+      'FINANCE_OFFICER',
+      'FINANCE_DIRECTOR',
+      'SYS_ADMIN',
+      'DIRECTOR',
     ];
     const hasUnscoped = user.roles.some((r) => unscopedRoles.includes(r.role));
     if (hasUnscoped) {
       return null;
     }
     const siteIds = user.roles
-      .filter((r) => r.role === Role.SITE_MANAGER && r.siteId !== null)
+      .filter((r) => r.role === 'SITE_MANAGER' && r.siteId !== null)
       .map((r) => r.siteId as string);
     return [...new Set(siteIds)];
   }

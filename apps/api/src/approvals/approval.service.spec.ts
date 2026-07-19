@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { ApprovalDecision, ApprovalMode, ApprovalStatus, Prisma, Role } from '@prisma/client';
+import { ApprovalDecision, ApprovalMode, ApprovalStatus, Prisma } from '@prisma/client';
 import { ApprovalService } from './approval.service';
 import { StatusTransitionRegistry } from './status-transition.registry';
 
@@ -42,7 +42,7 @@ describe('ApprovalService.submit — matrix routing', () => {
       {
         id: 'm1',
         stepOrder: 1,
-        approverRole: Role.SITE_MANAGER,
+        approverRole: 'SITE_MANAGER',
         mode: ApprovalMode.SEQUENTIAL,
         minAmount: dec(0),
         maxAmount: dec(1000),
@@ -50,7 +50,7 @@ describe('ApprovalService.submit — matrix routing', () => {
       {
         id: 'm2',
         stepOrder: 2,
-        approverRole: Role.FINANCE_OFFICER,
+        approverRole: 'FINANCE_OFFICER',
         mode: ApprovalMode.SEQUENTIAL,
         minAmount: dec(0),
         maxAmount: dec(1000),
@@ -59,7 +59,7 @@ describe('ApprovalService.submit — matrix routing', () => {
       {
         id: 'm3',
         stepOrder: 3,
-        approverRole: Role.FINANCE_DIRECTOR,
+        approverRole: 'FINANCE_DIRECTOR',
         mode: ApprovalMode.SEQUENTIAL,
         minAmount: dec(1001),
         maxAmount: dec(100000),
@@ -73,8 +73,8 @@ describe('ApprovalService.submit — matrix routing', () => {
       requesterId: 'req',
       siteId: null,
       steps: [
-        { id: 'a1', step: 1, approverRole: Role.SITE_MANAGER },
-        { id: 'a2', step: 2, approverRole: Role.FINANCE_OFFICER },
+        { id: 'a1', step: 1, approverRole: 'SITE_MANAGER' },
+        { id: 'a2', step: 2, approverRole: 'FINANCE_OFFICER' },
       ],
     });
     prisma.userSiteRole.findMany.mockResolvedValue([]);
@@ -91,8 +91,8 @@ describe('ApprovalService.submit — matrix routing', () => {
     const createdSteps = created.data.steps.create;
     expect(createdSteps).toHaveLength(2);
     expect(createdSteps.map((s: any) => s.approverRole)).toEqual([
-      Role.SITE_MANAGER,
-      Role.FINANCE_OFFICER,
+      'SITE_MANAGER',
+      'FINANCE_OFFICER',
     ]);
     // Chain starts at the first step order.
     expect(created.data.currentStep).toBe(1);
@@ -104,7 +104,7 @@ describe('ApprovalService.submit — matrix routing', () => {
       {
         id: 'm1',
         stepOrder: 1,
-        approverRole: Role.SITE_MANAGER,
+        approverRole: 'SITE_MANAGER',
         mode: ApprovalMode.SEQUENTIAL,
         minAmount: dec(0),
         maxAmount: dec(1000),
@@ -112,7 +112,7 @@ describe('ApprovalService.submit — matrix routing', () => {
       {
         id: 'm3',
         stepOrder: 3,
-        approverRole: Role.FINANCE_DIRECTOR,
+        approverRole: 'FINANCE_DIRECTOR',
         mode: ApprovalMode.SEQUENTIAL,
         minAmount: dec(1001),
         maxAmount: dec(100000),
@@ -135,7 +135,7 @@ describe('ApprovalService.submit — matrix routing', () => {
     });
 
     const createdSteps = prisma.approvalChain.create.mock.calls[0][0].data.steps.create;
-    expect(createdSteps.map((s: any) => s.approverRole)).toEqual([Role.FINANCE_DIRECTOR]);
+    expect(createdSteps.map((s: any) => s.approverRole)).toEqual(['FINANCE_DIRECTOR']);
   });
 
   it('throws when no matrix rows match', async () => {
@@ -243,7 +243,7 @@ describe('ApprovalService.decide — advancement modes', () => {
         id: 'a1',
         chainId: 'c1',
         step: 1,
-        approverRole: Role.SITE_MANAGER,
+        approverRole: 'SITE_MANAGER',
         mode: ApprovalMode.SEQUENTIAL,
         decision: null,
       },
@@ -251,7 +251,7 @@ describe('ApprovalService.decide — advancement modes', () => {
         id: 'a2',
         chainId: 'c1',
         step: 2,
-        approverRole: Role.FINANCE_OFFICER,
+        approverRole: 'FINANCE_OFFICER',
         mode: ApprovalMode.SEQUENTIAL,
         decision: null,
       },
@@ -284,7 +284,7 @@ describe('ApprovalService.decide — advancement modes', () => {
         id: 'a1',
         chainId: 'c1',
         step: 1,
-        approverRole: Role.FINANCE_OFFICER,
+        approverRole: 'FINANCE_OFFICER',
         mode: ApprovalMode.EITHER,
         decision: null,
       },
@@ -292,7 +292,7 @@ describe('ApprovalService.decide — advancement modes', () => {
         id: 'a2',
         chainId: 'c1',
         step: 1,
-        approverRole: Role.FINANCE_DIRECTOR,
+        approverRole: 'FINANCE_DIRECTOR',
         mode: ApprovalMode.EITHER,
         decision: null,
       },
@@ -334,7 +334,7 @@ describe('ApprovalService.decide — advancement modes', () => {
         id: 'a1',
         chainId: 'c1',
         step: 1,
-        approverRole: Role.FINANCE_OFFICER,
+        approverRole: 'FINANCE_OFFICER',
         mode: ApprovalMode.PARALLEL,
         decision: null,
       },
@@ -342,7 +342,7 @@ describe('ApprovalService.decide — advancement modes', () => {
         id: 'a2',
         chainId: 'c1',
         step: 1,
-        approverRole: Role.OPS_STAFF,
+        approverRole: 'OPS_STAFF',
         mode: ApprovalMode.PARALLEL,
         decision: null,
       },
@@ -371,7 +371,7 @@ describe('ApprovalService.decide — advancement modes', () => {
         id: 'a1',
         chainId: 'c1',
         step: 1,
-        approverRole: Role.FINANCE_OFFICER,
+        approverRole: 'FINANCE_OFFICER',
         mode: ApprovalMode.PARALLEL,
         decision: ApprovalDecision.APPROVED,
       },
@@ -379,7 +379,7 @@ describe('ApprovalService.decide — advancement modes', () => {
         id: 'a2',
         chainId: 'c1',
         step: 1,
-        approverRole: Role.OPS_STAFF,
+        approverRole: 'OPS_STAFF',
         mode: ApprovalMode.PARALLEL,
         decision: null,
       },
@@ -427,7 +427,7 @@ describe('ApprovalService.decide — reject and return', () => {
         id: 'a1',
         chainId: 'c1',
         step: 1,
-        approverRole: Role.SITE_MANAGER,
+        approverRole: 'SITE_MANAGER',
         mode: ApprovalMode.SEQUENTIAL,
         decision: null,
       },
@@ -435,7 +435,7 @@ describe('ApprovalService.decide — reject and return', () => {
         id: 'a2',
         chainId: 'c1',
         step: 2,
-        approverRole: Role.FINANCE_OFFICER,
+        approverRole: 'FINANCE_OFFICER',
         mode: ApprovalMode.SEQUENTIAL,
         decision: null,
       },
@@ -474,7 +474,7 @@ describe('ApprovalService.decide — reject and return', () => {
         id: 'a1',
         chainId: 'c1',
         step: 1,
-        approverRole: Role.SITE_MANAGER,
+        approverRole: 'SITE_MANAGER',
         mode: ApprovalMode.SEQUENTIAL,
         decision: null,
       },
@@ -482,7 +482,7 @@ describe('ApprovalService.decide — reject and return', () => {
         id: 'a2',
         chainId: 'c1',
         step: 2,
-        approverRole: Role.FINANCE_OFFICER,
+        approverRole: 'FINANCE_OFFICER',
         mode: ApprovalMode.SEQUENTIAL,
         decision: null,
       },
@@ -526,26 +526,26 @@ describe('ApprovalService.inbox', () => {
       {
         id: 'a1',
         step: 1,
-        approverRole: Role.FINANCE_OFFICER,
+        approverRole: 'FINANCE_OFFICER',
         chain: { currentStep: 1, requesterId: 'someone' },
       },
       // not the active step → excluded
       {
         id: 'a2',
         step: 2,
-        approverRole: Role.FINANCE_OFFICER,
+        approverRole: 'FINANCE_OFFICER',
         chain: { currentStep: 1, requesterId: 'someone' },
       },
       // user is the requester → excluded (cannot self-approve)
       {
         id: 'a3',
         step: 1,
-        approverRole: Role.FINANCE_OFFICER,
+        approverRole: 'FINANCE_OFFICER',
         chain: { currentStep: 1, requesterId: 'me' },
       },
     ]);
 
-    const result = await service.inbox({ id: 'me', roles: [Role.FINANCE_OFFICER] });
+    const result = await service.inbox({ id: 'me', roles: ['FINANCE_OFFICER'] });
     expect(result.map((r) => r.id)).toEqual(['a1']);
   });
 

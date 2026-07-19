@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../rbac/roles.decorator';
 import { CreateDelegationDto } from './dto/delegation.dto';
@@ -13,7 +12,7 @@ export class DelegationController {
   constructor(private readonly delegation: DelegationService) {}
 
   @Post()
-  @Roles(Role.FINANCE_DIRECTOR, Role.OPS_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Create an approver → alternate delegation window' })
   create(@Body() dto: CreateDelegationDto, @CurrentUser('id') actorId: string) {
     return this.delegation.create(dto, actorId);

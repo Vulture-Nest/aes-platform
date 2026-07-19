@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../rbac/roles.decorator';
 import { DangerRulesService } from './danger-rules.service';
@@ -13,21 +12,21 @@ export class DangerRulesController {
   constructor(private readonly rules: DangerRulesService) {}
 
   @Get()
-  @Roles(Role.SYS_ADMIN, Role.FINANCE_DIRECTOR)
+  @Roles('SYS_ADMIN', 'FINANCE_DIRECTOR')
   @ApiOperation({ summary: 'List danger rules' })
   list() {
     return this.rules.list();
   }
 
   @Post()
-  @Roles(Role.SYS_ADMIN, Role.FINANCE_DIRECTOR)
+  @Roles('SYS_ADMIN', 'FINANCE_DIRECTOR')
   @ApiOperation({ summary: 'Create a danger rule' })
   create(@Body() dto: CreateDangerRuleDto, @CurrentUser('id') actorId: string) {
     return this.rules.create(dto, actorId);
   }
 
   @Patch(':id')
-  @Roles(Role.SYS_ADMIN, Role.FINANCE_DIRECTOR)
+  @Roles('SYS_ADMIN', 'FINANCE_DIRECTOR')
   @ApiOperation({ summary: 'Update a danger rule (params/severity/enabled)' })
   update(
     @Param('id', ParseUUIDPipe) id: string,

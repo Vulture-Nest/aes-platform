@@ -9,7 +9,6 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../rbac/roles.decorator';
 import { CreateTimesheetPeriodDto, ReopenRequestDto, UpsertEntriesDto } from './dto/timesheet.dto';
@@ -27,7 +26,7 @@ export class TimesheetsController {
   constructor(private readonly timesheets: TimesheetsService) {}
 
   @Post()
-  @Roles(Role.SITE_CLERK, Role.SITE_MANAGER, Role.OPS_STAFF, Role.SYS_ADMIN)
+  @Roles('SITE_CLERK', 'SITE_MANAGER', 'OPS_STAFF', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Create a monthly timesheet period for a site' })
   createPeriod(@Body() dto: CreateTimesheetPeriodDto, @CurrentUser('id') actorId: string) {
     return this.timesheets.createPeriod(dto, actorId);
@@ -35,15 +34,15 @@ export class TimesheetsController {
 
   @Get(':id')
   @Roles(
-    Role.SITE_CLERK,
-    Role.SITE_MANAGER,
-    Role.OPS_STAFF,
-    Role.OPS_DIRECTOR,
-    Role.FINANCE_OFFICER,
-    Role.FINANCE_DIRECTOR,
-    Role.DIRECTOR,
-    Role.SYS_ADMIN,
-    Role.AUDITOR,
+    'SITE_CLERK',
+    'SITE_MANAGER',
+    'OPS_STAFF',
+    'OPS_DIRECTOR',
+    'FINANCE_OFFICER',
+    'FINANCE_DIRECTOR',
+    'DIRECTOR',
+    'SYS_ADMIN',
+    'AUDITOR',
   )
   @ApiOperation({ summary: 'Get the full timesheet grid (period + entries)' })
   getGrid(@Param('id', ParseUUIDPipe) id: string) {
@@ -51,7 +50,7 @@ export class TimesheetsController {
   }
 
   @Post(':id/entries')
-  @Roles(Role.SITE_CLERK, Role.SITE_MANAGER, Role.OPS_STAFF, Role.SYS_ADMIN)
+  @Roles('SITE_CLERK', 'SITE_MANAGER', 'OPS_STAFF', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Bulk upsert timesheet grid rows (validated; OPEN periods only)' })
   upsertEntries(
     @Param('id', ParseUUIDPipe) id: string,
@@ -63,7 +62,7 @@ export class TimesheetsController {
 
   @Post(':id/submit')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.SITE_CLERK, Role.SITE_MANAGER, Role.OPS_STAFF, Role.SYS_ADMIN)
+  @Roles('SITE_CLERK', 'SITE_MANAGER', 'OPS_STAFF', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Submit the period for Site-Manager approval' })
   submit(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('id') requesterId: string) {
     return this.timesheets.submit(id, requesterId);
@@ -71,7 +70,7 @@ export class TimesheetsController {
 
   @Post(':id/lock')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.SITE_MANAGER, Role.FINANCE_OFFICER, Role.FINANCE_DIRECTOR, Role.SYS_ADMIN)
+  @Roles('SITE_MANAGER', 'FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Lock a SITE_APPROVED period, freezing it for payroll' })
   lock(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('id') actorId: string) {
     return this.timesheets.lock(id, actorId);
@@ -79,7 +78,7 @@ export class TimesheetsController {
 
   @Post(':id/reopen-request')
   @HttpCode(HttpStatus.OK)
-  @Roles(Role.SITE_CLERK, Role.SITE_MANAGER, Role.OPS_STAFF, Role.SYS_ADMIN)
+  @Roles('SITE_CLERK', 'SITE_MANAGER', 'OPS_STAFF', 'SYS_ADMIN')
   @ApiOperation({ summary: 'Record an audited request to reopen a locked/approved period' })
   requestReopen(
     @Param('id', ParseUUIDPipe) id: string,
@@ -91,13 +90,13 @@ export class TimesheetsController {
 
   @Get(':id/manhours')
   @Roles(
-    Role.SITE_MANAGER,
-    Role.OPS_DIRECTOR,
-    Role.FINANCE_OFFICER,
-    Role.FINANCE_DIRECTOR,
-    Role.DIRECTOR,
-    Role.SYS_ADMIN,
-    Role.AUDITOR,
+    'SITE_MANAGER',
+    'OPS_DIRECTOR',
+    'FINANCE_OFFICER',
+    'FINANCE_DIRECTOR',
+    'DIRECTOR',
+    'SYS_ADMIN',
+    'AUDITOR',
   )
   @ApiOperation({ summary: 'Per-employee man-hour totals per category (data only; XLSX later)' })
   manhours(@Param('id', ParseUUIDPipe) id: string) {

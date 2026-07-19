@@ -14,7 +14,6 @@ import {
   Currency,
   NotificationSeverity,
   Prisma,
-  Role,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -195,7 +194,7 @@ export class ApprovalService {
   /** PENDING steps at the active step_order whose role the user holds and hasn't decided. */
   async inbox(user: {
     id: string;
-    roles: Role[];
+    roles: string[];
   }): Promise<(Approval & { chain: ApprovalChain })[]> {
     if (user.roles.length === 0) {
       return [];

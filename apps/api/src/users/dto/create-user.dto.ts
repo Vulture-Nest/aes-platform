@@ -1,11 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
   IsEmail,
-  IsEnum,
   IsOptional,
   IsString,
   IsUUID,
@@ -19,9 +17,12 @@ export class SiteRoleAssignmentDto {
   @IsUUID()
   siteId?: string;
 
-  @ApiProperty({ enum: Role })
-  @IsEnum(Role)
-  role!: Role;
+  @ApiProperty({
+    example: 'SITE_CLERK',
+    description: 'Role code; validated at runtime against the settings lookup catalog.',
+  })
+  @IsString()
+  role!: string;
 }
 
 export class CreateUserDto {
