@@ -1,4 +1,4 @@
-import { plainToInstance, Transform } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
@@ -28,6 +28,7 @@ export class EnvironmentVariables {
   @IsEnum(Environment)
   NODE_ENV: Environment = Environment.Development;
 
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   @Max(65535)
@@ -47,12 +48,14 @@ export class EnvironmentVariables {
   @IsString()
   REDIS_HOST = 'localhost';
 
+  @Type(() => Number)
   @IsInt()
   REDIS_PORT = 6379;
 
   @IsString()
   STORAGE_ENDPOINT = 'localhost';
 
+  @Type(() => Number)
   @IsInt()
   STORAGE_PORT = 9000;
 
@@ -74,10 +77,12 @@ export class EnvironmentVariables {
   @MinLength(16, { message: 'JWT_SECRET must be at least 16 characters' })
   JWT_SECRET!: string;
 
+  @Type(() => Number)
   @IsInt()
   @Min(60)
   JWT_ACCESS_TTL = 900;
 
+  @Type(() => Number)
   @IsInt()
   @Min(300)
   JWT_REFRESH_TTL = 2592000;
