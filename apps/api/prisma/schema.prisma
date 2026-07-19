@@ -284,3 +284,447 @@ model NotificationPreference {
   @@unique([userId, channel])
   @@map("notification_preferences")
 }
+
+// ---------------------------------------------------------------------------
+// Generic approval engine (spec S2, Prompt 3) — one engine used by all modules.
+// ---------------------------------------------------------------------------
+
+/// How the approvers within a single step order must act.
+///  - SEQUENTIAL: one role per step_order; steps advance one by one.
+///  - PARALLEL: every approver row sharing a step_order must approve.
+///  - EITHER: any one approver row in the step_order suffices.
+enum ApprovalMode {
+  SEQUENTIAL
+  PARALLEL
+  EITHER
+}
+
+/// The decision recorded on an individual approval step row.
+enum ApprovalDecision {
+  APPROVED
+  REJECTED
+  RETURNED
+}
+
+/// The lifecycle status of an approval chain instance.
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RETURNED
+}
+
+/// Configuration: which roles approve which module, in which amount band, in which
+/// order and mode. Rows are selected at submit time to instantiate a chain.
+model ApprovalMatrix {
+  id           String       @id @default(uuid()) @db.Uuid
+  module       String // e.g. "requisition", "payment"
+  minAmount    Decimal?     @map("min_amount") @db.Decimal(20, 2)
+  maxAmount    Decimal?     @map("max_amount") @db.Decimal(20, 2)
+  currency     Currency?
+  siteId       String?      @map("site_id") @db.Uuid
+  stepOrder    Int          @map("step_order")
+  approverRole Role         @map("approver_role")
+  mode         ApprovalMode @default(SEQUENTIAL)
+  active       Boolean      @default(true)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([module, active])
+  @@map("approval_matrix")
+}
+
+/// One chain instance per submitted subject (e.g. a specific requisition).
+model ApprovalChain {
+  id           String         @id @default(uuid()) @db.Uuid
+  module       String
+  subjectTable String         @map("subject_table")
+  subjectId    String         @map("subject_id") @db.Uuid
+  amount       Decimal?       @db.Decimal(20, 2)
+  currency     Currency?
+  siteId       String?        @map("site_id") @db.Uuid
+  requesterId  String         @map("requester_id") @db.Uuid
+  status       ApprovalStatus @default(PENDING)
+  currentStep  Int            @default(1) @map("current_step")
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  steps Approval[]
+
+  @@index([subjectTable, subjectId])
+  @@index([status])
+  @@map("approval_chains")
+}
+
+/// A single approval step within a chain, resolved from an approval_matrix row.
+model Approval {
+  id              String            @id @default(uuid()) @db.Uuid
+  chainId         String            @map("chain_id") @db.Uuid
+  chain           ApprovalChain     @relation(fields: [chainId], references: [id], onDelete: Cascade)
+  step            Int
+  approverRole    Role              @map("approver_role")
+  /// Resolved via delegation when a named approver is substituted; null = match by role.
+  assignedUserId  String?           @map("assigned_user_id") @db.Uuid
+  mode            ApprovalMode      @default(SEQUENTIAL)
+  decision        ApprovalDecision?
+  decidedByUserId String?           @map("decided_by_user_id") @db.Uuid
+  decidedAt       DateTime?         @map("decided_at")
+  comment         String?
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  @@index([chainId])
+  @@map("approvals")
+}
+
+// ---------------------------------------------------------------------------
+// S3 Financial core (spec Prompt 4) — clients, contracts, orders, expenses,
+// loans, accounts/ledger and the tax tables. Monetary amounts follow the money
+// rule: (amount, currency, fx_rate_id, rate_type) — never a bare number.
+// Appendix A calculations live in separate pure services (not here).
+// ---------------------------------------------------------------------------
+
+enum ContractStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+}
+
+enum LoanInterestMethod {
+  FLAT
+  REDUCING
+}
+
+enum LoanStatus {
+  ACTIVE
+  SETTLED
+}
+
+enum AccountType {
+  BANK
+  PETTY_CASH
+  MOBILE_WALLET
+}
+
+enum TaxType {
+  VAT
+  PAYE
+}
+
+/// A billed customer (mine site operator). Sites may map to a client via site.client_id.
+model Client {
+  id           String  @id @default(uuid()) @db.Uuid
+  name         String  @unique
+  contactEmail String? @map("contact_email")
+  active       Boolean @default(true)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  contracts Contract[]
+  orders    Order[]
+
+  @@map("clients")
+}
+
+/// A revenue contract with a client. Value is VAT-exclusive money.
+model Contract {
+  id         String         @id @default(uuid()) @db.Uuid
+  clientId   String         @map("client_id") @db.Uuid
+  client     Client         @relation(fields: [clientId], references: [id])
+  reference  String
+  valueExVat Decimal        @map("value_ex_vat") @db.Decimal(20, 2)
+  currency   Currency
+  fxRateId   String?        @map("fx_rate_id") @db.Uuid
+  rateType   String?        @map("rate_type")
+  startDate  DateTime       @map("start_date")
+  endDate    DateTime       @map("end_date")
+  status     ContractStatus @default(UPCOMING)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  claims ContractClaim[]
+  orders Order[]        @relation("OrderContract")
+
+  @@index([clientId])
+  @@map("contracts")
+}
+
+/// A progress claim raised against a contract. Amount is VAT-exclusive money.
+model ContractClaim {
+  id         String   @id @default(uuid()) @db.Uuid
+  contractId String   @map("contract_id") @db.Uuid
+  contract   Contract @relation(fields: [contractId], references: [id])
+  amountExVat Decimal @map("amount_ex_vat") @db.Decimal(20, 2)
+  currency   Currency
+  fxRateId   String?  @map("fx_rate_id") @db.Uuid
+  rateType   String?  @map("rate_type")
+  claimDate  DateTime @map("claim_date")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([contractId])
+  @@map("contract_claims")
+}
+
+/// A work order for a client, optionally tied to a contract. Value is VAT-exclusive money.
+model Order {
+  id         String    @id @default(uuid()) @db.Uuid
+  clientId   String    @map("client_id") @db.Uuid
+  client     Client    @relation(fields: [clientId], references: [id])
+  contractId String?   @map("contract_id") @db.Uuid
+  contract   Contract? @relation("OrderContract", fields: [contractId], references: [id])
+  reference  String
+  valueExVat Decimal   @map("value_ex_vat") @db.Decimal(20, 2)
+  currency   Currency
+  fxRateId   String?   @map("fx_rate_id") @db.Uuid
+  rateType   String?   @map("rate_type")
+  closingDate DateTime? @map("closing_date")
+  serviced   Boolean   @default(false)
+  servicedAt DateTime? @map("serviced_at")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  receipts OrderReceipt[]
+  expenses OrderExpense[]
+
+  @@index([clientId])
+  @@index([contractId])
+  @@map("orders")
+}
+
+/// A payment received against an order. Amount is money.
+model OrderReceipt {
+  id           String   @id @default(uuid()) @db.Uuid
+  orderId      String   @map("order_id") @db.Uuid
+  order        Order    @relation(fields: [orderId], references: [id])
+  amount       Decimal  @db.Decimal(20, 2)
+  currency     Currency
+  fxRateId     String?  @map("fx_rate_id") @db.Uuid
+  rateType     String?  @map("rate_type")
+  receivedDate DateTime @map("received_date")
+  reference    String?
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([orderId])
+  @@map("order_receipts")
+}
+
+/// A cost booked against an order. Amount is money; VAT may be claimable.
+model OrderExpense {
+  id            String   @id @default(uuid()) @db.Uuid
+  orderId       String   @map("order_id") @db.Uuid
+  order         Order    @relation(fields: [orderId], references: [id])
+  amount        Decimal  @db.Decimal(20, 2)
+  currency      Currency
+  fxRateId      String?  @map("fx_rate_id") @db.Uuid
+  rateType      String?  @map("rate_type")
+  vatClaimable  Boolean  @default(false) @map("vat_claimable")
+  description   String?
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([orderId])
+  @@map("order_expenses")
+}
+
+/// A non-order-specific expense (overhead-adjacent). Amount is money.
+model GeneralExpense {
+  id           String   @id @default(uuid()) @db.Uuid
+  amount       Decimal  @db.Decimal(20, 2)
+  currency     Currency
+  fxRateId     String?  @map("fx_rate_id") @db.Uuid
+  rateType     String?  @map("rate_type")
+  vatClaimable Boolean  @map("vat_claimable")
+  category     String?
+  expenseDate  DateTime @map("expense_date")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("general_expenses")
+}
+
+/// A recurring/periodic overhead cost. Amount is money.
+model Overhead {
+  id          String   @id @default(uuid()) @db.Uuid
+  amount      Decimal  @db.Decimal(20, 2)
+  currency    Currency
+  fxRateId    String?  @map("fx_rate_id") @db.Uuid
+  rateType    String?  @map("rate_type")
+  category    String?
+  periodMonth String?  @map("period_month")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("overheads")
+}
+
+/// A borrowing. Principal is money; interest accrues per weekly_rate_pct via a pure service.
+model Loan {
+  id             String             @id @default(uuid()) @db.Uuid
+  lender         String
+  principal      Decimal            @db.Decimal(20, 2)
+  currency       Currency
+  fxRateId       String?            @map("fx_rate_id") @db.Uuid
+  rateType       String?            @map("rate_type")
+  weeklyRatePct  Decimal            @map("weekly_rate_pct") @db.Decimal(20, 6)
+  interestMethod LoanInterestMethod @default(FLAT) @map("interest_method")
+  startDate      DateTime           @map("start_date")
+  status         LoanStatus         @default(ACTIVE)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  repayments LoanRepayment[]
+  interest   LoanInterest[]
+
+  @@map("loans")
+}
+
+/// A repayment against a loan. Amount is money.
+model LoanRepayment {
+  id         String   @id @default(uuid()) @db.Uuid
+  loanId     String   @map("loan_id") @db.Uuid
+  loan       Loan     @relation(fields: [loanId], references: [id])
+  amount     Decimal  @db.Decimal(20, 2)
+  currency   Currency
+  fxRateId   String?  @map("fx_rate_id") @db.Uuid
+  rateType   String?  @map("rate_type")
+  repaidDate DateTime @map("repaid_date")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([loanId])
+  @@map("loan_repayments")
+}
+
+/// Idempotent per-day interest accrual for a loan (written by the interest service).
+model LoanInterest {
+  id          String   @id @default(uuid()) @db.Uuid
+  loanId      String   @map("loan_id") @db.Uuid
+  loan        Loan     @relation(fields: [loanId], references: [id])
+  accrualDate DateTime @map("accrual_date") @db.Date
+  amount      Decimal  @db.Decimal(20, 2)
+  currency    Currency
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([loanId, accrualDate])
+  @@index([loanId])
+  @@map("loan_interest")
+}
+
+/// A cash/bank/wallet account, optionally scoped to a site.
+model Account {
+  id       String      @id @default(uuid()) @db.Uuid
+  name     String
+  type     AccountType
+  currency Currency
+  siteId   String?     @map("site_id") @db.Uuid
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  ledgerEntries LedgerEntry[]
+
+  @@map("accounts")
+}
+
+/// A double-entry-style ledger line against an account.
+model LedgerEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  accountId   String   @map("account_id") @db.Uuid
+  account     Account  @relation(fields: [accountId], references: [id])
+  debit       Decimal  @default(0) @db.Decimal(20, 2)
+  credit      Decimal  @default(0) @db.Decimal(20, 2)
+  currency    Currency
+  sourceTable String?  @map("source_table")
+  sourceId    String?  @map("source_id") @db.Uuid
+  entryDate   DateTime @map("entry_date")
+  description String?
+  createdBy   String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([accountId])
+  @@index([sourceTable, sourceId])
+  @@map("ledger_entries")
+}
+
+/// Running tax obligation per type + period (VAT/PAYE). Amounts are money.
+model TaxLedger {
+  id          String   @id @default(uuid()) @db.Uuid
+  taxType     TaxType  @map("tax_type")
+  periodMonth String   @map("period_month")
+  amountDue   Decimal  @map("amount_due") @db.Decimal(20, 2)
+  amountPaid  Decimal  @default(0) @map("amount_paid") @db.Decimal(20, 2)
+  currency    Currency
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("tax_ledger")
+}
+
+/// Other outstanding tax debt with its own interest rate.
+model OtherTaxDebt {
+  id        String   @id @default(uuid()) @db.Uuid
+  taxType   TaxType  @map("tax_type")
+  principal Decimal  @db.Decimal(20, 2)
+  currency  Currency
+  dueDate   DateTime @map("due_date")
+  ratePct   Decimal  @map("rate_pct") @db.Decimal(20, 6)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("other_tax_debt")
+}
+
+/// A ZIMRA assessment raised against the business. Assessed amount is money.
+model ZimraAssessment {
+  id             String   @id @default(uuid()) @db.Uuid
+  taxType        TaxType  @map("tax_type")
+  assessedAmount Decimal  @map("assessed_amount") @db.Decimal(20, 2)
+  currency       Currency
+  dueDate        DateTime @map("due_date")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("zimra_assessments")
+}
