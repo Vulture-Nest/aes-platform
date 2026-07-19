@@ -16,7 +16,13 @@ import { SitesModule } from './sites/sites.module';
 import { ReferenceModule } from './reference/reference.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ApprovalsModule } from './approvals/approvals.module';
+import { LedgerModule } from './ledger/ledger.module';
 import { FinancialModule } from './financial/financial.module';
+import { RequisitionsModule } from './workflows/requisitions/requisitions.module';
+import { TravelModule } from './workflows/travel/travel.module';
+import { PettyCashModule } from './workflows/petty-cash/petty-cash.module';
+import { BudgetsModule } from './workflows/budgets/budgets.module';
+import { DirectorWithdrawalsModule } from './workflows/director-withdrawals/director-withdrawals.module';
 
 @Module({
   imports: [
@@ -35,7 +41,13 @@ import { FinancialModule } from './financial/financial.module';
     SitesModule,
     ReferenceModule,
     ApprovalsModule,
+    LedgerModule,
     FinancialModule,
+    RequisitionsModule,
+    TravelModule,
+    PettyCashModule,
+    BudgetsModule,
+    DirectorWithdrawalsModule,
     HealthModule,
   ],
   providers: [

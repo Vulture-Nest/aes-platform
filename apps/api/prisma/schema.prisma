@@ -728,3 +728,275 @@ model ZimraAssessment {
 
   @@map("zimra_assessments")
 }
+
+// ---------------------------------------------------------------------------
+// Workflows — Cash Requisitions (spec §8 / Prompt 6.1)
+// ---------------------------------------------------------------------------
+
+/// A cash requisition. Follows the shared workflow lifecycle: DRAFT -> SUBMITTED ->
+/// APPROVED|REJECTED|RETURNED -> (funds check) APPROVED_READY_TO_PAY |
+/// APPROVED_PENDING_FUNDS -> DISBURSED -> CLOSED. Approval is merit-only; funds
+/// availability never blocks approval, it only picks READY_TO_PAY vs PENDING_FUNDS.
+model Requisition {
+  id             String    @id @default(uuid()) @db.Uuid
+  purpose        String
+  amount         Decimal   @db.Decimal(20, 2)
+  currency       Currency
+  requiredByDate DateTime  @map("required_by_date")
+  /// Optional link to the order this requisition funds.
+  orderId        String?   @map("order_id") @db.Uuid
+  attachmentKey  String?   @map("attachment_key")
+  siteId         String?   @map("site_id") @db.Uuid
+  requesterId    String    @map("requester_id") @db.Uuid
+  status         String    @default("DRAFT")
+  /// Cash position captured at the moment the funds check ran.
+  cashSnapshot   Json?     @map("cash_snapshot")
+  /// Amount by which the chosen account fell short at funds-check time (PENDING_FUNDS only).
+  shortfall      Decimal?  @db.Decimal(20, 2)
+  disbursementAccountId String? @map("disbursement_account_id") @db.Uuid
+  disbursementReference String? @map("disbursement_reference")
+  disbursedAt    DateTime? @map("disbursed_at")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([requesterId])
+  @@index([siteId])
+  @@map("requisitions")
+}
+
+// ---------------------------------------------------------------------------
+// Workflows — Travel Allowances (spec §8 / Prompt 6.2)
+// ---------------------------------------------------------------------------
+
+/// Admin-managed effective-dated per-diem rate table. The daily rate applied to a travel
+/// request is the most recent row for the (grade, destinationClass, currency) tuple whose
+/// effectiveDate is on or before the trip's dateFrom. Config, never hardcoded.
+model TravelRate {
+  id               String   @id @default(uuid()) @db.Uuid
+  grade            String
+  destinationClass String   @map("destination_class")
+  currency         Currency
+  dailyRate        Decimal  @map("daily_rate") @db.Decimal(20, 2)
+  effectiveDate    DateTime @map("effective_date")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([grade, destinationClass, currency, effectiveDate])
+  @@map("travel_rates")
+}
+
+/// A travel allowance / advance request. Follows the shared workflow lifecycle plus a
+/// travel-only retirement step: DRAFT -> SUBMITTED -> APPROVED|REJECTED|RETURNED ->
+/// (funds check) APPROVED_READY_TO_PAY | APPROVED_PENDING_FUNDS -> DISBURSED -> RETIRED ->
+/// CLOSED. Approval is merit-only; funds availability never blocks approval, it only picks
+/// READY_TO_PAY vs PENDING_FUNDS. On retirement the traveller's unspent advance drives
+/// refundDue (owed BACK to the business) or refundOwed (owed TO the traveller).
+model TravelRequest {
+  id               String   @id @default(uuid()) @db.Uuid
+  destination      String
+  destinationClass String?  @map("destination_class")
+  dateFrom         DateTime @map("date_from")
+  dateTo           DateTime @map("date_to")
+  grade            String?
+  /// Per-day allowance resolved from the travel_rates table at submit time.
+  perDiem          Decimal  @map("per_diem") @db.Decimal(20, 2)
+  days             Int
+  /// Total advance requested = perDiem * days.
+  advanceAmount    Decimal  @map("advance_amount") @db.Decimal(20, 2)
+  currency         Currency
+  siteId           String?  @map("site_id") @db.Uuid
+  requesterId      String   @map("requester_id") @db.Uuid
+  status           String   @default("DRAFT")
+  /// Cash position captured at the moment the funds check ran.
+  cashSnapshot     Json?    @map("cash_snapshot")
+  /// Amount by which the chosen account fell short at funds-check time (PENDING_FUNDS only).
+  shortfall        Decimal? @db.Decimal(20, 2)
+
+  disbursementAccountId String?   @map("disbursement_account_id") @db.Uuid
+  disbursementReference String?   @map("disbursement_reference")
+  disbursedAt           DateTime? @map("disbursed_at")
+
+  /// Retirement: storage key of the supporting receipts pack and the reconciliation result.
+  retirementReceiptsKey String?   @map("retirement_receipts_key")
+  /// Cash the traveller must refund BACK to the business (unspent advance).
+  refundDue             Decimal?  @map("refund_due") @db.Decimal(20, 2)
+  /// Cash the business owes TO the traveller (spent beyond the advance).
+  refundOwed            Decimal?  @map("refund_owed") @db.Decimal(20, 2)
+  retiredAt             DateTime? @map("retired_at")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([requesterId])
+  @@index([siteId])
+  @@map("travel_requests")
+}
+
+// ---------------------------------------------------------------------------
+// Workflows — Petty Cash (spec §9 / Prompt 6.3)
+// ---------------------------------------------------------------------------
+
+/// A petty-cash float held per site per currency by a named custodian. Its live balance is
+/// derived from petty_cash_txns (posted withdrawals draw it down; top-ups/conversion-ins
+/// replenish it). `locked` is set by reconciliation when a cash count reveals a variance
+/// beyond tolerance and blocks further withdrawals until an FD clears it.
+model PettyCashFloat {
+  id               String   @id @default(uuid()) @db.Uuid
+  siteId           String   @map("site_id") @db.Uuid
+  currency         Currency
+  custodianUserId  String   @map("custodian_user_id") @db.Uuid
+  /// The imprest/nominal float amount this custodian is entrusted with.
+  floatAmount      Decimal  @map("float_amount") @db.Decimal(20, 2)
+  /// Set true by reconciliation when a counted variance exceeds tolerance; blocks withdrawals.
+  locked           Boolean  @default(false)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  txns PettyCashTxn[]
+
+  @@index([siteId, currency])
+  @@index([custodianUserId])
+  @@map("petty_cash_floats")
+}
+
+/// A single movement against a petty-cash float. `type` is one of
+/// WITHDRAWAL | TOP_UP | CONVERSION_OUT | CONVERSION_IN. Conversions come in two linked legs
+/// (an OUT leg and an IN leg) referencing each other via `linkedTxnId`, carrying the achieved
+/// rate and the variance vs the official rate of the day. `status` follows the shared lifecycle
+/// (DRAFT/SUBMITTED/APPROVED.../POSTED) — below-threshold withdrawals post immediately after a
+/// Site Manager confirm; at/above threshold they require FD approval before cash leaves.
+model PettyCashTxn {
+  id       String         @id @default(uuid()) @db.Uuid
+  floatId  String         @map("float_id") @db.Uuid
+  float    PettyCashFloat @relation(fields: [floatId], references: [id])
+  type     String // WITHDRAWAL | TOP_UP | CONVERSION_OUT | CONVERSION_IN
+  amount   Decimal        @db.Decimal(20, 2)
+  currency Currency
+  purpose  String?
+  /// Optional link to the order this petty-cash spend relates to.
+  orderId  String?        @map("order_id") @db.Uuid
+  /// Storage key of the receipt photo/attachment supporting the voucher.
+  receiptKey          String?  @map("receipt_key")
+  /// Conversions only: the rate actually achieved on the street for the swap.
+  achievedRate        Decimal? @map("achieved_rate") @db.Decimal(20, 6)
+  /// Conversions only: achievedRate minus the official rate of the day (loss/gain signal).
+  varianceVsOfficial  Decimal? @map("variance_vs_official") @db.Decimal(20, 6)
+  /// The paired conversion leg (OUT <-> IN).
+  linkedTxnId         String?  @map("linked_txn_id") @db.Uuid
+  status              String   @default("DRAFT")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([floatId])
+  @@index([type])
+  @@index([status])
+  @@map("petty_cash_txns")
+}
+
+// ---------------------------------------------------------------------------
+// Workflows — Budgets (spec §10 / Prompt 6.4)
+// ---------------------------------------------------------------------------
+
+/// A budget for an optional site + period, made of one or more category lines. Follows the
+/// shared workflow lifecycle but resolves under a PARALLEL co-approval by BOTH the Ops Director
+/// and the Finance Director (module='budget'): the budget only becomes ACTIVE once both approve.
+/// A Return sends it back for correction and re-submission. Active budgets track actuals
+/// (order_expenses + general_expenses + overheads + requisitions) per line/category, warning at
+/// 85% and alerting at 100% (thresholds configurable). Revisions clone the budget to a new
+/// version (a fresh approvable); Budget Change Requests reuse the same dual-approval path.
+model Budget {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  /// Optional budget period, stored as an ISO month string e.g. "2026-07".
+  periodMonth String?  @map("period_month")
+  siteId      String?  @map("site_id") @db.Uuid
+  currency    Currency
+  status      String   @default("DRAFT")
+  version     Int      @default(1)
+  /// When a revision clones this budget, the clone points back at its predecessor.
+  parentBudgetId String? @map("parent_budget_id") @db.Uuid
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  lines BudgetLine[]
+
+  @@index([status])
+  @@index([siteId])
+  @@index([parentBudgetId])
+  @@map("budgets")
+}
+
+/// A single category line of a budget carrying the budgeted amount for that category.
+model BudgetLine {
+  id          String   @id @default(uuid()) @db.Uuid
+  budgetId    String   @map("budget_id") @db.Uuid
+  budget      Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  category    String
+  description String?
+  amount      Decimal  @db.Decimal(20, 2)
+  currency    Currency
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([budgetId])
+  @@map("budget_lines")
+}
+
+// ---------------------------------------------------------------------------
+// Workflows — Director Withdrawals (spec §11 / Prompt 6.5)
+// ---------------------------------------------------------------------------
+
+/// A withdrawal raised by a director against a company account. It requires co-approval by a
+/// SECOND director (self-approval is impossible — enforced by the approval engine). Once the
+/// co-approval chain resolves APPROVED an informational funds check runs and the movement is
+/// posted to the ledger immediately as "Posted — Awaiting Transfer" so the cash position
+/// reflects it at once; a human then performs the actual bank transfer and calls complete()
+/// (which must be a different user than the requester) to record the method/reference and
+/// close it.
+model DirectorWithdrawal {
+  id                 String   @id @default(uuid()) @db.Uuid
+  directorUserId     String   @map("director_user_id") @db.Uuid
+  amount             Decimal  @db.Decimal(20, 2)
+  currency           Currency
+  destinationAccount String   @map("destination_account")
+  reason             String
+  status             String   @default("DRAFT")
+
+  transferMethod    String?   @map("transfer_method")
+  transferReference String?   @map("transfer_reference")
+  completedByUserId String?   @map("completed_by_user_id") @db.Uuid
+  completedAt       DateTime? @map("completed_at")
+  /// Set when the withdrawal is posted to the ledger (immediately on co-approval).
+  ledgerPostedAt    DateTime? @map("ledger_posted_at")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([directorUserId])
+  @@map("director_withdrawals")
+}
