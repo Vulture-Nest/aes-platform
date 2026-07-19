@@ -33,6 +33,45 @@ export interface ExchangeRateRecord {
   source: string | null;
 }
 
+export interface SiteRecord {
+  id: string;
+  name: string;
+  type: string;
+}
+export interface RequisitionRecord {
+  id: string;
+  purpose: string;
+  amount: string;
+  currency: string;
+  requiredByDate: string;
+  status: string;
+  shortfall: string | null;
+  createdAt: string;
+}
+export interface ApprovalInboxItem {
+  id: string;
+  step: number;
+  approverRole: string;
+  chain: {
+    id: string;
+    module: string;
+    subjectTable: string;
+    subjectId: string;
+    amount: string | null;
+    currency: string | null;
+    status: string;
+  };
+}
+export interface OrderRecord {
+  id: string;
+  reference: string;
+  valueExVat: string;
+  currency: string;
+  serviced: boolean;
+  closingDate: string | null;
+  clientId: string;
+}
+
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE,
   prepareHeaders: (headers, { getState }) => {
@@ -86,7 +125,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Notifications', 'ExchangeRates'],
+  tagTypes: ['Notifications', 'ExchangeRates', 'Requisitions', 'Approvals', 'Orders'],
   endpoints: (build) => ({
     login: build.mutation<Tokens, { email: string; password: string }>({
       query: (body) => ({ url: 'v1/auth/login', method: 'POST', body }),
@@ -117,6 +156,49 @@ export const api = createApi({
       query: () => 'v1/exchange-rates',
       providesTags: ['ExchangeRates'],
     }),
+
+    getSites: build.query<SiteRecord[], void>({ query: () => 'v1/sites' }),
+
+    // Requests (cash requisitions)
+    getRequisitions: build.query<RequisitionRecord[], void>({
+      query: () => 'v1/requisitions',
+      providesTags: ['Requisitions'],
+    }),
+    createRequisition: build.mutation<
+      RequisitionRecord,
+      { purpose: string; amount: number; currency: string; requiredByDate: string }
+    >({
+      query: (body) => ({ url: 'v1/requisitions', method: 'POST', body }),
+      invalidatesTags: ['Requisitions'],
+    }),
+    submitRequisition: build.mutation<RequisitionRecord, string>({
+      query: (id) => ({ url: `v1/requisitions/${id}/submit`, method: 'POST', body: {} }),
+      invalidatesTags: ['Requisitions', 'Approvals'],
+    }),
+
+    // Approvals inbox
+    getApprovalInbox: build.query<ApprovalInboxItem[], void>({
+      query: () => 'v1/approvals/inbox',
+      providesTags: ['Approvals'],
+    }),
+    decideApproval: build.mutation<
+      unknown,
+      { id: string; decision: 'APPROVED' | 'REJECTED' | 'RETURNED'; comment?: string }
+    >({
+      query: ({ id, ...body }) => ({ url: `v1/approvals/${id}/decide`, method: 'POST', body }),
+      invalidatesTags: ['Approvals', 'Requisitions'],
+    }),
+
+    // Orders
+    getOrders: build.query<OrderRecord[], void>({
+      query: () => 'v1/orders',
+      providesTags: ['Orders'],
+    }),
+
+    // Command centre (composite)
+    getCommandCentre: build.query<Record<string, unknown>, void>({
+      query: () => 'v1/command-centre',
+    }),
   }),
 });
 
@@ -129,4 +211,12 @@ export const {
   useMarkReadMutation,
   useMarkAllReadMutation,
   useGetExchangeRatesQuery,
+  useGetSitesQuery,
+  useGetRequisitionsQuery,
+  useCreateRequisitionMutation,
+  useSubmitRequisitionMutation,
+  useGetApprovalInboxQuery,
+  useDecideApprovalMutation,
+  useGetOrdersQuery,
+  useGetCommandCentreQuery,
 } = api;

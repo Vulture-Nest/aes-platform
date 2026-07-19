@@ -1,6 +1,7 @@
 import {
   BellOutlined,
   CheckSquareOutlined,
+  DashboardOutlined,
   DollarOutlined,
   FileTextOutlined,
   HomeOutlined,
@@ -8,7 +9,7 @@ import {
   ShoppingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Badge, Button, Dropdown, Layout, Menu, Tooltip } from 'antd';
+import { Badge, Button, Dropdown, Layout, Menu } from 'antd';
 import { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLogoutMutation, useUnreadCountQuery } from '../api/api';
@@ -17,12 +18,12 @@ import { loggedOut } from '../features/auth/authSlice';
 
 const NAV = [
   { key: '/', label: 'Home', icon: <HomeOutlined /> },
-  { key: '/notifications', label: 'Notifications', icon: <BellOutlined /> },
+  { key: '/requests', label: 'Requests', icon: <FileTextOutlined /> },
+  { key: '/approvals', label: 'Approvals', icon: <CheckSquareOutlined /> },
+  { key: '/orders', label: 'Orders', icon: <ShoppingOutlined /> },
+  { key: '/command-centre', label: 'Command Centre', icon: <DashboardOutlined /> },
   { key: '/rates', label: 'Exchange Rates', icon: <DollarOutlined /> },
-  // Light up as their backend lands (S2–S5).
-  { key: '/approvals', label: 'Approvals', icon: <CheckSquareOutlined />, disabled: true },
-  { key: '/requests', label: 'Requests', icon: <FileTextOutlined />, disabled: true },
-  { key: '/orders', label: 'Orders', icon: <ShoppingOutlined />, disabled: true },
+  { key: '/notifications', label: 'Notifications', icon: <BellOutlined /> },
   { key: '/profile', label: 'Profile', icon: <UserOutlined /> },
 ];
 
@@ -50,18 +51,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           mode="inline"
           selectedKeys={[location.pathname]}
           onClick={({ key }) => navigate(key)}
-          items={NAV.map((n) => ({
-            key: n.key,
-            icon: n.icon,
-            disabled: n.disabled,
-            label: n.disabled ? (
-              <Tooltip title="Coming soon">
-                <span>{n.label}</span>
-              </Tooltip>
-            ) : (
-              n.label
-            ),
-          }))}
+          items={NAV.map((n) => ({ key: n.key, icon: n.icon, label: n.label }))}
         />
       </Layout.Sider>
       <Layout>
