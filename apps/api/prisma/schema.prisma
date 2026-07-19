@@ -1280,3 +1280,125 @@ model LookupValue {
   @@index([category, active])
   @@map("lookup_values")
 }
+
+// ---------------------------------------------------------------------------
+// CRM core (spec §17 / Prompt 12) — lightweight business-development pipeline:
+// organisations we deal with, their contacts, and logged interactions.
+// ---------------------------------------------------------------------------
+
+/// A type of logged touchpoint with an organisation/contact.
+enum InteractionType {
+  CALL
+  VISIT
+  EMAIL
+  TENDER
+  MEETING
+}
+
+/// The stage of a sales-pipeline opportunity as it moves toward WON or LOST.
+enum OpportunityStage {
+  CONTACT
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+/// A prospect/customer organisation tracked by business development. May link to an
+/// existing billed Client once the relationship is converted (clientId is a soft link).
+model CrmOrganisation {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String
+  /// Soft link to a financial-core Client (no FK — orgs may exist before a client does).
+  clientId    String? @map("client_id") @db.Uuid
+  industry    String?
+  source      String?
+  ownerUserId String? @map("owner_user_id") @db.Uuid
+  notes       String?
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  contacts     CrmContact[]
+  interactions CrmInteraction[]
+
+  @@index([clientId])
+  @@map("crm_organisations")
+}
+
+/// A person at an organisation.
+model CrmContact {
+  id             String          @id @default(uuid()) @db.Uuid
+  organisationId String          @map("organisation_id") @db.Uuid
+  organisation   CrmOrganisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  firstName      String          @map("first_name")
+  lastName       String          @map("last_name")
+  email          String?
+  phone          String?
+  title          String?
+  ownerUserId    String?         @map("owner_user_id") @db.Uuid
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  interactions CrmInteraction[]
+
+  @@index([organisationId])
+  @@map("crm_contacts")
+}
+
+/// A logged touchpoint (call/visit/email/tender/meeting) with an org and/or contact.
+model CrmInteraction {
+  id             String           @id @default(uuid()) @db.Uuid
+  organisationId String?          @map("organisation_id") @db.Uuid
+  organisation   CrmOrganisation? @relation(fields: [organisationId], references: [id])
+  contactId      String?          @map("contact_id") @db.Uuid
+  contact        CrmContact?      @relation(fields: [contactId], references: [id])
+  type           InteractionType
+  occurredAt     DateTime         @map("occurred_at")
+  outcome        String?
+  notes          String?
+  byUserId       String?          @map("by_user_id") @db.Uuid
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([organisationId])
+  @@index([contactId])
+  @@map("crm_interactions")
+}
+
+/// A sales-pipeline opportunity (deal) tracked through stages. When WON it may be
+/// converted into a financial-core Order or Contract (soft links, no FK — the deal
+/// records the id of the created order/contract for traceability).
+model CrmOpportunity {
+  id                  String           @id @default(uuid()) @db.Uuid
+  title               String
+  organisationId      String?          @map("organisation_id") @db.Uuid
+  contactId           String?          @map("contact_id") @db.Uuid
+  stage               OpportunityStage @default(CONTACT)
+  estimatedValue      Decimal?         @map("estimated_value") @db.Decimal(20, 2)
+  currency            Currency?
+  ownerUserId         String?          @map("owner_user_id") @db.Uuid
+  expectedCloseDate   DateTime?        @map("expected_close_date")
+  wonAt               DateTime?        @map("won_at")
+  lostReason          String?          @map("lost_reason")
+  convertedOrderId    String?          @map("converted_order_id") @db.Uuid
+  convertedContractId String?          @map("converted_contract_id") @db.Uuid
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([stage])
+  @@index([ownerUserId])
+  @@map("crm_opportunities")
+}
