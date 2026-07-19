@@ -1052,3 +1052,203 @@ model Alert {
   @@index([ruleKey, subjectId, resolvedAt])
   @@map("alerts")
 }
+
+// ---------------------------------------------------------------------------
+// HR-LITE — employee master + timesheets (spec §12 / Prompt 9)
+// ---------------------------------------------------------------------------
+
+/// How an employee is engaged. Drives statutory treatment downstream (payroll, S9+).
+enum EmploymentType {
+  PERMANENT
+  CONTRACT
+  CASUAL
+}
+
+/// How an employee's pay is split across currencies. CLIENT_RATIO follows the site's
+/// client USD/ZWG billing ratio; FIXED_SPLIT uses the per-employee `fixedUsdPct`.
+enum PayMode {
+  CLIENT_RATIO
+  FIXED_SPLIT
+}
+
+/// Lifecycle of a monthly timesheet period. OPEN accepts edits; SITE_APPROVED is set
+/// after the Site Manager approval chain resolves; LOCKED is immutable and is the only
+/// state (with SITE_APPROVED) that payroll may read from.
+enum TimesheetPeriodStatus {
+  OPEN
+  SITE_APPROVED
+  LOCKED
+}
+
+/// HR-lite employee master. Bank account numbers are masked (last 4 only) in read DTOs;
+/// the raw value is only ever used by payroll (S9+). `userId` optionally links to a login.
+model Employee {
+  id              String          @id @default(uuid()) @db.Uuid
+  worksNo         String          @unique @map("works_no")
+  firstName       String          @map("first_name")
+  lastName        String          @map("last_name")
+  nationalId      String?         @map("national_id")
+  nssaNo          String?         @map("nssa_no")
+  grade           String?
+  necClass        String?         @map("nec_class")
+  occupation      String?
+  siteId          String          @map("site_id") @db.Uuid
+  employmentType  EmploymentType  @map("employment_type")
+  payMode         PayMode         @map("pay_mode")
+  /// Only meaningful when payMode = FIXED_SPLIT: the fixed USD percentage (0..100).
+  fixedUsdPct     Decimal?        @map("fixed_usd_pct") @db.Decimal(5, 2)
+  hourlyRate      Decimal?        @map("hourly_rate") @db.Decimal(20, 4)
+  bankName        String?         @map("bank_name")
+  bankBranch      String?         @map("bank_branch")
+  accountNo       String?         @map("account_no")
+  accountCurrency Currency?       @map("account_currency")
+  leaveBalance    Decimal         @default(0) @map("leave_balance") @db.Decimal(10, 2)
+  startDate       DateTime        @map("start_date")
+  endDate         DateTime?       @map("end_date")
+  /// Optional link to the users table (an employee that also has a login).
+  userId          String?         @map("user_id") @db.Uuid
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  timesheetEntries TimesheetEntry[]
+
+  @@index([siteId])
+  @@map("employees")
+}
+
+/// A monthly timesheet period per site. One period per (site, month). Entries hang off it.
+model TimesheetPeriod {
+  id                String                @id @default(uuid()) @db.Uuid
+  siteId            String                @map("site_id") @db.Uuid
+  /// Calendar month in YYYY-MM.
+  month             String
+  status            TimesheetPeriodStatus @default(OPEN)
+  approvedByUserId  String?               @map("approved_by_user_id") @db.Uuid
+  lockedAt          DateTime?             @map("locked_at")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  entries TimesheetEntry[]
+
+  @@unique([siteId, month])
+  @@index([siteId])
+  @@map("timesheet_periods")
+}
+
+/// One employee-day row in a timesheet period. Hours are split by category; category
+/// exclusivity + a configurable max-hours/day are enforced at write time in the service.
+model TimesheetEntry {
+  id          String          @id @default(uuid()) @db.Uuid
+  periodId    String          @map("period_id") @db.Uuid
+  period      TimesheetPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  employeeId  String          @map("employee_id") @db.Uuid
+  employee    Employee        @relation(fields: [employeeId], references: [id])
+  date        DateTime        @db.Date
+  hoursNormal Decimal         @default(0) @map("hours_normal") @db.Decimal(6, 2)
+  hoursOt15   Decimal         @default(0) @map("hours_ot15") @db.Decimal(6, 2)
+  hoursOt20   Decimal         @default(0) @map("hours_ot20") @db.Decimal(6, 2)
+  ugShift     Decimal         @default(0) @map("ug_shift") @db.Decimal(6, 2)
+  nightHours  Decimal         @default(0) @map("night_hours") @db.Decimal(6, 2)
+  remarks     String?
+  /// Placeholder anomaly flag — set when a heuristic (S9+) flags the row for review.
+  anomalyFlag Boolean         @default(false) @map("anomaly_flag")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([periodId, employeeId, date])
+  @@index([periodId])
+  @@index([employeeId])
+  @@map("timesheet_entries")
+}
+
+// ---------------------------------------------------------------------------
+// Payroll engine (spec §13 / Prompt 10)
+// ---------------------------------------------------------------------------
+
+/// Lifecycle of a monthly payroll run. DRAFT is created once a site+month timesheet is
+/// SITE_APPROVED/LOCKED; CHECKED after compute; APPROVED after the Finance-Director chain
+/// resolves and the employer cost posts to the ledger; PAID once disbursed; LOCKED is the
+/// terminal immutable state (corrections are made via a reversing correcting run, never by
+/// mutating a locked run).
+enum PayrollRunStatus {
+  DRAFT
+  CHECKED
+  APPROVED
+  PAID
+  LOCKED
+}
+
+/// A monthly payroll run for one site. One run per (site, month). The chosen FX rate and the
+/// governing client USD/ZWG ratio are snapshotted at open time so a run is reproducible even
+/// if reference data changes later.
+model PayrollRun {
+  id                  String           @id @default(uuid()) @db.Uuid
+  siteId              String           @map("site_id") @db.Uuid
+  /// Calendar month in YYYY-MM.
+  month               String
+  status              PayrollRunStatus @default(DRAFT)
+  /// The exchange_rates row snapshotted for this run (USD/ZWG conversions).
+  fxRateId            String?          @map("fx_rate_id") @db.Uuid
+  /// Snapshot of the client USD/ZWG split ratio governing the run at open time.
+  clientRatioSnapshot Json?            @map("client_ratio_snapshot")
+  preparedByUserId    String?          @map("prepared_by_user_id") @db.Uuid
+  approvedByUserId    String?          @map("approved_by_user_id") @db.Uuid
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  lines PayrollLine[]
+
+  @@unique([siteId, month])
+  @@index([siteId])
+  @@map("payroll_runs")
+}
+
+/// One computed pay line per employee within a run. Gross is built from timesheet hours and
+/// pay config; statutory deductions/contributions are computed per currency from effective
+/// StatutoryRate config. Net = gross - paye - aidsLevy - nssaEe - otherDeductions, split USD/ZWG.
+model PayrollLine {
+  id               String     @id @default(uuid()) @db.Uuid
+  runId            String     @map("run_id") @db.Uuid
+  run              PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  employeeId       String     @map("employee_id") @db.Uuid
+  basicUsd         Decimal    @default(0) @map("basic_usd") @db.Decimal(20, 2)
+  basicZwg         Decimal    @default(0) @map("basic_zwg") @db.Decimal(20, 2)
+  cola             Decimal    @default(0) @db.Decimal(20, 2)
+  ugAllowance      Decimal    @default(0) @map("ug_allowance") @db.Decimal(20, 2)
+  nightAllowance   Decimal    @default(0) @map("night_allowance") @db.Decimal(20, 2)
+  otherAllowances  Decimal    @default(0) @map("other_allowances") @db.Decimal(20, 2)
+  gross            Decimal    @default(0) @db.Decimal(20, 2)
+  paye             Decimal    @default(0) @db.Decimal(20, 2)
+  aidsLevy         Decimal    @default(0) @map("aids_levy") @db.Decimal(20, 2)
+  nssaEe           Decimal    @default(0) @map("nssa_ee") @db.Decimal(20, 2)
+  nssaEr           Decimal    @default(0) @map("nssa_er") @db.Decimal(20, 2)
+  zimdef           Decimal    @default(0) @db.Decimal(20, 2)
+  nec              Decimal    @default(0) @db.Decimal(20, 2)
+  mipf             Decimal    @default(0) @db.Decimal(20, 2)
+  nyaradzo         Decimal    @default(0) @db.Decimal(20, 2)
+  otherDeductions  Decimal    @default(0) @map("other_deductions") @db.Decimal(20, 2)
+  netUsd           Decimal    @default(0) @map("net_usd") @db.Decimal(20, 2)
+  netZwg           Decimal    @default(0) @map("net_zwg") @db.Decimal(20, 2)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([runId, employeeId])
+  @@index([runId])
+  @@index([employeeId])
+  @@map("payroll_lines")
+}
