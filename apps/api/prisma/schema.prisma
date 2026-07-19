@@ -170,3 +170,117 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_log")
 }
+
+// ---------------------------------------------------------------------------
+// Reference data — all effective-dated, append-only where noted (spec S1)
+// ---------------------------------------------------------------------------
+
+enum Currency {
+  USD
+  ZWG
+}
+
+/// Append-only, effective-dated FX rates (official + parallel/street). Never overwritten;
+/// a newer effective date supersedes. `rateAsOf(date, type)` reads the latest ≤ date.
+model ExchangeRate {
+  id            String   @id @default(uuid()) @db.Uuid
+  dateEffective DateTime @map("date_effective")
+  currencyPair  String   @map("currency_pair") // e.g. "USD/ZWG"
+  officialRate  Decimal  @map("official_rate") @db.Decimal(20, 6)
+  parallelRate  Decimal? @map("parallel_rate") @db.Decimal(20, 6)
+  source        String?
+  enteredBy     String?  @map("entered_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([currencyPair, dateEffective])
+  @@map("exchange_rates")
+}
+
+/// Effective-dated statutory parameters (VAT %, ZIMRA interest %, NSSA/ZIMDEF/NEC/MIPF,
+/// PAYE bands per currency as JSON). Config, never hardcoded.
+model StatutoryRate {
+  id            String    @id @default(uuid()) @db.Uuid
+  key           String // vat_pct, zimra_interest_pct, nssa_*, zimdef_pct, paye_bands, aids_levy_pct
+  currency      Currency?
+  value         Decimal?  @db.Decimal(20, 6)
+  params        Json?
+  dateEffective DateTime  @map("date_effective")
+  createdBy     String?   @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([key, currency, dateEffective])
+  @@map("statutory_rates")
+}
+
+/// Effective-dated thresholds + tunable parameters (petty-cash FD threshold per currency,
+/// SLA timers, danger-rule params).
+model Threshold {
+  id            String    @id @default(uuid()) @db.Uuid
+  key           String // petty_cash_fd_threshold, sla_reminder_hours, danger_cash_runway_weeks
+  currency      Currency?
+  value         Decimal?  @db.Decimal(20, 6)
+  params        Json?
+  dateEffective DateTime  @default(now()) @map("date_effective")
+  createdBy     String?   @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([key, currency, dateEffective])
+  @@map("thresholds")
+}
+
+/// Approver → alternate substitution for a date range (used by the approval engine).
+model DelegationRule {
+  id             String   @id @default(uuid()) @db.Uuid
+  approverUserId String   @map("approver_user_id") @db.Uuid
+  delegateUserId String   @map("delegate_user_id") @db.Uuid
+  dateFrom       DateTime @map("date_from")
+  dateTo         DateTime @map("date_to")
+  active         Boolean  @default(true)
+  createdBy      String?  @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([approverUserId, active])
+  @@map("delegation_rules")
+}
+
+// ---------------------------------------------------------------------------
+// Notifications (spec S1) — channel abstraction with per-user preferences
+// ---------------------------------------------------------------------------
+
+enum NotificationSeverity {
+  INFO
+  WATCH
+  DANGER
+}
+
+enum NotificationChannel {
+  IN_APP
+  PUSH
+  EMAIL
+  TEAMS
+}
+
+model Notification {
+  id           String               @id @default(uuid()) @db.Uuid
+  userId       String               @map("user_id") @db.Uuid
+  template     String
+  payload      Json?
+  severity     NotificationSeverity @default(INFO)
+  subjectTable String?              @map("subject_table")
+  subjectId    String?              @map("subject_id")
+  readAt       DateTime?            @map("read_at")
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id      String              @id @default(uuid()) @db.Uuid
+  userId  String              @map("user_id") @db.Uuid
+  channel NotificationChannel
+  enabled Boolean             @default(true)
+
+  @@unique([userId, channel])
+  @@map("notification_preferences")
+}
