@@ -28,7 +28,16 @@ export class MinioStorageService implements StorageService, OnModuleInit {
   }
 
   async onModuleInit(): Promise<void> {
-    await this.ensureBucket();
+    // A missing/unreachable file store must not take down the whole API at boot.
+    // Log and continue; storage operations fail loudly if invoked while it's down.
+    try {
+      await this.ensureBucket();
+    } catch (err) {
+      this.logger.warn(
+        `Storage unavailable at boot (${err instanceof Error ? err.message : String(err)}); ` +
+          'file operations will fail until it is reachable.',
+      );
+    }
   }
 
   async ensureBucket(): Promise<void> {
