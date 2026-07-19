@@ -15,6 +15,8 @@ import { UsersModule } from './users/users.module';
 import { SitesModule } from './sites/sites.module';
 import { ReferenceModule } from './reference/reference.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ApprovalsModule } from './approvals/approvals.module';
+import { FinancialModule } from './financial/financial.module';
 
 @Module({
   imports: [
@@ -32,8 +34,9 @@ import { NotificationsModule } from './notifications/notifications.module';
     UsersModule,
     SitesModule,
     ReferenceModule,
+    ApprovalsModule,
+    FinancialModule,
     HealthModule,
-    // Next: approval engine (S2), financial core (S3), …
   ],
   providers: [
     // Every route requires a valid JWT unless marked @Public(); then RBAC runs.
