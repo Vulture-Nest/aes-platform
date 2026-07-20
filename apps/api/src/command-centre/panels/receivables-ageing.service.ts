@@ -21,9 +21,6 @@ const OVERDUE_DAYS_KEY = 'receivables_overdue_days';
 /** Fallback overdue cutoff (days past the reference date) when unconfigured. */
 const DEFAULT_OVERDUE_DAYS = 30;
 
-/** Currency pair used to consolidate ZWG outstanding into a USD headline. */
-const ZWG_USD_PAIR = 'ZWG/USD';
-
 /** The four fixed ageing buckets, in evaluation order. */
 export type AgeBucketKey = '0-30' | '31-60' | '61-90' | '90+';
 
@@ -171,13 +168,16 @@ export class ReceivablesAgeingService {
     let orderCount = 0;
 
     for (const client of clients) {
-      totalsByCurrency[client.currency] = round2(
-        totalsByCurrency[client.currency] + client.totalOutstanding,
-      );
-      overdueByCurrency[client.currency] = round2(
-        overdueByCurrency[client.currency] + client.overdueOutstanding,
-      );
-      this.addBuckets(bucketsByCurrency[client.currency], client.buckets);
+      const cur = client.currency;
+      // Currencies are admin-configurable, so lazily initialise any currency
+      // beyond the USD/ZWG defaults (e.g. ZAR) instead of assuming a fixed set.
+      if (totalsByCurrency[cur] === undefined) totalsByCurrency[cur] = 0;
+      if (overdueByCurrency[cur] === undefined) overdueByCurrency[cur] = 0;
+      if (!bucketsByCurrency[cur]) bucketsByCurrency[cur] = this.emptyBuckets();
+
+      totalsByCurrency[cur] = round2(totalsByCurrency[cur] + client.totalOutstanding);
+      overdueByCurrency[cur] = round2(overdueByCurrency[cur] + client.overdueOutstanding);
+      this.addBuckets(bucketsByCurrency[cur], client.buckets);
       orderCount += client.lines.length;
     }
 
@@ -321,21 +321,25 @@ export class ReceivablesAgeingService {
    * official ZWG/USD rate; returns null when that rate is unavailable or zero.
    */
   private async consolidateUsd(totals: Record<string, number>, asOf: Date): Promise<number | null> {
-    const usd = totals['USD'] ?? 0;
-    const zwg = totals['ZWG'] ?? 0;
-    if (zwg === 0) {
-      return round2(usd);
-    }
-    try {
-      const { rate } = await this.exchangeRates.rateAsOf(ZWG_USD_PAIR, asOf);
-      const rateNum = Number(rate);
-      if (!Number.isFinite(rateNum) || rateNum <= 0) {
+    let total = totals['USD'] ?? 0;
+    // Convert every non-USD currency via its <CUR>/USD official rate. If any
+    // required rate is missing the headline can't be trusted, so return null.
+    for (const [currency, amount] of Object.entries(totals)) {
+      if (currency === 'USD' || amount === 0) {
+        continue;
+      }
+      try {
+        const { rate } = await this.exchangeRates.rateAsOf(`${currency}/USD`, asOf);
+        const rateNum = Number(rate);
+        if (!Number.isFinite(rateNum) || rateNum <= 0) {
+          return null;
+        }
+        total += amount * rateNum;
+      } catch {
         return null;
       }
-      return round2(usd + zwg * rateNum);
-    } catch {
-      return null;
     }
+    return round2(total);
   }
 
   /** A fresh zeroed per-currency total map. */
