@@ -75,6 +75,17 @@ export class TimesheetsService implements OnModuleInit {
   // Period lifecycle
   // -------------------------------------------------------------------------
 
+  /** List periods, most recent month first, optionally filtered by site and/or month. */
+  list(filter: { siteId?: string; month?: string } = {}): Promise<TimesheetPeriod[]> {
+    return this.prisma.timesheetPeriod.findMany({
+      where: {
+        siteId: filter.siteId,
+        month: filter.month,
+      },
+      orderBy: [{ month: 'desc' }, { createdAt: 'desc' }],
+    });
+  }
+
   async createPeriod(dto: CreateTimesheetPeriodDto, actorId: string): Promise<TimesheetPeriod> {
     const site = await this.prisma.site.findUnique({ where: { id: dto.siteId } });
     if (!site) {

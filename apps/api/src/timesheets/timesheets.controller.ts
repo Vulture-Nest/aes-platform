@@ -7,11 +7,17 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../rbac/roles.decorator';
-import { CreateTimesheetPeriodDto, ReopenRequestDto, UpsertEntriesDto } from './dto/timesheet.dto';
+import {
+  CreateTimesheetPeriodDto,
+  ListTimesheetPeriodsQueryDto,
+  ReopenRequestDto,
+  UpsertEntriesDto,
+} from './dto/timesheet.dto';
 import { TimesheetsService } from './timesheets.service';
 
 /**
@@ -30,6 +36,23 @@ export class TimesheetsController {
   @ApiOperation({ summary: 'Create a monthly timesheet period for a site' })
   createPeriod(@Body() dto: CreateTimesheetPeriodDto, @CurrentUser('id') actorId: string) {
     return this.timesheets.createPeriod(dto, actorId);
+  }
+
+  @Get()
+  @Roles(
+    'SITE_CLERK',
+    'SITE_MANAGER',
+    'OPS_STAFF',
+    'OPS_DIRECTOR',
+    'FINANCE_OFFICER',
+    'FINANCE_DIRECTOR',
+    'DIRECTOR',
+    'SYS_ADMIN',
+    'AUDITOR',
+  )
+  @ApiOperation({ summary: 'List timesheet periods (optionally by site and/or month)' })
+  list(@Query() query: ListTimesheetPeriodsQueryDto) {
+    return this.timesheets.list(query);
   }
 
   @Get(':id')
