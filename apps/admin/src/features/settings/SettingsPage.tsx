@@ -20,6 +20,20 @@ const CATEGORIES = [
   { label: 'Roles', value: 'role' },
 ];
 
+/** Example code/label hints shown as placeholders for each category. */
+const EXAMPLES: Record<string, { code: string; label: string }> = {
+  currency: { code: 'ZAR', label: 'South African Rand' },
+  currency_pair: { code: 'USD/ZWG', label: 'US Dollar to Zimbabwe Gold' },
+  site_type: { code: 'QUARRY', label: 'Quarry' },
+  statutory_key: { code: 'PAYE', label: 'Pay As You Earn' },
+  threshold_key: { code: 'PETTY_CASH_FD', label: 'Petty cash — FD approval limit' },
+  employment_type: { code: 'CONTRACT', label: 'Contract' },
+  pay_mode: { code: 'BANK_TRANSFER', label: 'Bank transfer' },
+  role: { code: 'SITE_MANAGER', label: 'Site Manager' },
+};
+
+const FALLBACK_EXAMPLE = { code: 'CODE', label: 'Descriptive name' };
+
 const isSystem = (r: LookupRecord) => r.metadata?.system === true;
 
 export function SettingsPage() {
@@ -31,6 +45,7 @@ export function SettingsPage() {
   const { message } = App.useApp();
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
+  const example = EXAMPLES[category] ?? FALLBACK_EXAMPLE;
 
   const submit = async (v: { code: string; label: string }) => {
     await create({ category, code: v.code, label: v.label }).unwrap();
@@ -110,10 +125,10 @@ export function SettingsPage() {
       >
         <Form form={form} layout="vertical" onFinish={submit}>
           <Form.Item name="code" label="Code" rules={[{ required: true }]}>
-            <Input placeholder="e.g. ZAR" />
+            <Input placeholder={`e.g. ${example.code}`} />
           </Form.Item>
           <Form.Item name="label" label="Label" rules={[{ required: true }]}>
-            <Input placeholder="e.g. South African Rand" />
+            <Input placeholder={`e.g. ${example.label}`} />
           </Form.Item>
         </Form>
       </Modal>
