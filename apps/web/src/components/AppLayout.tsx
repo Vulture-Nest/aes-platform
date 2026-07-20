@@ -15,15 +15,25 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useLogoutMutation, useUnreadCountQuery } from '../api/api';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { loggedOut } from '../features/auth/authSlice';
+import { hasAnyRole, type Role } from '../rbac/roles';
 import { AES } from '../theme';
 import logoWhite from '../assets/aes-logo-white.png';
 
-const NAV = [
+// Business Health Command Centre is leadership-only (mirrors the API's @Roles).
+const LEADERSHIP: Role[] = [
+  'FINANCE_OFFICER',
+  'FINANCE_DIRECTOR',
+  'OPS_DIRECTOR',
+  'DIRECTOR',
+  'SYS_ADMIN',
+];
+
+const NAV: { key: string; label: string; icon: ReactNode; roles?: Role[] }[] = [
   { key: '/', label: 'Home', icon: <HomeOutlined /> },
   { key: '/requests', label: 'Requests', icon: <FileTextOutlined /> },
   { key: '/approvals', label: 'Approvals', icon: <CheckSquareOutlined /> },
   { key: '/my-orders', label: 'My Orders', icon: <ShoppingOutlined /> },
-  { key: '/command-centre', label: 'Command Centre', icon: <DashboardOutlined /> },
+  { key: '/command-centre', label: 'Command Centre', icon: <DashboardOutlined />, roles: LEADERSHIP },
   { key: '/rates', label: 'Exchange Rates', icon: <DollarOutlined /> },
   { key: '/notifications', label: 'Notifications', icon: <BellOutlined /> },
   { key: '/profile', label: 'Profile', icon: <UserOutlined /> },
@@ -70,7 +80,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
           mode="inline"
           selectedKeys={[location.pathname]}
           onClick={({ key }) => navigate(key)}
-          items={NAV.map((n) => ({ key: n.key, icon: n.icon, label: n.label }))}
+          items={NAV.filter((n) => hasAnyRole(user, n.roles ?? [])).map((n) => ({
+            key: n.key,
+            icon: n.icon,
+            label: n.label,
+          }))}
         />
       </Layout.Sider>
       <Layout>
