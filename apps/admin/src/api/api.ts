@@ -301,7 +301,10 @@ export const api = createApi({
       query: () => 'v1/danger-rules',
       providesTags: ['DangerRules'],
     }),
-    updateDangerRule: build.mutation<DangerRuleRecord, { id: string; enabled?: boolean; severity?: string }>({
+    updateDangerRule: build.mutation<
+      DangerRuleRecord,
+      { id: string; enabled?: boolean; severity?: string; params?: Record<string, unknown> }
+    >({
       query: ({ id, ...body }) => ({ url: `v1/danger-rules/${id}`, method: 'PATCH', body }),
       invalidatesTags: ['DangerRules'],
     }),
