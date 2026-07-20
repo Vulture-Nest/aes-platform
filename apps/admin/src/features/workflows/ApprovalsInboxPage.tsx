@@ -11,17 +11,20 @@ import { errorMessage, money } from './shared';
 const MODULE_LABEL: Record<string, string> = {
   requisition: 'Cash requisition',
   travel: 'Travel & allowances',
-  petty_cash: 'Petty cash',
   budget: 'Budget',
   director_withdrawal: 'Director withdrawal',
   payroll_run: 'Payroll run',
-  timesheet_period: 'Timesheet period',
 };
+
+// Back-office approvals live here; timesheet & petty-cash approvals are handled by
+// site managers in the end-user web app.
+const ADMIN_MODULES = Object.keys(MODULE_LABEL);
 
 export function ApprovalsInboxPage() {
   const { data, isLoading } = useGetApprovalInboxQuery();
   const [decide, decideState] = useDecideApprovalMutation();
   const { message } = App.useApp();
+  const items = (data ?? []).filter((i) => ADMIN_MODULES.includes(i.chain.module));
   const [reasonFor, setReasonFor] = useState<{ item: ApprovalInboxItem; decision: string } | null>(
     null,
   );
@@ -53,12 +56,14 @@ export function ApprovalsInboxPage() {
         My approvals
       </Typography.Title>
       <Typography.Paragraph type="secondary">
-        Requests awaiting your decision across all workflows. You cannot approve your own requests.
+        Requisitions, travel, budgets, director withdrawals and payroll awaiting your decision.
+        Timesheet and petty-cash approvals are handled by site managers in the web app. You cannot
+        approve your own requests.
       </Typography.Paragraph>
       <Table
         rowKey="id"
         loading={isLoading}
-        dataSource={data}
+        dataSource={items}
         locale={{ emptyText: 'Nothing awaiting your approval' }}
         columns={[
           {
