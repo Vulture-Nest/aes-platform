@@ -10,6 +10,9 @@ import { NotificationsPage } from './features/notifications/NotificationsPage';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { RatesPage } from './features/rates/RatesPage';
 import { RequestsPage } from './features/requests/RequestsPage';
+import { TravelPage } from './features/travel/TravelPage';
+import { PettyCashPage } from './features/petty-cash/PettyCashPage';
+import { TimesheetsPage } from './features/timesheets/TimesheetsPage';
 import { ApprovalsPage } from './features/approvals/ApprovalsPage';
 import { MyOrdersPage } from './features/my-orders/MyOrdersPage';
 import { CommandCentrePage } from './features/command-centre/CommandCentrePage';
@@ -39,6 +42,9 @@ function Shell() {
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/requests" element={<RequestsPage />} />
+        <Route path="/travel" element={<TravelPage />} />
+        <Route path="/petty-cash" element={<PettyCashPage />} />
+        <Route path="/timesheets" element={<TimesheetsPage />} />
         <Route path="/approvals" element={<ApprovalsPage />} />
         <Route path="/my-orders" element={<MyOrdersPage />} />
         <Route path="/command-centre" element={<CommandCentrePage />} />

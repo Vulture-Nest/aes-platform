@@ -1,11 +1,14 @@
 import {
   BellOutlined,
+  CarOutlined,
   CheckSquareOutlined,
+  ClockCircleOutlined,
   DashboardOutlined,
   DollarOutlined,
   FileTextOutlined,
   HomeOutlined,
   LogoutOutlined,
+  MoneyCollectOutlined,
   ShoppingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -28,9 +31,23 @@ const LEADERSHIP: Role[] = [
   'SYS_ADMIN',
 ];
 
+const SITE_STAFF: Role[] = ['SITE_CLERK', 'SITE_MANAGER', 'OPS_STAFF'];
+const TIMESHEET_ROLES: Role[] = [
+  'SITE_CLERK',
+  'SITE_MANAGER',
+  'OPS_STAFF',
+  'OPS_DIRECTOR',
+  'FINANCE_OFFICER',
+  'FINANCE_DIRECTOR',
+  'SYS_ADMIN',
+];
+
 const NAV: { key: string; label: string; icon: ReactNode; roles?: Role[] }[] = [
   { key: '/', label: 'Home', icon: <HomeOutlined /> },
   { key: '/requests', label: 'Requests', icon: <FileTextOutlined /> },
+  { key: '/travel', label: 'Travel', icon: <CarOutlined /> },
+  { key: '/petty-cash', label: 'Petty Cash', icon: <MoneyCollectOutlined />, roles: SITE_STAFF },
+  { key: '/timesheets', label: 'Timesheets', icon: <ClockCircleOutlined />, roles: TIMESHEET_ROLES },
   { key: '/approvals', label: 'Approvals', icon: <CheckSquareOutlined /> },
   { key: '/my-orders', label: 'My Orders', icon: <ShoppingOutlined /> },
   { key: '/command-centre', label: 'Command Centre', icon: <DashboardOutlined />, roles: LEADERSHIP },
