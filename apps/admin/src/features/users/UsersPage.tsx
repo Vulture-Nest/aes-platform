@@ -8,7 +8,8 @@ import {
   useGetUsersQuery,
   type UserRecord,
 } from '../../api/api';
-import { ALL_ROLES, ROLE_LABELS, type Role } from '../../rbac/roles';
+import { LookupSelect } from '../../components/LookupSelect';
+import { ROLE_LABELS } from '../../rbac/roles';
 
 export function UsersPage() {
   const { data, isLoading } = useGetUsersQuery();
@@ -23,9 +24,13 @@ export function UsersPage() {
   const [roleForm] = Form.useForm();
 
   const siteOptions = (sites ?? []).map((s) => ({ label: s.name, value: s.id }));
-  const roleOptions = ALL_ROLES.map((r) => ({ label: ROLE_LABELS[r], value: r }));
 
-  const submitCreate = async (v: { email: string; password: string; role: Role; siteId?: string }) => {
+  const submitCreate = async (v: {
+    email: string;
+    password: string;
+    role: string;
+    siteId?: string;
+  }) => {
     await createUser({
       email: v.email,
       password: v.password,
@@ -36,7 +41,7 @@ export function UsersPage() {
     createForm.resetFields();
   };
 
-  const submitRole = async (v: { role: Role; siteId?: string }) => {
+  const submitRole = async (v: { role: string; siteId?: string }) => {
     if (!roleFor) return;
     await assignRole({ id: roleFor.id, role: v.role, siteId: v.siteId }).unwrap();
     message.success('Role assigned');
@@ -74,7 +79,7 @@ export function UsersPage() {
             render: (roles: UserRecord['siteRoles']) =>
               roles?.map((r) => (
                 <Tag key={r.id} color="blue">
-                  {ROLE_LABELS[r.role]}
+                  {ROLE_LABELS[r.role] ?? r.role}
                   {r.siteId ? '' : ' (global)'}
                 </Tag>
               )),
@@ -106,7 +111,7 @@ export function UsersPage() {
             <Input.Password />
           </Form.Item>
           <Form.Item name="role" label="Role" rules={[{ required: true }]}>
-            <Select options={roleOptions} />
+            <LookupSelect category="role" placeholder="Select a role" />
           </Form.Item>
           <Form.Item name="siteId" label="Site (leave empty for a global role)">
             <Select allowClear options={siteOptions} />
@@ -124,7 +129,7 @@ export function UsersPage() {
       >
         <Form form={roleForm} layout="vertical" onFinish={submitRole}>
           <Form.Item name="role" label="Role" rules={[{ required: true }]}>
-            <Select options={roleOptions} />
+            <LookupSelect category="role" placeholder="Select a role" />
           </Form.Item>
           <Form.Item name="siteId" label="Site (leave empty for a global role)">
             <Select allowClear options={siteOptions} />

@@ -2,9 +2,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { App, Button, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Typography } from 'antd';
 import { useState } from 'react';
 import { useCreateEmployeeMutation, useGetEmployeesQuery, useGetSitesQuery } from '../../api/api';
-
-const EMPLOYMENT = ['PERMANENT', 'CONTRACT', 'CASUAL'];
-const PAY_MODES = ['CLIENT_RATIO', 'FIXED_SPLIT'];
+import { LookupSelect } from '../../components/LookupSelect';
 
 export function EmployeesPage() {
   const { data, isLoading } = useGetEmployeesQuery();
@@ -61,12 +59,7 @@ export function EmployeesPage() {
         destroyOnClose
         width={560}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={submit}
-          initialValues={{ employmentType: 'PERMANENT', payMode: 'CLIENT_RATIO', accountCurrency: 'USD' }}
-        >
+        <Form form={form} layout="vertical" onFinish={submit}>
           <Space>
             <Form.Item name="worksNo" label="Works no." rules={[{ required: true }]}>
               <Input placeholder="W-0421" />
@@ -83,10 +76,10 @@ export function EmployeesPage() {
           </Form.Item>
           <Space>
             <Form.Item name="employmentType" label="Employment" rules={[{ required: true }]}>
-              <Select style={{ width: 140 }} options={EMPLOYMENT.map((e) => ({ label: e, value: e }))} />
+              <LookupSelect category="employment_type" style={{ width: 140 }} />
             </Form.Item>
             <Form.Item name="payMode" label="Pay mode" rules={[{ required: true }]}>
-              <Select style={{ width: 150 }} options={PAY_MODES.map((p) => ({ label: p, value: p }))} />
+              <LookupSelect category="pay_mode" style={{ width: 150 }} />
             </Form.Item>
             {payMode === 'FIXED_SPLIT' && (
               <Form.Item name="fixedUsdPct" label="USD split %" rules={[{ required: true }]}>
@@ -99,7 +92,7 @@ export function EmployeesPage() {
               <InputNumber min={0} />
             </Form.Item>
             <Form.Item name="accountCurrency" label="Account currency">
-              <Select style={{ width: 100 }} options={[{ label: 'USD', value: 'USD' }, { label: 'ZWG', value: 'ZWG' }]} />
+              <LookupSelect category="currency" style={{ width: 100 }} />
             </Form.Item>
             <Form.Item name="accountNo" label="Account no.">
               <Input />

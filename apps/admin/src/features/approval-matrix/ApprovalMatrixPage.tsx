@@ -1,14 +1,16 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { App, Button, Form, InputNumber, Modal, Select, Space, Table, Tag, Typography } from 'antd';
 import { useState } from 'react';
-import { useCreateApprovalRuleMutation, useGetApprovalMatrixQuery } from '../../api/api';
-import { ALL_ROLES, ROLE_LABELS } from '../../rbac/roles';
-
-const MODULES = ['requisition', 'travel', 'petty_cash', 'budget', 'director_withdrawal', 'payroll_run', 'timesheet_period'];
-const MODES = ['SEQUENTIAL', 'PARALLEL', 'EITHER'];
+import {
+  useCreateApprovalRuleMutation,
+  useGetApprovalMatrixQuery,
+  useGetApprovalOptionsQuery,
+} from '../../api/api';
+import { LookupSelect } from '../../components/LookupSelect';
 
 export function ApprovalMatrixPage() {
   const { data, isLoading } = useGetApprovalMatrixQuery();
+  const { data: options } = useGetApprovalOptionsQuery();
   const [create, createState] = useCreateApprovalRuleMutation();
   const { message } = App.useApp();
   const [open, setOpen] = useState(false);
@@ -59,9 +61,9 @@ export function ApprovalMatrixPage() {
         confirmLoading={createState.isLoading}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" onFinish={submit} initialValues={{ stepOrder: 1, mode: 'SEQUENTIAL' }}>
+        <Form form={form} layout="vertical" onFinish={submit} initialValues={{ stepOrder: 1 }}>
           <Form.Item name="module" label="Module" rules={[{ required: true }]}>
-            <Select showSearch options={MODULES.map((m) => ({ label: m, value: m }))} />
+            <Select showSearch options={options?.modules ?? []} placeholder="Select a module" />
           </Form.Item>
           <Space>
             <Form.Item name="minAmount" label="Min amount">
@@ -71,17 +73,17 @@ export function ApprovalMatrixPage() {
               <InputNumber min={0} />
             </Form.Item>
             <Form.Item name="currency" label="Currency">
-              <Select allowClear style={{ width: 90 }} options={[{ label: 'USD', value: 'USD' }, { label: 'ZWG', value: 'ZWG' }]} />
+              <LookupSelect category="currency" allowClear style={{ width: 90 }} />
             </Form.Item>
           </Space>
           <Form.Item name="stepOrder" label="Step order" rules={[{ required: true }]}>
             <InputNumber min={1} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="approverRole" label="Approver role" rules={[{ required: true }]}>
-            <Select options={ALL_ROLES.map((r) => ({ label: ROLE_LABELS[r], value: r }))} />
+            <LookupSelect category="role" placeholder="Select a role" />
           </Form.Item>
           <Form.Item name="mode" label="Mode" rules={[{ required: true }]}>
-            <Select options={MODES.map((m) => ({ label: m, value: m }))} />
+            <Select options={options?.modes ?? []} placeholder="Select a mode" />
           </Form.Item>
         </Form>
       </Modal>

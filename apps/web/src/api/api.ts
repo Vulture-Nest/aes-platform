@@ -159,6 +159,11 @@ export const api = createApi({
 
     getSites: build.query<SiteRecord[], void>({ query: () => 'v1/sites' }),
 
+    // Settings catalog (read-only for forms) — options come from here, never hardcoded.
+    getLookups: build.query<{ code: string; label: string; active: boolean }[], string>({
+      query: (category) => ({ url: 'v1/settings/lookups', params: { category } }),
+    }),
+
     // Requests (cash requisitions)
     getRequisitions: build.query<RequisitionRecord[], void>({
       query: () => 'v1/requisitions',
@@ -212,6 +217,7 @@ export const {
   useMarkAllReadMutation,
   useGetExchangeRatesQuery,
   useGetSitesQuery,
+  useGetLookupsQuery,
   useGetRequisitionsQuery,
   useCreateRequisitionMutation,
   useSubmitRequisitionMutation,

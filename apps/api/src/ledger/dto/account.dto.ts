@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { AccountType } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import { IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
 
 export class CreateAccountDto {
   @ApiProperty({ example: 'Bank USD' })
@@ -8,9 +7,9 @@ export class CreateAccountDto {
   @MinLength(2)
   name!: string;
 
-  @ApiProperty({ enum: AccountType })
-  @IsEnum(AccountType)
-  type!: AccountType;
+  @ApiProperty({ example: 'BANK', description: 'Configured account_type lookup code' })
+  @IsString()
+  type!: string;
 
   @ApiProperty()
   @IsString()

@@ -2,12 +2,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { App, Button, Form, Input, Modal, Select, Space, Table, Tag, Typography } from 'antd';
 import { useState } from 'react';
 import { useCreateAccountMutation, useGetAccountsQuery, useGetSitesQuery } from '../../api/api';
-
-const TYPES = [
-  { label: 'Bank', value: 'BANK' },
-  { label: 'Petty cash', value: 'PETTY_CASH' },
-  { label: 'Mobile wallet', value: 'MOBILE_WALLET' },
-];
+import { LookupSelect } from '../../components/LookupSelect';
 
 export function AccountsPage() {
   const { data, isLoading } = useGetAccountsQuery();
@@ -57,15 +52,15 @@ export function AccountsPage() {
         confirmLoading={createState.isLoading}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" onFinish={submit} initialValues={{ currency: 'USD', type: 'BANK' }}>
+        <Form form={form} layout="vertical" onFinish={submit}>
           <Form.Item name="name" label="Name" rules={[{ required: true }]}>
             <Input placeholder="Bank USD" />
           </Form.Item>
           <Form.Item name="type" label="Type" rules={[{ required: true }]}>
-            <Select options={TYPES} />
+            <LookupSelect category="account_type" placeholder="Select a type" />
           </Form.Item>
           <Form.Item name="currency" label="Currency" rules={[{ required: true }]}>
-            <Select options={[{ label: 'USD', value: 'USD' }, { label: 'ZWG', value: 'ZWG' }]} />
+            <LookupSelect category="currency" placeholder="Select a currency" />
           </Form.Item>
           <Form.Item name="siteId" label="Site (optional)">
             <Select allowClear options={(sites ?? []).map((s) => ({ label: s.name, value: s.id }))} />

@@ -17,6 +17,7 @@ export const LOOKUP_CATEGORIES = [
   'currency',
   'currency_pair',
   'site_type',
+  'account_type',
   'statutory_key',
   'threshold_key',
   'employment_type',
@@ -36,6 +37,11 @@ const DEFAULTS: Record<string, SeedRow[]> = {
   site_type: [
     { code: 'MINE_SITE', label: 'Mine site', metadata: { isMineSite: true } },
     { code: 'HEAD_OFFICE', label: 'Head office', metadata: { isMineSite: false } },
+  ],
+  account_type: [
+    { code: 'BANK', label: 'Bank' },
+    { code: 'PETTY_CASH', label: 'Petty cash' },
+    { code: 'MOBILE_WALLET', label: 'Mobile wallet' },
   ],
   statutory_key: [
     { code: 'vat_pct', label: 'VAT %' },
