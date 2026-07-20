@@ -23,6 +23,12 @@ import { OrdersPage } from './features/orders/OrdersPage';
 import { PayrollPage } from './features/payroll/PayrollPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { TimesheetsPage } from './features/timesheets/TimesheetsPage';
+import { ApprovalsInboxPage } from './features/workflows/ApprovalsInboxPage';
+import { BudgetsPage } from './features/workflows/BudgetsPage';
+import { DirectorWithdrawalsPage } from './features/workflows/DirectorWithdrawalsPage';
+import { PettyCashPage } from './features/workflows/PettyCashPage';
+import { RequisitionsPage } from './features/workflows/RequisitionsPage';
+import { TravelPage } from './features/workflows/TravelPage';
 import { BusinessDevelopmentPage } from './features/crm/BusinessDevelopmentPage';
 import { DangerRulesPage } from './features/danger-rules/DangerRulesPage';
 import { SettingsPage } from './features/settings/SettingsPage';
@@ -205,6 +211,92 @@ function Shell() {
               ]}
             >
               <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/approvals" element={<ApprovalsInboxPage />} />
+        <Route
+          path="/requisitions"
+          element={
+            <ProtectedRoute
+              roles={[
+                'SITE_CLERK',
+                'SITE_MANAGER',
+                'OPS_STAFF',
+                'FINANCE_OFFICER',
+                'FINANCE_DIRECTOR',
+                'OPS_DIRECTOR',
+                'DIRECTOR',
+                'SYS_ADMIN',
+                'AUDITOR',
+              ]}
+            >
+              <RequisitionsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/travel"
+          element={
+            <ProtectedRoute
+              roles={[
+                'SITE_CLERK',
+                'SITE_MANAGER',
+                'OPS_STAFF',
+                'FINANCE_OFFICER',
+                'FINANCE_DIRECTOR',
+                'OPS_DIRECTOR',
+                'DIRECTOR',
+                'SYS_ADMIN',
+                'AUDITOR',
+              ]}
+            >
+              <TravelPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/petty-cash"
+          element={
+            <ProtectedRoute
+              roles={[
+                'SITE_CLERK',
+                'SITE_MANAGER',
+                'OPS_STAFF',
+                'FINANCE_OFFICER',
+                'FINANCE_DIRECTOR',
+                'OPS_DIRECTOR',
+                'DIRECTOR',
+                'SYS_ADMIN',
+                'AUDITOR',
+              ]}
+            >
+              <PettyCashPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/budgets"
+          element={
+            <ProtectedRoute
+              roles={[
+                'FINANCE_OFFICER',
+                'FINANCE_DIRECTOR',
+                'OPS_DIRECTOR',
+                'DIRECTOR',
+                'SYS_ADMIN',
+                'AUDITOR',
+              ]}
+            >
+              <BudgetsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/director-withdrawals"
+          element={
+            <ProtectedRoute roles={['DIRECTOR', 'SYS_ADMIN', 'AUDITOR']}>
+              <DirectorWithdrawalsPage />
             </ProtectedRoute>
           }
         />
