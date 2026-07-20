@@ -15,6 +15,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useLogoutMutation, useUnreadCountQuery } from '../api/api';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { loggedOut } from '../features/auth/authSlice';
+import { AES } from '../theme';
+import logoWhite from '../assets/aes-logo-white.png';
 
 const NAV = [
   { key: '/', label: 'Home', icon: <HomeOutlined /> },
@@ -45,7 +47,24 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Layout.Sider breakpoint="lg" collapsedWidth="0" theme="dark">
-        <div style={{ color: '#fff', padding: 16, fontWeight: 700, fontSize: 20 }}>AES</div>
+        <div style={{ padding: '22px 16px 14px', textAlign: 'center' }}>
+          <img
+            src={logoWhite}
+            alt="AES"
+            style={{ height: 34, maxWidth: '78%', objectFit: 'contain' }}
+          />
+          <div
+            style={{
+              color: AES.green,
+              fontSize: 10,
+              letterSpacing: 2,
+              marginTop: 8,
+              fontWeight: 600,
+            }}
+          >
+            OPERATIONS &amp; FINANCE
+          </div>
+        </div>
         <Menu
           theme="dark"
           mode="inline"

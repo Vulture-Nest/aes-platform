@@ -1,5 +1,6 @@
 import { App as AntdApp, ConfigProvider, Spin } from 'antd';
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { aesTheme } from './theme';
 import { AppLayout } from './components/AppLayout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuditPage } from './features/audit/AuditPage';
@@ -146,7 +147,7 @@ function Shell() {
 
 export default function App() {
   return (
-    <ConfigProvider theme={{ token: { colorPrimary: '#0B6E4F' } }}>
+    <ConfigProvider theme={aesTheme}>
       <AntdApp>
         <BrowserRouter>
           <Shell />
