@@ -26,6 +26,7 @@ export class ContractsService {
 
   async create(dto: CreateContractDto, actorId: string) {
     await this.lookups.assertValid('currency', dto.currency);
+    if (dto.status) await this.lookups.assertValid('contract_status', dto.status);
     const client = await this.prisma.client.findUnique({ where: { id: dto.clientId } });
     if (!client) {
       throw new BadRequestException('Client not found');
@@ -63,6 +64,8 @@ export class ContractsService {
 
   async update(id: string, dto: UpdateContractDto, actorId: string) {
     const before = await this.findOne(id);
+    if (dto.currency) await this.lookups.assertValid('currency', dto.currency);
+    if (dto.status) await this.lookups.assertValid('contract_status', dto.status);
     const contract = await this.prisma.contract.update({
       where: { id },
       data: {
