@@ -18,6 +18,7 @@ import { AccountsPage } from './features/accounts/AccountsPage';
 import { EmployeesPage } from './features/employees/EmployeesPage';
 import { ClientsPage } from './features/clients/ClientsPage';
 import { ContractsPage } from './features/contracts/ContractsPage';
+import { ExpensesPage } from './features/expenses/ExpensesPage';
 import { OrdersPage } from './features/orders/OrdersPage';
 import { BusinessDevelopmentPage } from './features/crm/BusinessDevelopmentPage';
 import { DangerRulesPage } from './features/danger-rules/DangerRulesPage';
@@ -148,6 +149,14 @@ function Shell() {
           element={
             <ProtectedRoute roles={['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR']}>
               <OrdersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/expenses"
+          element={
+            <ProtectedRoute roles={['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR']}>
+              <ExpensesPage />
             </ProtectedRoute>
           }
         />

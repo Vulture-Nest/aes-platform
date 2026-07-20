@@ -145,8 +145,38 @@ export interface OrderReceiptRecord {
   receivedDate: string;
   reference: string | null;
 }
+export interface OrderExpenseRecord {
+  id: string;
+  amount: string;
+  currency: string;
+  vatClaimable: boolean;
+  description: string | null;
+}
 export interface OrderDetail extends OrderRecord {
   receipts?: OrderReceiptRecord[];
+  expenses?: OrderExpenseRecord[];
+}
+export interface GeneralExpenseRecord {
+  id: string;
+  amount: string;
+  currency: string;
+  vatClaimable: boolean;
+  category: string | null;
+  expenseDate: string;
+}
+export interface OverheadRecord {
+  id: string;
+  amount: string;
+  currency: string;
+  category: string | null;
+  periodMonth: string | null;
+}
+export interface ContractClaimRecord {
+  id: string;
+  contractId: string;
+  amountExVat: string;
+  currency: string;
+  claimDate: string;
 }
 export interface PerformanceResult {
   currency: string;
@@ -295,6 +325,9 @@ export const api = createApi({
     'CrmContacts',
     'CrmInteractions',
     'CrmOpps',
+    'GeneralExpenses',
+    'Overheads',
+    'ContractClaims',
   ],
   endpoints: (build) => ({
     // --- auth ---
@@ -445,6 +478,38 @@ export const api = createApi({
     markServiced: build.mutation<unknown, string>({
       query: (id) => ({ url: `v1/orders/${id}/mark-serviced`, method: 'POST', body: {} }),
       invalidatesTags: ['Orders'],
+    }),
+    addOrderExpense: build.mutation<OrderExpenseRecord, { id: string } & Record<string, unknown>>({
+      query: ({ id, ...body }) => ({ url: `v1/orders/${id}/expenses`, method: 'POST', body }),
+      invalidatesTags: ['Orders'],
+    }),
+
+    // --- general expenses & overheads ---
+    getGeneralExpenses: build.query<GeneralExpenseRecord[], void>({
+      query: () => 'v1/general-expenses',
+      providesTags: ['GeneralExpenses'],
+    }),
+    createGeneralExpense: build.mutation<GeneralExpenseRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/general-expenses', method: 'POST', body }),
+      invalidatesTags: ['GeneralExpenses'],
+    }),
+    getOverheads: build.query<OverheadRecord[], void>({
+      query: () => 'v1/overheads',
+      providesTags: ['Overheads'],
+    }),
+    createOverhead: build.mutation<OverheadRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/overheads', method: 'POST', body }),
+      invalidatesTags: ['Overheads'],
+    }),
+
+    // --- contract claims ---
+    getContractClaims: build.query<ContractClaimRecord[], string>({
+      query: (id) => `v1/contracts/${id}/claims`,
+      providesTags: ['ContractClaims'],
+    }),
+    addContractClaim: build.mutation<ContractClaimRecord, { id: string } & Record<string, unknown>>({
+      query: ({ id, ...body }) => ({ url: `v1/contracts/${id}/claims`, method: 'POST', body }),
+      invalidatesTags: ['ContractClaims'],
     }),
 
     // --- command centre: performance (revenue & profit) ---
@@ -616,6 +681,13 @@ export const {
   useCreateOrderMutation,
   useRecordReceiptMutation,
   useMarkServicedMutation,
+  useAddOrderExpenseMutation,
+  useGetGeneralExpensesQuery,
+  useCreateGeneralExpenseMutation,
+  useGetOverheadsQuery,
+  useCreateOverheadMutation,
+  useGetContractClaimsQuery,
+  useAddContractClaimMutation,
   useGetPerformanceQuery,
   useGetOrganisationsQuery,
   useCreateOrganisationMutation,

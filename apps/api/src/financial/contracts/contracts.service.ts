@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { AuditService } from '../../audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LookupService } from '../../settings/lookup.service';
-import { CreateContractDto, UpdateContractDto } from './dto/contract.dto';
+import { CreateContractClaimDto, CreateContractDto, UpdateContractDto } from './dto/contract.dto';
 
 @Injectable()
 export class ContractsService {
@@ -60,6 +60,37 @@ export class ContractsService {
       },
     });
     return contract;
+  }
+
+  listClaims(contractId: string) {
+    return this.prisma.contractClaim.findMany({
+      where: { contractId },
+      orderBy: { claimDate: 'desc' },
+    });
+  }
+
+  async addClaim(contractId: string, dto: CreateContractClaimDto, actorId: string) {
+    await this.findOne(contractId);
+    await this.lookups.assertValid('currency', dto.currency);
+    const claim = await this.prisma.contractClaim.create({
+      data: {
+        contractId,
+        amountExVat: dto.amountExVat,
+        currency: dto.currency,
+        claimDate: dto.claimDate,
+        rateType: dto.rateType ?? null,
+        createdBy: actorId,
+        updatedBy: actorId,
+      },
+    });
+    await this.audit.record({
+      actorUserId: actorId,
+      action: 'CREATE',
+      tableName: 'contract_claims',
+      recordId: claim.id,
+      after: { contractId, amountExVat: claim.amountExVat.toString(), currency: claim.currency },
+    });
+    return claim;
   }
 
   async update(id: string, dto: UpdateContractDto, actorId: string) {

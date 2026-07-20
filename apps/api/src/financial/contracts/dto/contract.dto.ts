@@ -52,3 +52,25 @@ export class CreateContractDto {
 }
 
 export class UpdateContractDto extends PartialType(CreateContractDto) {}
+
+export class CreateContractClaimDto {
+  @ApiProperty({ example: 20000, description: 'VAT-exclusive claim amount' })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  amountExVat!: number;
+
+  @ApiProperty()
+  @IsString()
+  currency!: string;
+
+  @ApiProperty({ example: '2026-07-01' })
+  @Type(() => Date)
+  @IsDate()
+  claimDate!: Date;
+
+  @ApiPropertyOptional({ example: 'OFFICIAL' })
+  @IsOptional()
+  @IsString()
+  rateType?: string;
+}

@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../rbac/roles.decorator';
 import { ContractsService } from './contracts.service';
-import { CreateContractDto, UpdateContractDto } from './dto/contract.dto';
+import { CreateContractClaimDto, CreateContractDto, UpdateContractDto } from './dto/contract.dto';
 
 @ApiTags('contracts')
 @ApiBearerAuth()
@@ -41,5 +41,23 @@ export class ContractsController {
     @CurrentUser('id') actorId: string,
   ) {
     return this.contracts.update(id, dto, actorId);
+  }
+
+  @Get(':id/claims')
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN', 'AUDITOR')
+  @ApiOperation({ summary: 'List claims against a contract' })
+  listClaims(@Param('id', ParseUUIDPipe) id: string) {
+    return this.contracts.listClaims(id);
+  }
+
+  @Post(':id/claims')
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
+  @ApiOperation({ summary: 'Record a claim against a contract' })
+  addClaim(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateContractClaimDto,
+    @CurrentUser('id') actorId: string,
+  ) {
+    return this.contracts.addClaim(id, dto, actorId);
   }
 }

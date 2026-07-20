@@ -8,7 +8,12 @@ import { AuditService } from '../../audit/audit.service';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LookupService } from '../../settings/lookup.service';
-import { CreateOrderDto, CreateOrderReceiptDto, UpdateOrderDto } from './dto/order.dto';
+import {
+  CreateOrderDto,
+  CreateOrderExpenseDto,
+  CreateOrderReceiptDto,
+  UpdateOrderDto,
+} from './dto/order.dto';
 
 /** Roles that manage the whole order book (beyond just their assigned orders). */
 const ORDER_MANAGER_ROLES = ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER'];
@@ -164,6 +169,32 @@ export class OrdersService {
       },
     });
     return receipt;
+  }
+
+  /** Record an expense against an order (feeds spent-to-date, profit and input VAT). */
+  async addExpense(orderId: string, dto: CreateOrderExpenseDto, actorId: string) {
+    await this.findOne(orderId);
+    await this.lookups.assertValid('currency', dto.currency);
+    const expense = await this.prisma.orderExpense.create({
+      data: {
+        orderId,
+        amount: dto.amount,
+        currency: dto.currency,
+        vatClaimable: dto.vatClaimable ?? false,
+        description: dto.description ?? null,
+        rateType: dto.rateType ?? null,
+        createdBy: actorId,
+        updatedBy: actorId,
+      },
+    });
+    await this.audit.record({
+      actorUserId: actorId,
+      action: 'CREATE',
+      tableName: 'order_expenses',
+      recordId: expense.id,
+      after: { orderId, amount: expense.amount.toString(), currency: expense.currency },
+    });
+    return expense;
   }
 
   async markServiced(orderId: string, user: AuthenticatedUser) {

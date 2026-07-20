@@ -1,8 +1,9 @@
-import { EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { EditOutlined, FileTextOutlined, PlusOutlined } from '@ant-design/icons';
 import {
   App,
   Button,
   DatePicker,
+  Divider,
   Form,
   Input,
   InputNumber,
@@ -16,10 +17,13 @@ import {
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import {
+  useAddContractClaimMutation,
   useCreateContractMutation,
   useGetClientsQuery,
+  useGetContractClaimsQuery,
   useGetContractsQuery,
   useUpdateContractMutation,
+  type ContractClaimRecord,
   type ContractRecord,
 } from '../../api/api';
 import { useAppSelector } from '../../app/hooks';
@@ -43,6 +47,108 @@ interface ContractForm {
   status: string;
 }
 
+interface ClaimForm {
+  amountExVat: number;
+  currency: string;
+  claimDate: dayjs.Dayjs;
+}
+
+function ClaimsModal({
+  contract,
+  canWrite,
+  onClose,
+}: {
+  contract: ContractRecord | null;
+  canWrite: boolean;
+  onClose: () => void;
+}) {
+  const { data, isLoading } = useGetContractClaimsQuery(contract?.id ?? '', { skip: !contract });
+  const [addClaim, addState] = useAddContractClaimMutation();
+  const { message } = App.useApp();
+  const [form] = Form.useForm();
+
+  const totalClaimed = (data ?? []).reduce((sum, c) => sum + Number(c.amountExVat), 0);
+
+  const submit = async (v: ClaimForm) => {
+    if (!contract) return;
+    await addClaim({
+      id: contract.id,
+      amountExVat: v.amountExVat,
+      currency: v.currency,
+      claimDate: v.claimDate.toISOString(),
+    }).unwrap();
+    message.success('Claim recorded');
+    form.resetFields();
+  };
+
+  return (
+    <Modal
+      title={contract ? `Claims — ${contract.reference}` : 'Claims'}
+      open={!!contract}
+      onCancel={onClose}
+      footer={
+        <Button type="primary" onClick={onClose}>
+          Close
+        </Button>
+      }
+      width={640}
+      destroyOnClose
+    >
+      <Typography.Paragraph type="secondary">
+        Claims certified against the contract value
+        {contract ? ` (${contract.currency} ${Number(contract.valueExVat).toLocaleString()})` : ''}.
+        Total claimed so far: {contract?.currency} {totalClaimed.toLocaleString()}.
+      </Typography.Paragraph>
+      <Table
+        rowKey="id"
+        size="small"
+        loading={isLoading}
+        pagination={false}
+        dataSource={data}
+        locale={{ emptyText: 'No claims yet' }}
+        columns={[
+          {
+            title: 'Date',
+            dataIndex: 'claimDate',
+            render: (d: string) => dayjs(d).format('YYYY-MM-DD'),
+          },
+          {
+            title: 'Amount (ex VAT)',
+            render: (_: unknown, r: ContractClaimRecord) =>
+              `${r.currency} ${Number(r.amountExVat).toLocaleString()}`,
+          },
+        ]}
+      />
+      {canWrite && (
+        <>
+          <Divider>Record a claim</Divider>
+          <Form
+            form={form}
+            layout="inline"
+            onFinish={submit}
+            initialValues={{ currency: contract?.currency, claimDate: dayjs() }}
+          >
+            <Form.Item name="amountExVat" label="Amount" rules={[{ required: true }]}>
+              <InputNumber min={0} style={{ width: 160 }} />
+            </Form.Item>
+            <Form.Item name="currency" label="Currency" rules={[{ required: true }]}>
+              <LookupSelect category="currency" style={{ width: 110 }} />
+            </Form.Item>
+            <Form.Item name="claimDate" label="Date" rules={[{ required: true }]}>
+              <DatePicker />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" loading={addState.isLoading}>
+                Add
+              </Button>
+            </Form.Item>
+          </Form>
+        </>
+      )}
+    </Modal>
+  );
+}
+
 export function ContractsPage() {
   const { data, isLoading } = useGetContractsQuery();
   const { data: clients } = useGetClientsQuery();
@@ -53,6 +159,7 @@ export function ContractsPage() {
   const canWrite = hasAnyRole(user, ['FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN']);
 
   const [editing, setEditing] = useState<ContractRecord | null>(null);
+  const [claimsFor, setClaimsFor] = useState<ContractRecord | null>(null);
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
 
@@ -125,23 +232,34 @@ export function ContractsPage() {
           },
           {
             title: '',
-            width: 90,
-            render: (_: unknown, c: ContractRecord) =>
-              canWrite ? (
+            width: 170,
+            render: (_: unknown, c: ContractRecord) => (
+              <Space>
                 <Button
                   size="small"
-                  icon={<EditOutlined />}
-                  onClick={() => {
-                    setEditing(c);
-                    setOpen(true);
-                  }}
+                  icon={<FileTextOutlined />}
+                  onClick={() => setClaimsFor(c)}
                 >
-                  Edit
+                  Claims
                 </Button>
-              ) : null,
+                {canWrite && (
+                  <Button
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      setEditing(c);
+                      setOpen(true);
+                    }}
+                  >
+                    Edit
+                  </Button>
+                )}
+              </Space>
+            ),
           },
         ]}
       />
+      <ClaimsModal contract={claimsFor} canWrite={canWrite} onClose={() => setClaimsFor(null)} />
       <Modal
         title={editing ? 'Edit contract' : 'Add contract'}
         open={open}

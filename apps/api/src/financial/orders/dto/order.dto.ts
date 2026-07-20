@@ -1,6 +1,15 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDate, IsNumber, IsOptional, IsString, IsUUID, Min, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsDate,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class CreateOrderDto {
   @ApiProperty()
@@ -81,4 +90,31 @@ export class CreateOrderReceiptDto {
   @IsOptional()
   @IsString()
   reference?: string;
+}
+
+export class CreateOrderExpenseDto {
+  @ApiProperty({ example: 1200, description: 'VAT-exclusive expense amount' })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  amount!: number;
+
+  @ApiProperty()
+  @IsString()
+  currency!: string;
+
+  @ApiPropertyOptional({ description: 'Whether input VAT is claimable (needs a fiscal invoice)' })
+  @IsOptional()
+  @IsBoolean()
+  vatClaimable?: boolean;
+
+  @ApiPropertyOptional({ example: 'Site fuel' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ example: 'OFFICIAL' })
+  @IsOptional()
+  @IsString()
+  rateType?: string;
 }

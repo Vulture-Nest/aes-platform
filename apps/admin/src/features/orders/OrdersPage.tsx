@@ -1,4 +1,4 @@
-import { DollarOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
+import { DollarOutlined, EyeOutlined, MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import {
   App,
   Button,
@@ -11,6 +11,7 @@ import {
   Popconfirm,
   Select,
   Space,
+  Switch,
   Table,
   Tag,
   Typography,
@@ -18,6 +19,7 @@ import {
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import {
+  useAddOrderExpenseMutation,
   useCreateOrderMutation,
   useGetClientsQuery,
   useGetContractsQuery,
@@ -26,6 +28,7 @@ import {
   useGetUsersQuery,
   useMarkServicedMutation,
   useRecordReceiptMutation,
+  type OrderExpenseRecord,
   type OrderReceiptRecord,
   type OrderRecord,
 } from '../../api/api';
@@ -48,6 +51,12 @@ interface ReceiptForm {
   receivedDate: dayjs.Dayjs;
   reference?: string;
 }
+interface ExpenseForm {
+  amount: number;
+  currency: string;
+  vatClaimable?: boolean;
+  description?: string;
+}
 
 export function OrdersPage() {
   const { data, isLoading } = useGetOrdersQuery();
@@ -56,6 +65,7 @@ export function OrdersPage() {
   const { data: users } = useGetUsersQuery();
   const [create, createState] = useCreateOrderMutation();
   const [recordReceipt, receiptState] = useRecordReceiptMutation();
+  const [addExpense, expenseState] = useAddOrderExpenseMutation();
   const [markServiced] = useMarkServicedMutation();
   const { message } = App.useApp();
   const user = useAppSelector((s) => s.auth.user);
@@ -63,9 +73,11 @@ export function OrdersPage() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [receiptFor, setReceiptFor] = useState<OrderRecord | null>(null);
+  const [expenseFor, setExpenseFor] = useState<OrderRecord | null>(null);
   const [viewId, setViewId] = useState<string | null>(null);
   const [orderForm] = Form.useForm();
   const [receiptForm] = Form.useForm();
+  const [expenseForm] = Form.useForm();
   const selectedClient = Form.useWatch('clientId', orderForm);
 
   const { data: detail, isFetching: detailLoading } = useGetOrderQuery(viewId ?? '', {
@@ -103,6 +115,20 @@ export function OrdersPage() {
     message.success('Receipt recorded');
     setReceiptFor(null);
     receiptForm.resetFields();
+  };
+
+  const submitExpense = async (v: ExpenseForm) => {
+    if (!expenseFor) return;
+    await addExpense({
+      id: expenseFor.id,
+      amount: v.amount,
+      currency: v.currency,
+      vatClaimable: v.vatClaimable ?? false,
+      description: v.description,
+    }).unwrap();
+    message.success('Expense recorded');
+    setExpenseFor(null);
+    expenseForm.resetFields();
   };
 
   const onServiced = async (id: string) => {
@@ -159,6 +185,15 @@ export function OrdersPage() {
                 <Button size="small" icon={<EyeOutlined />} onClick={() => setViewId(r.id)}>
                   View
                 </Button>
+                {canWrite && (
+                  <Button
+                    size="small"
+                    icon={<MinusCircleOutlined />}
+                    onClick={() => setExpenseFor(r)}
+                  >
+                    Expense
+                  </Button>
+                )}
                 {canWrite && !r.serviced && (
                   <>
                     <Button size="small" icon={<DollarOutlined />} onClick={() => setReceiptFor(r)}>
@@ -269,6 +304,41 @@ export function OrdersPage() {
         </Form>
       </Modal>
 
+      {/* Record expense */}
+      <Modal
+        title={`Record expense${expenseFor ? ` — ${expenseFor.reference}` : ''}`}
+        open={!!expenseFor}
+        onCancel={() => setExpenseFor(null)}
+        onOk={() => expenseForm.submit()}
+        confirmLoading={expenseState.isLoading}
+        destroyOnClose
+      >
+        <Form
+          form={expenseForm}
+          layout="vertical"
+          onFinish={submitExpense}
+          initialValues={{
+            currency: expenseFor?.currency,
+            vatClaimable: false,
+          }}
+        >
+          <Space>
+            <Form.Item name="amount" label="Amount (ex VAT)" rules={[{ required: true }]}>
+              <InputNumber min={0} style={{ width: 200 }} />
+            </Form.Item>
+            <Form.Item name="currency" label="Currency" rules={[{ required: true }]}>
+              <LookupSelect category="currency" style={{ width: 120 }} />
+            </Form.Item>
+          </Space>
+          <Form.Item name="description" label="Description">
+            <Input placeholder="Subcontractor labour" />
+          </Form.Item>
+          <Form.Item name="vatClaimable" label="Input VAT claimable" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Form>
+      </Modal>
+
       {/* View detail */}
       <Modal
         title={detail ? `Order — ${detail.reference}` : 'Order'}
@@ -320,6 +390,33 @@ export function OrdersPage() {
                   title: 'Reference',
                   dataIndex: 'reference',
                   render: (v: string | null) => v ?? '—',
+                },
+              ]}
+            />
+            <Typography.Title level={5} style={{ marginTop: 16 }}>
+              Expenses
+            </Typography.Title>
+            <Table
+              rowKey="id"
+              size="small"
+              pagination={false}
+              dataSource={detail.expenses ?? []}
+              locale={{ emptyText: 'No expenses yet' }}
+              columns={[
+                {
+                  title: 'Description',
+                  dataIndex: 'description',
+                  render: (v: string | null) => v ?? '—',
+                },
+                {
+                  title: 'Amount',
+                  render: (_: unknown, r: OrderExpenseRecord) =>
+                    `${r.currency} ${Number(r.amount).toLocaleString()}`,
+                },
+                {
+                  title: 'VAT claimable',
+                  dataIndex: 'vatClaimable',
+                  render: (v: boolean) => (v ? <Tag color="green">Yes</Tag> : <Tag>No</Tag>),
                 },
               ]}
             />
