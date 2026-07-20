@@ -20,7 +20,9 @@ import { ClientsPage } from './features/clients/ClientsPage';
 import { ContractsPage } from './features/contracts/ContractsPage';
 import { ExpensesPage } from './features/expenses/ExpensesPage';
 import { OrdersPage } from './features/orders/OrdersPage';
+import { PayrollPage } from './features/payroll/PayrollPage';
 import { ReportsPage } from './features/reports/ReportsPage';
+import { TimesheetsPage } from './features/timesheets/TimesheetsPage';
 import { BusinessDevelopmentPage } from './features/crm/BusinessDevelopmentPage';
 import { DangerRulesPage } from './features/danger-rules/DangerRulesPage';
 import { SettingsPage } from './features/settings/SettingsPage';
@@ -158,6 +160,34 @@ function Shell() {
           element={
             <ProtectedRoute roles={['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR']}>
               <ExpensesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/timesheets"
+          element={
+            <ProtectedRoute
+              roles={[
+                'SITE_CLERK',
+                'SITE_MANAGER',
+                'OPS_STAFF',
+                'OPS_DIRECTOR',
+                'FINANCE_OFFICER',
+                'FINANCE_DIRECTOR',
+                'DIRECTOR',
+                'SYS_ADMIN',
+                'AUDITOR',
+              ]}
+            >
+              <TimesheetsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/payroll"
+          element={
+            <ProtectedRoute roles={['FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN']}>
+              <PayrollPage />
             </ProtectedRoute>
           }
         />

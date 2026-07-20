@@ -184,6 +184,73 @@ export interface PayrollRunRecord {
   month: string;
   status: string;
 }
+export interface PayrollLineRecord {
+  id: string;
+  employeeId: string;
+  gross: string;
+  paye: string;
+  aidsLevy: string;
+  nssaEe: string;
+  otherDeductions: string;
+  netUsd: string;
+  netZwg: string;
+  employee: {
+    id: string;
+    worksNo: string;
+    firstName: string;
+    lastName: string;
+    bankName: string | null;
+    accountNo: string | null;
+  } | null;
+}
+export interface PayrollRunDetail extends PayrollRunRecord {
+  fxRateId: string | null;
+  preparedByUserId: string | null;
+  approvedByUserId: string | null;
+  createdAt: string;
+  lines: PayrollLineRecord[];
+}
+export interface TimesheetPeriodRecord {
+  id: string;
+  siteId: string;
+  month: string;
+  status: string;
+  lockedAt: string | null;
+  createdAt: string;
+}
+export interface TimesheetEntryRecord {
+  id: string;
+  employeeId: string;
+  date: string;
+  hoursNormal: string;
+  hoursOt15: string;
+  hoursOt20: string;
+  ugShift: string;
+  nightHours: string;
+  remarks: string | null;
+  anomalyFlag: boolean;
+}
+export interface TimesheetGrid extends TimesheetPeriodRecord {
+  entries: TimesheetEntryRecord[];
+}
+export interface ManhoursRow {
+  employeeId: string;
+  worksNo: string;
+  employeeName: string;
+  hoursNormal: number;
+  hoursOt15: number;
+  hoursOt20: number;
+  ugShift: number;
+  nightHours: number;
+  totalHours: number;
+}
+export interface ManhoursResult {
+  periodId: string;
+  siteId: string;
+  month: string;
+  status: string;
+  rows: ManhoursRow[];
+}
 export interface PerformanceResult {
   currency: string;
   bookedOrderValue: number;
@@ -335,6 +402,9 @@ export const api = createApi({
     'Overheads',
     'ContractClaims',
     'PayrollRuns',
+    'PayrollRun',
+    'TimesheetPeriods',
+    'TimesheetGrid',
   ],
   endpoints: (build) => ({
     // --- auth ---
@@ -519,10 +589,86 @@ export const api = createApi({
       invalidatesTags: ['ContractClaims'],
     }),
 
-    // --- payroll runs (selector for report exports) ---
-    getPayrollRuns: build.query<PayrollRunRecord[], void>({
-      query: () => 'v1/payroll-runs',
+    // --- payroll runs ---
+    getPayrollRuns: build.query<PayrollRunRecord[], { siteId?: string; month?: string } | void>({
+      query: (arg) => {
+        const qs = new URLSearchParams();
+        if (arg && arg.siteId) qs.set('siteId', arg.siteId);
+        if (arg && arg.month) qs.set('month', arg.month);
+        const q = qs.toString();
+        return `v1/payroll-runs${q ? `?${q}` : ''}`;
+      },
       providesTags: ['PayrollRuns'],
+    }),
+    getPayrollRun: build.query<PayrollRunDetail, string>({
+      query: (id) => `v1/payroll-runs/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'PayrollRun', id }],
+    }),
+    createPayrollRun: build.mutation<PayrollRunRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/payroll-runs', method: 'POST', body }),
+      invalidatesTags: ['PayrollRuns'],
+    }),
+    computePayrollRun: build.mutation<unknown, string>({
+      query: (id) => ({ url: `v1/payroll-runs/${id}/compute`, method: 'POST', body: {} }),
+      invalidatesTags: (_r, _e, id) => ['PayrollRuns', { type: 'PayrollRun', id }],
+    }),
+    submitPayrollRun: build.mutation<unknown, string>({
+      query: (id) => ({ url: `v1/payroll-runs/${id}/submit`, method: 'POST', body: {} }),
+      invalidatesTags: (_r, _e, id) => ['PayrollRuns', { type: 'PayrollRun', id }],
+    }),
+
+    // --- timesheet periods ---
+    getTimesheetPeriods: build.query<
+      TimesheetPeriodRecord[],
+      { siteId?: string; month?: string } | void
+    >({
+      query: (arg) => {
+        const qs = new URLSearchParams();
+        if (arg && arg.siteId) qs.set('siteId', arg.siteId);
+        if (arg && arg.month) qs.set('month', arg.month);
+        const q = qs.toString();
+        return `v1/timesheet-periods${q ? `?${q}` : ''}`;
+      },
+      providesTags: ['TimesheetPeriods'],
+    }),
+    getTimesheetGrid: build.query<TimesheetGrid, string>({
+      query: (id) => `v1/timesheet-periods/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'TimesheetGrid', id }],
+    }),
+    getManhours: build.query<ManhoursResult, string>({
+      query: (id) => `v1/timesheet-periods/${id}/manhours`,
+      providesTags: (_r, _e, id) => [{ type: 'TimesheetGrid', id }],
+    }),
+    createTimesheetPeriod: build.mutation<TimesheetPeriodRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/timesheet-periods', method: 'POST', body }),
+      invalidatesTags: ['TimesheetPeriods'],
+    }),
+    upsertTimesheetEntries: build.mutation<
+      unknown,
+      { id: string; rows: Record<string, unknown>[] }
+    >({
+      query: ({ id, rows }) => ({
+        url: `v1/timesheet-periods/${id}/entries`,
+        method: 'POST',
+        body: { rows },
+      }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'TimesheetGrid', id }],
+    }),
+    submitTimesheetPeriod: build.mutation<unknown, string>({
+      query: (id) => ({ url: `v1/timesheet-periods/${id}/submit`, method: 'POST', body: {} }),
+      invalidatesTags: (_r, _e, id) => ['TimesheetPeriods', { type: 'TimesheetGrid', id }],
+    }),
+    lockTimesheetPeriod: build.mutation<unknown, string>({
+      query: (id) => ({ url: `v1/timesheet-periods/${id}/lock`, method: 'POST', body: {} }),
+      invalidatesTags: (_r, _e, id) => ['TimesheetPeriods', { type: 'TimesheetGrid', id }],
+    }),
+    requestReopenTimesheet: build.mutation<unknown, { id: string; reason: string }>({
+      query: ({ id, reason }) => ({
+        url: `v1/timesheet-periods/${id}/reopen-request`,
+        method: 'POST',
+        body: { reason },
+      }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'TimesheetGrid', id }],
     }),
 
     // --- command centre: performance (revenue & profit) ---
@@ -702,6 +848,18 @@ export const {
   useGetContractClaimsQuery,
   useAddContractClaimMutation,
   useGetPayrollRunsQuery,
+  useGetPayrollRunQuery,
+  useCreatePayrollRunMutation,
+  useComputePayrollRunMutation,
+  useSubmitPayrollRunMutation,
+  useGetTimesheetPeriodsQuery,
+  useGetTimesheetGridQuery,
+  useGetManhoursQuery,
+  useCreateTimesheetPeriodMutation,
+  useUpsertTimesheetEntriesMutation,
+  useSubmitTimesheetPeriodMutation,
+  useLockTimesheetPeriodMutation,
+  useRequestReopenTimesheetMutation,
   useGetPerformanceQuery,
   useGetOrganisationsQuery,
   useCreateOrganisationMutation,

@@ -13,6 +13,20 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+/** Query filter for listing timesheet periods. */
+export class ListTimesheetPeriodsQueryDto {
+  @ApiPropertyOptional({ description: 'Filter by site' })
+  @IsOptional()
+  @IsUUID()
+  siteId?: string;
+
+  @ApiPropertyOptional({ example: '2026-07', description: 'Filter by month (YYYY-MM)' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: 'month must be in YYYY-MM format' })
+  month?: string;
+}
+
 /** Create a monthly timesheet period for a site. */
 export class CreateTimesheetPeriodDto {
   @ApiProperty({ description: 'Site the period belongs to' })
