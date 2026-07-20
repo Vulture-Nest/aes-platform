@@ -8,6 +8,7 @@ import {
   PlusOutlined,
   SlidersOutlined,
   SwapOutlined,
+  TagsOutlined,
   TeamOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
@@ -45,6 +46,12 @@ const CATEGORIES: Category[] = [
     icon: <WalletOutlined />,
   },
   {
+    label: 'Contract statuses',
+    value: 'contract_status',
+    desc: 'Contract lifecycle labels',
+    icon: <TagsOutlined />,
+  },
+  {
     label: 'Statutory keys',
     value: 'statutory_key',
     desc: 'Tax & statutory parameters',
@@ -72,6 +79,7 @@ const EXAMPLES: Record<string, { code: string; label: string }> = {
   currency_pair: { code: 'USD/ZWG', label: 'US Dollar to Zimbabwe Gold' },
   site_type: { code: 'QUARRY', label: 'Quarry' },
   account_type: { code: 'SAVINGS', label: 'Savings account' },
+  contract_status: { code: 'SUSPENDED', label: 'Suspended' },
   statutory_key: { code: 'PAYE', label: 'Pay As You Earn' },
   threshold_key: { code: 'PETTY_CASH_FD', label: 'Petty cash — FD approval limit' },
   employment_type: { code: 'CONTRACT', label: 'Contract' },

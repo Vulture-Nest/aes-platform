@@ -360,11 +360,6 @@ model Approval {
 // Appendix A calculations live in separate pure services (not here).
 // ---------------------------------------------------------------------------
 
-enum ContractStatus {
-  UPCOMING
-  ACTIVE
-  COMPLETED
-}
 
 enum LoanInterestMethod {
   FLAT
@@ -411,7 +406,7 @@ model Contract {
   rateType   String?        @map("rate_type")
   startDate  DateTime       @map("start_date")
   endDate    DateTime       @map("end_date")
-  status     ContractStatus @default(UPCOMING)
+  status     String         @default("UPCOMING") // validated against the lookup catalog ('contract_status')
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -460,6 +455,8 @@ model Order {
   closingDate DateTime? @map("closing_date")
   serviced    Boolean   @default(false)
   servicedAt  DateTime? @map("serviced_at")
+  /// The user responsible for servicing this order (sees it in their "My Orders").
+  assignedUserId String? @map("assigned_user_id") @db.Uuid
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -471,6 +468,7 @@ model Order {
 
   @@index([clientId])
   @@index([contractId])
+  @@index([assignedUserId])
   @@map("orders")
 }
 

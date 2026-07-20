@@ -42,6 +42,11 @@ export class CreateOrderDto {
   @Type(() => Date)
   @IsDate()
   closingDate?: Date;
+
+  @ApiPropertyOptional({ description: 'User who will service this order' })
+  @IsOptional()
+  @IsUUID()
+  assignedUserId?: string;
 }
 
 export class UpdateOrderDto extends PartialType(CreateOrderDto) {}

@@ -18,6 +18,7 @@ export const LOOKUP_CATEGORIES = [
   'currency_pair',
   'site_type',
   'account_type',
+  'contract_status',
   'statutory_key',
   'threshold_key',
   'employment_type',
@@ -42,6 +43,11 @@ const DEFAULTS: Record<string, SeedRow[]> = {
     { code: 'BANK', label: 'Bank' },
     { code: 'PETTY_CASH', label: 'Petty cash' },
     { code: 'MOBILE_WALLET', label: 'Mobile wallet' },
+  ],
+  contract_status: [
+    { code: 'UPCOMING', label: 'Upcoming' },
+    { code: 'ACTIVE', label: 'Active' },
+    { code: 'COMPLETED', label: 'Completed' },
   ],
   statutory_key: [
     { code: 'vat_pct', label: 'VAT %' },

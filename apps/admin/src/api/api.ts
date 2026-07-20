@@ -136,6 +136,7 @@ export interface OrderRecord {
   closingDate: string | null;
   clientId: string;
   contractId: string | null;
+  assignedUserId: string | null;
 }
 export interface OrderReceiptRecord {
   id: string;

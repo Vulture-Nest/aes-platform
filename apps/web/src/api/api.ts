@@ -62,6 +62,27 @@ export interface ApprovalInboxItem {
     status: string;
   };
 }
+export interface OrderRecord {
+  id: string;
+  reference: string;
+  valueExVat: string;
+  currency: string;
+  serviced: boolean;
+  closingDate: string | null;
+  clientId: string;
+  assignedUserId: string | null;
+}
+export interface OrderReceiptRecord {
+  id: string;
+  amount: string;
+  currency: string;
+  receivedDate: string;
+  reference: string | null;
+}
+export interface OrderDetail extends OrderRecord {
+  receipts?: OrderReceiptRecord[];
+}
+
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE,
   prepareHeaders: (headers, { getState }) => {
@@ -115,7 +136,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Notifications', 'ExchangeRates', 'Requisitions', 'Approvals'],
+  tagTypes: ['Notifications', 'ExchangeRates', 'Requisitions', 'Approvals', 'Orders'],
   endpoints: (build) => ({
     login: build.mutation<Tokens, { email: string; password: string }>({
       query: (body) => ({ url: 'v1/auth/login', method: 'POST', body }),
@@ -184,6 +205,24 @@ export const api = createApi({
       invalidatesTags: ['Approvals', 'Requisitions'],
     }),
 
+    // My Orders (orders assigned to the current user)
+    getAssignedOrders: build.query<OrderRecord[], void>({
+      query: () => 'v1/orders/assigned',
+      providesTags: ['Orders'],
+    }),
+    getOrder: build.query<OrderDetail, string>({
+      query: (id) => `v1/orders/${id}`,
+      providesTags: ['Orders'],
+    }),
+    recordReceipt: build.mutation<unknown, { id: string } & Record<string, unknown>>({
+      query: ({ id, ...body }) => ({ url: `v1/orders/${id}/receipts`, method: 'POST', body }),
+      invalidatesTags: ['Orders'],
+    }),
+    markServiced: build.mutation<unknown, string>({
+      query: (id) => ({ url: `v1/orders/${id}/mark-serviced`, method: 'POST', body: {} }),
+      invalidatesTags: ['Orders'],
+    }),
+
     // Command centre (composite)
     getCommandCentre: build.query<Record<string, unknown>, void>({
       query: () => 'v1/command-centre',
@@ -207,5 +246,9 @@ export const {
   useSubmitRequisitionMutation,
   useGetApprovalInboxQuery,
   useDecideApprovalMutation,
+  useGetAssignedOrdersQuery,
+  useGetOrderQuery,
+  useRecordReceiptMutation,
+  useMarkServicedMutation,
   useGetCommandCentreQuery,
 } = api;

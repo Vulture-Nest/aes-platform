@@ -11,6 +11,7 @@ import { ProfilePage } from './features/profile/ProfilePage';
 import { RatesPage } from './features/rates/RatesPage';
 import { RequestsPage } from './features/requests/RequestsPage';
 import { ApprovalsPage } from './features/approvals/ApprovalsPage';
+import { MyOrdersPage } from './features/my-orders/MyOrdersPage';
 import { CommandCentrePage } from './features/command-centre/CommandCentrePage';
 
 function ProtectedLayout() {
@@ -39,6 +40,7 @@ function Shell() {
         <Route path="/" element={<HomePage />} />
         <Route path="/requests" element={<RequestsPage />} />
         <Route path="/approvals" element={<ApprovalsPage />} />
+        <Route path="/my-orders" element={<MyOrdersPage />} />
         <Route path="/command-centre" element={<CommandCentrePage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/rates" element={<RatesPage />} />

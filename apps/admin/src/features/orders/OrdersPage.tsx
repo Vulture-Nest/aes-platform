@@ -23,6 +23,7 @@ import {
   useGetContractsQuery,
   useGetOrderQuery,
   useGetOrdersQuery,
+  useGetUsersQuery,
   useMarkServicedMutation,
   useRecordReceiptMutation,
   type OrderReceiptRecord,
@@ -39,6 +40,7 @@ interface OrderForm {
   valueExVat: number;
   currency: string;
   closingDate?: dayjs.Dayjs;
+  assignedUserId?: string;
 }
 interface ReceiptForm {
   amount: number;
@@ -51,6 +53,7 @@ export function OrdersPage() {
   const { data, isLoading } = useGetOrdersQuery();
   const { data: clients } = useGetClientsQuery();
   const { data: contracts } = useGetContractsQuery();
+  const { data: users } = useGetUsersQuery();
   const [create, createState] = useCreateOrderMutation();
   const [recordReceipt, receiptState] = useRecordReceiptMutation();
   const [markServiced] = useMarkServicedMutation();
@@ -70,6 +73,8 @@ export function OrdersPage() {
   });
 
   const clientName = (id: string) => clients?.find((c) => c.id === id)?.name ?? id.slice(0, 8);
+  const assigneeName = (id: string | null) =>
+    id ? (users?.find((u) => u.id === id)?.email ?? id.slice(0, 8)) : '—';
 
   const submitOrder = async (v: OrderForm) => {
     await create({
@@ -79,6 +84,7 @@ export function OrdersPage() {
       valueExVat: v.valueExVat,
       currency: v.currency,
       closingDate: v.closingDate ? v.closingDate.toISOString() : undefined,
+      assignedUserId: v.assignedUserId,
     }).unwrap();
     message.success('Order created');
     setAddOpen(false);
@@ -128,6 +134,12 @@ export function OrdersPage() {
             title: 'Value (ex VAT)',
             render: (_: unknown, r: OrderRecord) =>
               `${r.currency} ${Number(r.valueExVat).toLocaleString()}`,
+          },
+          {
+            title: 'Assigned to',
+            dataIndex: 'assignedUserId',
+            render: (id: string | null) =>
+              id ? <Tag color="purple">{assigneeName(id)}</Tag> : <Tag>unassigned</Tag>,
           },
           {
             title: 'Serviced',
@@ -209,6 +221,19 @@ export function OrdersPage() {
           <Form.Item name="closingDate" label="Closing date (optional)">
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
+          <Form.Item
+            name="assignedUserId"
+            label="Assign to (optional)"
+            help="The person who services this order — it shows in their My Orders."
+          >
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder="Select a user"
+              options={(users ?? []).map((u) => ({ label: u.email, value: u.id }))}
+            />
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -268,6 +293,9 @@ export function OrdersPage() {
               <Descriptions.Item label="Serviced">{detail.serviced ? 'Yes' : 'No'}</Descriptions.Item>
               <Descriptions.Item label="Closing">
                 {detail.closingDate ? dayjs(detail.closingDate).format('YYYY-MM-DD') : '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Assigned to" span={2}>
+                {assigneeName(detail.assignedUserId)}
               </Descriptions.Item>
             </Descriptions>
             <Typography.Title level={5}>Receipts</Typography.Title>

@@ -1,16 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { ContractStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
-import {
-  IsDate,
-  IsEnum,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Min,
-  MinLength,
-} from 'class-validator';
+import { IsDate, IsNumber, IsOptional, IsString, IsUUID, Min, MinLength } from 'class-validator';
 
 export class CreateContractDto {
   @ApiProperty()
@@ -52,10 +42,13 @@ export class CreateContractDto {
   @IsDate()
   endDate!: Date;
 
-  @ApiPropertyOptional({ enum: ContractStatus, default: ContractStatus.UPCOMING })
+  @ApiPropertyOptional({
+    example: 'UPCOMING',
+    description: 'Configured contract_status lookup code',
+  })
   @IsOptional()
-  @IsEnum(ContractStatus)
-  status?: ContractStatus;
+  @IsString()
+  status?: string;
 }
 
 export class UpdateContractDto extends PartialType(CreateContractDto) {}

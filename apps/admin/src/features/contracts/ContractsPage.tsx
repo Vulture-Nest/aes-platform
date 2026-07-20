@@ -26,8 +26,7 @@ import { useAppSelector } from '../../app/hooks';
 import { LookupSelect } from '../../components/LookupSelect';
 import { hasAnyRole } from '../../rbac/roles';
 
-// Contract lifecycle is an engine-defined state, not admin-configured.
-const STATUS = ['UPCOMING', 'ACTIVE', 'COMPLETED'];
+// Colours for the common statuses; any admin-added status falls back to default.
 const STATUS_COLOR: Record<string, string> = {
   UPCOMING: 'blue',
   ACTIVE: 'green',
@@ -195,7 +194,7 @@ export function ContractsPage() {
             </Form.Item>
           </Space>
           <Form.Item name="status" label="Status" rules={[{ required: true }]}>
-            <Select options={STATUS.map((s) => ({ label: s, value: s }))} />
+            <LookupSelect category="contract_status" placeholder="Select a status" />
           </Form.Item>
         </Form>
       </Modal>
