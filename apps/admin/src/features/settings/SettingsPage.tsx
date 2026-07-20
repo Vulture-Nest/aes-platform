@@ -9,6 +9,7 @@ import {
   SlidersOutlined,
   SwapOutlined,
   TeamOutlined,
+  WalletOutlined,
 } from '@ant-design/icons';
 import { App, Button, Form, Input, Modal, Popconfirm, Space, Switch, Table, Tag, Typography } from 'antd';
 import { ReactNode, useState } from 'react';
@@ -38,6 +39,12 @@ const CATEGORIES: Category[] = [
   },
   { label: 'Site types', value: 'site_type', desc: 'Site classifications', icon: <BankOutlined /> },
   {
+    label: 'Account types',
+    value: 'account_type',
+    desc: 'Ledger account categories',
+    icon: <WalletOutlined />,
+  },
+  {
     label: 'Statutory keys',
     value: 'statutory_key',
     desc: 'Tax & statutory parameters',
@@ -64,6 +71,7 @@ const EXAMPLES: Record<string, { code: string; label: string }> = {
   currency: { code: 'ZAR', label: 'South African Rand' },
   currency_pair: { code: 'USD/ZWG', label: 'US Dollar to Zimbabwe Gold' },
   site_type: { code: 'QUARRY', label: 'Quarry' },
+  account_type: { code: 'SAVINGS', label: 'Savings account' },
   statutory_key: { code: 'PAYE', label: 'Pay As You Earn' },
   threshold_key: { code: 'PETTY_CASH_FD', label: 'Petty cash — FD approval limit' },
   employment_type: { code: 'CONTRACT', label: 'Contract' },

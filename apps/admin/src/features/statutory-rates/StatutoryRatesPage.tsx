@@ -3,6 +3,7 @@ import { App, Button, DatePicker, Form, InputNumber, Modal, Select, Space, Table
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { useCreateStatutoryRateMutation, useGetLookupsQuery, useGetStatutoryRatesQuery } from '../../api/api';
+import { LookupSelect } from '../../components/LookupSelect';
 
 export function StatutoryRatesPage() {
   const { data, isLoading } = useGetStatutoryRatesQuery();
@@ -75,7 +76,7 @@ export function StatutoryRatesPage() {
             />
           </Form.Item>
           <Form.Item name="currency" label="Currency (optional)">
-            <Select allowClear options={[{ label: 'USD', value: 'USD' }, { label: 'ZWG', value: 'ZWG' }]} />
+            <LookupSelect category="currency" allowClear />
           </Form.Item>
           <Form.Item name="value" label="Value">
             <InputNumber step={0.01} style={{ width: '100%' }} />

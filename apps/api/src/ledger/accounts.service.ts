@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AccountType } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LookupService } from '../settings/lookup.service';
@@ -26,6 +25,7 @@ export class AccountsService {
   }
 
   async create(dto: CreateAccountDto, actorId: string) {
+    await this.lookups.assertValid('account_type', dto.type);
     await this.lookups.assertValid('currency', dto.currency);
     const account = await this.prisma.account.create({
       data: { ...dto, createdBy: actorId, updatedBy: actorId },
@@ -47,6 +47,8 @@ export class AccountsService {
 
   async update(id: string, dto: UpdateAccountDto, actorId: string) {
     const before = await this.findOne(id);
+    if (dto.type) await this.lookups.assertValid('account_type', dto.type);
+    if (dto.currency) await this.lookups.assertValid('currency', dto.currency);
     const account = await this.prisma.account.update({
       where: { id },
       data: { ...dto, updatedBy: actorId },
@@ -69,17 +71,17 @@ export class AccountsService {
   async ensureDefaults(siteIds: string[] = []): Promise<void> {
     const wanted: Array<{
       name: string;
-      type: AccountType;
+      type: string;
       currency: string;
       siteId: string | null;
     }> = [
-      { name: 'Bank USD', type: AccountType.BANK, currency: 'USD', siteId: null },
-      { name: 'Bank ZWG', type: AccountType.BANK, currency: 'ZWG', siteId: null },
+      { name: 'Bank USD', type: 'BANK', currency: 'USD', siteId: null },
+      { name: 'Bank ZWG', type: 'BANK', currency: 'ZWG', siteId: null },
     ];
     for (const siteId of siteIds) {
       wanted.push({
         name: `Petty Cash (${siteId})`,
-        type: AccountType.PETTY_CASH,
+        type: 'PETTY_CASH',
         currency: 'USD',
         siteId,
       });

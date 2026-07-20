@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import { Mutex } from './mutex';
 import { loggedOut, tokensReceived } from '../features/auth/authSlice';
-import type { AuthUser, Role, SiteRole } from '../rbac/roles';
+import type { AuthUser, SiteRole } from '../rbac/roles';
 import type { RootState } from '../app/store';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
@@ -21,7 +21,7 @@ export interface UserRecord extends AuthUser {
 export interface SiteRecord {
   id: string;
   name: string;
-  type: 'MINE_SITE' | 'HEAD_OFFICE';
+  type: string;
   clientId: string | null;
   active: boolean;
 }
@@ -193,12 +193,12 @@ export const api = createApi({
     getUsers: build.query<UserRecord[], void>({ query: () => 'v1/users', providesTags: ['Users'] }),
     createUser: build.mutation<
       UserRecord,
-      { email: string; password: string; roles?: { siteId?: string; role: Role }[] }
+      { email: string; password: string; roles?: { siteId?: string; role: string }[] }
     >({
       query: (body) => ({ url: 'v1/users', method: 'POST', body }),
       invalidatesTags: ['Users'],
     }),
-    assignRole: build.mutation<UserRecord, { id: string; siteId?: string; role: Role }>({
+    assignRole: build.mutation<UserRecord, { id: string; siteId?: string; role: string }>({
       query: ({ id, ...body }) => ({ url: `v1/users/${id}/roles`, method: 'POST', body }),
       invalidatesTags: ['Users'],
     }),
@@ -285,6 +285,12 @@ export const api = createApi({
       query: () => 'v1/approval-matrix',
       providesTags: ['ApprovalMatrix'],
     }),
+    getApprovalOptions: build.query<
+      { modes: { value: string; label: string }[]; modules: { value: string; label: string }[] },
+      void
+    >({
+      query: () => 'v1/approval-matrix/options',
+    }),
     createApprovalRule: build.mutation<ApprovalMatrixRecord, Record<string, unknown>>({
       query: (body) => ({ url: 'v1/approval-matrix', method: 'POST', body }),
       invalidatesTags: ['ApprovalMatrix'],
@@ -344,6 +350,7 @@ export const {
   useGetEmployeesQuery,
   useCreateEmployeeMutation,
   useGetApprovalMatrixQuery,
+  useGetApprovalOptionsQuery,
   useCreateApprovalRuleMutation,
   useGetDangerRulesQuery,
   useUpdateDangerRuleMutation,

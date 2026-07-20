@@ -3,6 +3,7 @@ import { App, Button, Form, InputNumber, Modal, Select, Space, Table, Tag, Typog
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { useCreateThresholdMutation, useGetLookupsQuery, useGetThresholdsQuery } from '../../api/api';
+import { LookupSelect } from '../../components/LookupSelect';
 
 export function ThresholdsPage() {
   const { data, isLoading } = useGetThresholdsQuery();
@@ -63,7 +64,7 @@ export function ThresholdsPage() {
             />
           </Form.Item>
           <Form.Item name="currency" label="Currency (optional)">
-            <Select allowClear options={[{ label: 'USD', value: 'USD' }, { label: 'ZWG', value: 'ZWG' }]} />
+            <LookupSelect category="currency" allowClear />
           </Form.Item>
           <Form.Item name="value" label="Value" rules={[{ required: true }]}>
             <InputNumber step={0.01} style={{ width: '100%' }} />

@@ -2,11 +2,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { App, Button, Form, Input, Modal, Select, Space, Table, Tag, Typography } from 'antd';
 import { useState } from 'react';
 import { useCreateSiteMutation, useGetSitesQuery, useUpdateSiteMutation } from '../../api/api';
-
-const TYPE_OPTIONS = [
-  { label: 'Mine site', value: 'MINE_SITE' },
-  { label: 'Head office', value: 'HEAD_OFFICE' },
-];
+import { LookupSelect } from '../../components/LookupSelect';
 
 export function SitesPage() {
   const { data, isLoading } = useGetSitesQuery();
@@ -16,7 +12,7 @@ export function SitesPage() {
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
 
-  const submit = async (v: { name: string; type: 'MINE_SITE' | 'HEAD_OFFICE' }) => {
+  const submit = async (v: { name: string; type: string }) => {
     await createSite(v).unwrap();
     message.success('Site created');
     setOpen(false);
@@ -72,7 +68,7 @@ export function SitesPage() {
             <Input placeholder="Mimosa" />
           </Form.Item>
           <Form.Item name="type" label="Type" rules={[{ required: true }]}>
-            <Select options={TYPE_OPTIONS} />
+            <LookupSelect category="site_type" placeholder="Select a type" />
           </Form.Item>
         </Form>
       </Modal>

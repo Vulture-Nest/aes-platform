@@ -1,5 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons';
-import { App, Button, DatePicker, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Typography } from 'antd';
+import { App, Button, DatePicker, Form, Input, InputNumber, Modal, Space, Table, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import {
@@ -8,6 +8,7 @@ import {
   useSubmitRequisitionMutation,
   type RequisitionRecord,
 } from '../../api/api';
+import { LookupSelect } from '../../components/LookupSelect';
 
 const STATUS_COLOR: Record<string, string> = {
   DRAFT: 'default',
@@ -106,7 +107,7 @@ export function RequestsPage() {
         confirmLoading={createState.isLoading}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" onFinish={onCreate} initialValues={{ currency: 'USD' }}>
+        <Form form={form} layout="vertical" onFinish={onCreate}>
           <Form.Item name="purpose" label="Purpose" rules={[{ required: true }]}>
             <Input placeholder="Site fuel for March" />
           </Form.Item>
@@ -114,7 +115,7 @@ export function RequestsPage() {
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="currency" label="Currency" rules={[{ required: true }]}>
-            <Select options={[{ label: 'USD', value: 'USD' }, { label: 'ZWG', value: 'ZWG' }]} />
+            <LookupSelect category="currency" placeholder="Select a currency" />
           </Form.Item>
           <Form.Item name="requiredByDate" label="Required by" rules={[{ required: true }]}>
             <DatePicker style={{ width: '100%' }} />
