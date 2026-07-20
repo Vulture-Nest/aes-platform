@@ -385,6 +385,14 @@ export const api = createApi({
       query: (body) => ({ url: 'v1/approval-matrix', method: 'POST', body }),
       invalidatesTags: ['ApprovalMatrix'],
     }),
+    updateApprovalRule: build.mutation<ApprovalMatrixRecord, { id: string; active?: boolean }>({
+      query: ({ id, ...body }) => ({ url: `v1/approval-matrix/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['ApprovalMatrix'],
+    }),
+    deleteApprovalRule: build.mutation<void, string>({
+      query: (id) => ({ url: `v1/approval-matrix/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['ApprovalMatrix'],
+    }),
 
     // --- danger rules ---
     getDangerRules: build.query<DangerRuleRecord[], void>({
@@ -456,6 +464,8 @@ export const {
   useGetApprovalMatrixQuery,
   useGetApprovalOptionsQuery,
   useCreateApprovalRuleMutation,
+  useUpdateApprovalRuleMutation,
+  useDeleteApprovalRuleMutation,
   useGetDangerRulesQuery,
   useUpdateDangerRuleMutation,
   useGetLookupsQuery,

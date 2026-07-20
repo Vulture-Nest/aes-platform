@@ -64,3 +64,11 @@ export class CreateApprovalMatrixDto {
   @IsBoolean()
   active?: boolean;
 }
+
+/** Patch an approval-matrix rule — currently just enable/disable. */
+export class UpdateApprovalMatrixDto {
+  @ApiPropertyOptional({ description: 'Enable or disable this routing rule' })
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+}

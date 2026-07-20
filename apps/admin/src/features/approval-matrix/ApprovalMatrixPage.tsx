@@ -1,10 +1,25 @@
-import { PlusOutlined } from '@ant-design/icons';
-import { App, Button, Form, InputNumber, Modal, Select, Space, Table, Tag, Typography } from 'antd';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import {
+  App,
+  Button,
+  Form,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Switch,
+  Table,
+  Tag,
+  Typography,
+} from 'antd';
 import { useState } from 'react';
 import {
   useCreateApprovalRuleMutation,
+  useDeleteApprovalRuleMutation,
   useGetApprovalMatrixQuery,
   useGetApprovalOptionsQuery,
+  useUpdateApprovalRuleMutation,
 } from '../../api/api';
 import { LookupSelect } from '../../components/LookupSelect';
 
@@ -12,6 +27,8 @@ export function ApprovalMatrixPage() {
   const { data, isLoading } = useGetApprovalMatrixQuery();
   const { data: options } = useGetApprovalOptionsQuery();
   const [create, createState] = useCreateApprovalRuleMutation();
+  const [update] = useUpdateApprovalRuleMutation();
+  const [remove] = useDeleteApprovalRuleMutation();
   const { message } = App.useApp();
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
@@ -21,6 +38,16 @@ export function ApprovalMatrixPage() {
     message.success('Approval rule added');
     setOpen(false);
     form.resetFields();
+  };
+
+  const toggle = async (id: string, active: boolean) => {
+    await update({ id, active }).unwrap();
+    message.success(active ? 'Rule enabled' : 'Rule disabled');
+  };
+
+  const onRemove = async (id: string) => {
+    await remove(id).unwrap();
+    message.success('Rule deleted');
   };
 
   return (
@@ -51,6 +78,22 @@ export function ApprovalMatrixPage() {
           { title: 'Step', dataIndex: 'stepOrder' },
           { title: 'Approver role', dataIndex: 'approverRole', render: (r: string) => <Tag color="blue">{r}</Tag> },
           { title: 'Mode', dataIndex: 'mode', render: (m: string) => <Tag>{m}</Tag> },
+          {
+            title: 'Active',
+            dataIndex: 'active',
+            render: (active: boolean, r) => (
+              <Switch checked={active} onChange={(v) => toggle(r.id, v)} />
+            ),
+          },
+          {
+            title: '',
+            width: 48,
+            render: (_: unknown, r) => (
+              <Popconfirm title="Delete this rule?" onConfirm={() => onRemove(r.id)}>
+                <Button size="small" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            ),
+          },
         ]}
       />
       <Modal
