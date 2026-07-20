@@ -162,6 +162,65 @@ export interface PerformanceResult {
   servicedOrderCount: number;
 }
 
+// --- CRM (Business Development) ---
+export interface CrmOrganisation {
+  id: string;
+  name: string;
+  clientId: string | null;
+  industry: string | null;
+  source: string | null;
+  ownerUserId: string | null;
+  notes: string | null;
+}
+export interface CrmContact {
+  id: string;
+  organisationId: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+  title: string | null;
+  ownerUserId: string | null;
+}
+export interface CrmInteraction {
+  id: string;
+  organisationId: string | null;
+  contactId: string | null;
+  type: string;
+  occurredAt: string;
+  outcome: string | null;
+  notes: string | null;
+}
+export interface CrmOpportunity {
+  id: string;
+  title: string;
+  organisationId: string | null;
+  contactId: string | null;
+  stage: string;
+  estimatedValue: string | null;
+  currency: string | null;
+  ownerUserId: string | null;
+  expectedCloseDate: string | null;
+  lostReason: string | null;
+  convertedOrderId: string | null;
+  convertedContractId: string | null;
+}
+export type CrmBoard = Record<string, CrmOpportunity[]>;
+export interface CrmConversionMetrics {
+  ownerUserId: string | null;
+  organisations: number;
+  contacts: number;
+  opportunities: number;
+  won: number;
+  lost: number;
+  valueWon: number;
+  conversionRate: number;
+}
+export interface CrmConversionAnalytics {
+  overall: CrmConversionMetrics;
+  owners: CrmConversionMetrics[];
+}
+
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE,
   prepareHeaders: (headers, { getState }) => {
@@ -232,6 +291,10 @@ export const api = createApi({
     'Clients',
     'Contracts',
     'Orders',
+    'CrmOrgs',
+    'CrmContacts',
+    'CrmInteractions',
+    'CrmOpps',
   ],
   endpoints: (build) => ({
     // --- auth ---
@@ -389,6 +452,79 @@ export const api = createApi({
       query: () => 'v1/command-centre/performance',
     }),
 
+    // --- CRM: organisations ---
+    getOrganisations: build.query<CrmOrganisation[], void>({
+      query: () => 'v1/crm/organisations',
+      providesTags: ['CrmOrgs'],
+    }),
+    createOrganisation: build.mutation<CrmOrganisation, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/crm/organisations', method: 'POST', body }),
+      invalidatesTags: ['CrmOrgs'],
+    }),
+    updateOrganisation: build.mutation<CrmOrganisation, { id: string } & Record<string, unknown>>({
+      query: ({ id, ...body }) => ({ url: `v1/crm/organisations/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['CrmOrgs'],
+    }),
+
+    // --- CRM: contacts ---
+    getContacts: build.query<CrmContact[], string | void>({
+      query: (organisationId) => ({
+        url: 'v1/crm/contacts',
+        params: organisationId ? { organisationId } : undefined,
+      }),
+      providesTags: ['CrmContacts'],
+    }),
+    createContact: build.mutation<CrmContact, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/crm/contacts', method: 'POST', body }),
+      invalidatesTags: ['CrmContacts'],
+    }),
+    updateContact: build.mutation<CrmContact, { id: string } & Record<string, unknown>>({
+      query: ({ id, ...body }) => ({ url: `v1/crm/contacts/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['CrmContacts'],
+    }),
+
+    // --- CRM: interactions ---
+    getInteractions: build.query<CrmInteraction[], Record<string, string> | void>({
+      query: (params) => ({ url: 'v1/crm/interactions', params: params ?? undefined }),
+      providesTags: ['CrmInteractions'],
+    }),
+    createInteraction: build.mutation<CrmInteraction, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/crm/interactions', method: 'POST', body }),
+      invalidatesTags: ['CrmInteractions'],
+    }),
+
+    // --- CRM: opportunities (pipeline) ---
+    getOpportunityBoard: build.query<CrmBoard, void>({
+      query: () => 'v1/crm/opportunities/board',
+      providesTags: ['CrmOpps'],
+    }),
+    createOpportunity: build.mutation<CrmOpportunity, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/crm/opportunities', method: 'POST', body }),
+      invalidatesTags: ['CrmOpps'],
+    }),
+    updateOpportunity: build.mutation<CrmOpportunity, { id: string } & Record<string, unknown>>({
+      query: ({ id, ...body }) => ({ url: `v1/crm/opportunities/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['CrmOpps'],
+    }),
+    moveOpportunity: build.mutation<
+      CrmOpportunity,
+      { id: string; stage: string; lostReason?: string }
+    >({
+      query: ({ id, ...body }) => ({ url: `v1/crm/opportunities/${id}/move`, method: 'POST', body }),
+      invalidatesTags: ['CrmOpps'],
+    }),
+    convertOpportunity: build.mutation<unknown, { id: string } & Record<string, unknown>>({
+      query: ({ id, ...body }) => ({
+        url: `v1/crm/opportunities/${id}/convert`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['CrmOpps', 'Orders', 'Contracts'],
+    }),
+    getCrmAnalytics: build.query<CrmConversionAnalytics, void>({
+      query: () => 'v1/crm/analytics/conversion',
+    }),
+
     // --- approval matrix ---
     getApprovalMatrix: build.query<ApprovalMatrixRecord[], void>({
       query: () => 'v1/approval-matrix',
@@ -481,6 +617,20 @@ export const {
   useRecordReceiptMutation,
   useMarkServicedMutation,
   useGetPerformanceQuery,
+  useGetOrganisationsQuery,
+  useCreateOrganisationMutation,
+  useUpdateOrganisationMutation,
+  useGetContactsQuery,
+  useCreateContactMutation,
+  useUpdateContactMutation,
+  useGetInteractionsQuery,
+  useCreateInteractionMutation,
+  useGetOpportunityBoardQuery,
+  useCreateOpportunityMutation,
+  useUpdateOpportunityMutation,
+  useMoveOpportunityMutation,
+  useConvertOpportunityMutation,
+  useGetCrmAnalyticsQuery,
   useGetApprovalMatrixQuery,
   useGetApprovalOptionsQuery,
   useCreateApprovalRuleMutation,
