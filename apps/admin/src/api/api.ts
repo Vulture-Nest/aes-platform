@@ -148,6 +148,19 @@ export interface OrderReceiptRecord {
 export interface OrderDetail extends OrderRecord {
   receipts?: OrderReceiptRecord[];
 }
+export interface PerformanceResult {
+  currency: string;
+  bookedOrderValue: number;
+  servicedOrderIncome: number;
+  claimsIncome: number;
+  income: number;
+  expenses: number;
+  expenseBreakdown: { order: number; general: number; overheads: number; loanInterest: number };
+  operatingProfit: number;
+  margin: number | null;
+  orderCount: number;
+  servicedOrderCount: number;
+}
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE,
@@ -371,6 +384,11 @@ export const api = createApi({
       invalidatesTags: ['Orders'],
     }),
 
+    // --- command centre: performance (revenue & profit) ---
+    getPerformance: build.query<PerformanceResult, void>({
+      query: () => 'v1/command-centre/performance',
+    }),
+
     // --- approval matrix ---
     getApprovalMatrix: build.query<ApprovalMatrixRecord[], void>({
       query: () => 'v1/approval-matrix',
@@ -462,6 +480,7 @@ export const {
   useCreateOrderMutation,
   useRecordReceiptMutation,
   useMarkServicedMutation,
+  useGetPerformanceQuery,
   useGetApprovalMatrixQuery,
   useGetApprovalOptionsQuery,
   useCreateApprovalRuleMutation,
