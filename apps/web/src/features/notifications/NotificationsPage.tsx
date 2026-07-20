@@ -9,6 +9,50 @@ import {
 } from '../../api/api';
 
 const SEVERITY_COLOR: Record<string, string> = { INFO: 'blue', WATCH: 'gold', DANGER: 'red' };
+const SEVERITY_LABEL: Record<string, string> = { INFO: 'Info', WATCH: 'Attention', DANGER: 'Urgent' };
+
+const MONEY_KEYS = /(amount|shortfall|total|balance|value|sum|due|paid|limit)/i;
+
+/** Turn a template/field key like "requisition.pending_funds" into readable text. */
+const humanize = (s: string) =>
+  s
+    .replace(/[._]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/\bid\b/gi, '')
+    .trim()
+    .replace(/^./, (c) => c.toUpperCase());
+
+const isUuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-/i.test(v);
+
+/** Render a notification payload as friendly label/value rows — never raw JSON. */
+function friendlyRows(payload: Record<string, unknown>): { label: string; value: string }[] {
+  const currency = typeof payload.currency === 'string' ? payload.currency : undefined;
+  const rows: { label: string; value: string }[] = [];
+  let currencyShown = false;
+  for (const [key, raw] of Object.entries(payload)) {
+    if (key === 'currency') continue;
+    let value: string;
+    if (typeof raw === 'number') {
+      const n = raw.toLocaleString(undefined, { maximumFractionDigits: 2 });
+      if (MONEY_KEYS.test(key) && currency) {
+        value = `${n} ${currency}`;
+        currencyShown = true;
+      } else {
+        value = n;
+      }
+    } else if (typeof raw === 'boolean') {
+      value = raw ? 'Yes' : 'No';
+    } else if (raw == null) {
+      continue;
+    } else {
+      const s = String(raw);
+      value = isUuid(s) ? `#${s.slice(0, 8)}` : s;
+    }
+    rows.push({ label: humanize(key), value });
+  }
+  if (currency && !currencyShown) rows.push({ label: 'Currency', value: currency });
+  return rows;
+}
 
 export function NotificationsPage() {
   const { data, isLoading } = useGetNotificationsQuery();
@@ -65,8 +109,10 @@ export function NotificationsPage() {
                         }}
                       />
                     )}
-                    <Tag color={SEVERITY_COLOR[n.severity]}>{n.severity}</Tag>
-                    <span style={{ fontWeight: n.readAt ? 400 : 600 }}>{n.template}</span>
+                    <Tag color={SEVERITY_COLOR[n.severity]}>
+                      {SEVERITY_LABEL[n.severity] ?? n.severity}
+                    </Tag>
+                    <span style={{ fontWeight: n.readAt ? 400 : 600 }}>{humanize(n.template)}</span>
                   </Space>
                 }
                 description={dayjs(n.createdAt).format('YYYY-MM-DD HH:mm')}
@@ -76,7 +122,7 @@ export function NotificationsPage() {
         />
       )}
       <Modal
-        title="Notification"
+        title={selected ? humanize(selected.template) : 'Notification'}
         open={!!selected}
         onCancel={() => setSelected(null)}
         footer={
@@ -87,24 +133,19 @@ export function NotificationsPage() {
       >
         {selected && (
           <Descriptions column={1} size="small" bordered>
-            <Descriptions.Item label="Severity">
-              <Tag color={SEVERITY_COLOR[selected.severity]}>{selected.severity}</Tag>
+            <Descriptions.Item label="Priority">
+              <Tag color={SEVERITY_COLOR[selected.severity]}>
+                {SEVERITY_LABEL[selected.severity] ?? selected.severity}
+              </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="Event">{selected.template}</Descriptions.Item>
             <Descriptions.Item label="When">
-              {dayjs(selected.createdAt).format('YYYY-MM-DD HH:mm')}
+              {dayjs(selected.createdAt).format('DD MMM YYYY, HH:mm')}
             </Descriptions.Item>
-            {selected.subjectTable && (
-              <Descriptions.Item label="Relates to">
-                {selected.subjectTable}
-                {selected.subjectId ? ` · ${selected.subjectId.slice(0, 8)}` : ''}
+            {friendlyRows((selected.payload ?? {}) as Record<string, unknown>).map((r) => (
+              <Descriptions.Item key={r.label} label={r.label}>
+                {r.value}
               </Descriptions.Item>
-            )}
-            <Descriptions.Item label="Details">
-              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 12 }}>
-                {selected.payload ? JSON.stringify(selected.payload, null, 2) : '—'}
-              </pre>
-            </Descriptions.Item>
+            ))}
           </Descriptions>
         )}
       </Modal>
