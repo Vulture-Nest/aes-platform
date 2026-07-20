@@ -7,6 +7,9 @@ import { LoansController } from './loans/loans.controller';
 import { LoansService } from './loans/loans.service';
 import { OrdersController } from './orders/orders.controller';
 import { OrdersService } from './orders/orders.service';
+import { ExpensesService } from './expenses/expenses.service';
+import { GeneralExpensesController } from './expenses/general-expenses.controller';
+import { OverheadsController } from './expenses/overheads.controller';
 import { OrderFinancialsService } from './domain/order-financials.service';
 import { OrderHealthService } from './domain/order-health.service';
 import { ContractVarianceService } from './domain/contract-variance.service';
@@ -21,12 +24,20 @@ import { HealthVerdictService } from './domain/health-verdict.service';
  * plus the Appendix A domain calculation services (pure, reusable).
  */
 @Module({
-  controllers: [ClientsController, ContractsController, OrdersController, LoansController],
+  controllers: [
+    ClientsController,
+    ContractsController,
+    OrdersController,
+    LoansController,
+    GeneralExpensesController,
+    OverheadsController,
+  ],
   providers: [
     ClientsService,
     ContractsService,
     OrdersService,
     LoansService,
+    ExpensesService,
     OrderFinancialsService,
     OrderHealthService,
     ContractVarianceService,

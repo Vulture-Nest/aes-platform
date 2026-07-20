@@ -13,7 +13,12 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { Roles } from '../../rbac/roles.decorator';
-import { CreateOrderDto, CreateOrderReceiptDto, UpdateOrderDto } from './dto/order.dto';
+import {
+  CreateOrderDto,
+  CreateOrderExpenseDto,
+  CreateOrderReceiptDto,
+  UpdateOrderDto,
+} from './dto/order.dto';
 import { OrdersService } from './orders.service';
 
 @ApiTags('orders')
@@ -58,6 +63,17 @@ export class OrdersController {
     @CurrentUser('id') actorId: string,
   ) {
     return this.orders.update(id, dto, actorId);
+  }
+
+  @Post(':id/expenses')
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
+  @ApiOperation({ summary: 'Record an expense against an order' })
+  addExpense(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateOrderExpenseDto,
+    @CurrentUser('id') actorId: string,
+  ) {
+    return this.orders.addExpense(id, dto, actorId);
   }
 
   @Post(':id/receipts')

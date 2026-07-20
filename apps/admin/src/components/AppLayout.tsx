@@ -4,6 +4,7 @@ import {
   AuditOutlined,
   BankOutlined,
   ContactsOutlined,
+  CreditCardOutlined,
   DashboardOutlined,
   DollarOutlined,
   FileDoneOutlined,
@@ -103,6 +104,12 @@ const NAV: NavItem[] = [
     key: '/orders',
     label: 'Orders',
     icon: <ShoppingOutlined />,
+    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR'],
+  },
+  {
+    key: '/expenses',
+    label: 'Expenses',
+    icon: <CreditCardOutlined />,
     roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR'],
   },
   {
