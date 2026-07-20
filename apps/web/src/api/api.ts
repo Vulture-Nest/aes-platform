@@ -62,16 +62,6 @@ export interface ApprovalInboxItem {
     status: string;
   };
 }
-export interface OrderRecord {
-  id: string;
-  reference: string;
-  valueExVat: string;
-  currency: string;
-  serviced: boolean;
-  closingDate: string | null;
-  clientId: string;
-}
-
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE,
   prepareHeaders: (headers, { getState }) => {
@@ -125,7 +115,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Notifications', 'ExchangeRates', 'Requisitions', 'Approvals', 'Orders'],
+  tagTypes: ['Notifications', 'ExchangeRates', 'Requisitions', 'Approvals'],
   endpoints: (build) => ({
     login: build.mutation<Tokens, { email: string; password: string }>({
       query: (body) => ({ url: 'v1/auth/login', method: 'POST', body }),
@@ -194,12 +184,6 @@ export const api = createApi({
       invalidatesTags: ['Approvals', 'Requisitions'],
     }),
 
-    // Orders
-    getOrders: build.query<OrderRecord[], void>({
-      query: () => 'v1/orders',
-      providesTags: ['Orders'],
-    }),
-
     // Command centre (composite)
     getCommandCentre: build.query<Record<string, unknown>, void>({
       query: () => 'v1/command-centre',
@@ -223,6 +207,5 @@ export const {
   useSubmitRequisitionMutation,
   useGetApprovalInboxQuery,
   useDecideApprovalMutation,
-  useGetOrdersQuery,
   useGetCommandCentreQuery,
 } = api;

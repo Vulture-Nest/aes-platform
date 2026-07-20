@@ -40,7 +40,7 @@ export function HomePage() {
         ))}
       </Row>
       <Typography.Paragraph type="secondary" style={{ marginTop: 24 }}>
-        Approvals, Requests and Orders arrive as their backend lands.
+        Raise requests, action approvals and watch the Command Centre.
       </Typography.Paragraph>
     </>
   );

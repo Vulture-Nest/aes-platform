@@ -110,6 +110,43 @@ export interface LookupRecord {
   active: boolean;
   metadata: Record<string, unknown> | null;
 }
+export interface ClientRecord {
+  id: string;
+  name: string;
+  contactEmail: string | null;
+  active: boolean;
+  createdAt?: string;
+}
+export interface ContractRecord {
+  id: string;
+  clientId: string;
+  reference: string;
+  valueExVat: string;
+  currency: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+}
+export interface OrderRecord {
+  id: string;
+  reference: string;
+  valueExVat: string;
+  currency: string;
+  serviced: boolean;
+  closingDate: string | null;
+  clientId: string;
+  contractId: string | null;
+}
+export interface OrderReceiptRecord {
+  id: string;
+  amount: string;
+  currency: string;
+  receivedDate: string;
+  reference: string | null;
+}
+export interface OrderDetail extends OrderRecord {
+  receipts?: OrderReceiptRecord[];
+}
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE,
@@ -178,6 +215,9 @@ export const api = createApi({
     'ApprovalMatrix',
     'DangerRules',
     'Lookups',
+    'Clients',
+    'Contracts',
+    'Orders',
   ],
   endpoints: (build) => ({
     // --- auth ---
@@ -280,6 +320,56 @@ export const api = createApi({
       invalidatesTags: ['Employees'],
     }),
 
+    // --- clients ---
+    getClients: build.query<ClientRecord[], void>({
+      query: () => 'v1/clients',
+      providesTags: ['Clients'],
+    }),
+    createClient: build.mutation<ClientRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/clients', method: 'POST', body }),
+      invalidatesTags: ['Clients'],
+    }),
+    updateClient: build.mutation<ClientRecord, { id: string } & Record<string, unknown>>({
+      query: ({ id, ...body }) => ({ url: `v1/clients/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['Clients'],
+    }),
+
+    // --- contracts ---
+    getContracts: build.query<ContractRecord[], void>({
+      query: () => 'v1/contracts',
+      providesTags: ['Contracts'],
+    }),
+    createContract: build.mutation<ContractRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/contracts', method: 'POST', body }),
+      invalidatesTags: ['Contracts'],
+    }),
+    updateContract: build.mutation<ContractRecord, { id: string } & Record<string, unknown>>({
+      query: ({ id, ...body }) => ({ url: `v1/contracts/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['Contracts'],
+    }),
+
+    // --- orders ---
+    getOrders: build.query<OrderRecord[], void>({
+      query: () => 'v1/orders',
+      providesTags: ['Orders'],
+    }),
+    getOrder: build.query<OrderDetail, string>({
+      query: (id) => `v1/orders/${id}`,
+      providesTags: ['Orders'],
+    }),
+    createOrder: build.mutation<OrderRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/orders', method: 'POST', body }),
+      invalidatesTags: ['Orders'],
+    }),
+    recordReceipt: build.mutation<unknown, { id: string } & Record<string, unknown>>({
+      query: ({ id, ...body }) => ({ url: `v1/orders/${id}/receipts`, method: 'POST', body }),
+      invalidatesTags: ['Orders'],
+    }),
+    markServiced: build.mutation<unknown, string>({
+      query: (id) => ({ url: `v1/orders/${id}/mark-serviced`, method: 'POST', body: {} }),
+      invalidatesTags: ['Orders'],
+    }),
+
     // --- approval matrix ---
     getApprovalMatrix: build.query<ApprovalMatrixRecord[], void>({
       query: () => 'v1/approval-matrix',
@@ -352,6 +442,17 @@ export const {
   useCreateAccountMutation,
   useGetEmployeesQuery,
   useCreateEmployeeMutation,
+  useGetClientsQuery,
+  useCreateClientMutation,
+  useUpdateClientMutation,
+  useGetContractsQuery,
+  useCreateContractMutation,
+  useUpdateContractMutation,
+  useGetOrdersQuery,
+  useGetOrderQuery,
+  useCreateOrderMutation,
+  useRecordReceiptMutation,
+  useMarkServicedMutation,
   useGetApprovalMatrixQuery,
   useGetApprovalOptionsQuery,
   useCreateApprovalRuleMutation,

@@ -16,6 +16,9 @@ import { UsersPage } from './features/users/UsersPage';
 import { ApprovalMatrixPage } from './features/approval-matrix/ApprovalMatrixPage';
 import { AccountsPage } from './features/accounts/AccountsPage';
 import { EmployeesPage } from './features/employees/EmployeesPage';
+import { ClientsPage } from './features/clients/ClientsPage';
+import { ContractsPage } from './features/contracts/ContractsPage';
+import { OrdersPage } from './features/orders/OrdersPage';
 import { DangerRulesPage } from './features/danger-rules/DangerRulesPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 
@@ -120,6 +123,30 @@ function Shell() {
           element={
             <ProtectedRoute roles={['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER']}>
               <EmployeesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/clients"
+          element={
+            <ProtectedRoute roles={['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR']}>
+              <ClientsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/contracts"
+          element={
+            <ProtectedRoute roles={['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR']}>
+              <ContractsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/orders"
+          element={
+            <ProtectedRoute roles={['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR']}>
+              <OrdersPage />
             </ProtectedRoute>
           }
         />
