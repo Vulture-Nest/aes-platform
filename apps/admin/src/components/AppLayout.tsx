@@ -7,6 +7,7 @@ import {
   CreditCardOutlined,
   DashboardOutlined,
   DollarOutlined,
+  DownloadOutlined,
   FileDoneOutlined,
   FundProjectionScreenOutlined,
   IdcardOutlined,
@@ -111,6 +112,12 @@ const NAV: NavItem[] = [
     label: 'Expenses',
     icon: <CreditCardOutlined />,
     roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR'],
+  },
+  {
+    key: '/reports',
+    label: 'Reports',
+    icon: <DownloadOutlined />,
+    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'OPS_DIRECTOR', 'DIRECTOR', 'AUDITOR'],
   },
   {
     key: '/business-development',

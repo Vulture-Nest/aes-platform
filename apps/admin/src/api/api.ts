@@ -178,6 +178,12 @@ export interface ContractClaimRecord {
   currency: string;
   claimDate: string;
 }
+export interface PayrollRunRecord {
+  id: string;
+  siteId: string;
+  month: string;
+  status: string;
+}
 export interface PerformanceResult {
   currency: string;
   bookedOrderValue: number;
@@ -328,6 +334,7 @@ export const api = createApi({
     'GeneralExpenses',
     'Overheads',
     'ContractClaims',
+    'PayrollRuns',
   ],
   endpoints: (build) => ({
     // --- auth ---
@@ -512,6 +519,12 @@ export const api = createApi({
       invalidatesTags: ['ContractClaims'],
     }),
 
+    // --- payroll runs (selector for report exports) ---
+    getPayrollRuns: build.query<PayrollRunRecord[], void>({
+      query: () => 'v1/payroll-runs',
+      providesTags: ['PayrollRuns'],
+    }),
+
     // --- command centre: performance (revenue & profit) ---
     getPerformance: build.query<PerformanceResult, void>({
       query: () => 'v1/command-centre/performance',
@@ -688,6 +701,7 @@ export const {
   useCreateOverheadMutation,
   useGetContractClaimsQuery,
   useAddContractClaimMutation,
+  useGetPayrollRunsQuery,
   useGetPerformanceQuery,
   useGetOrganisationsQuery,
   useCreateOrganisationMutation,

@@ -30,6 +30,7 @@ import { HrModule } from './hr/hr.module';
 import { TimesheetsModule } from './timesheets/timesheets.module';
 import { PayrollModule } from './payroll/payroll.module';
 import { CrmModule } from './crm/crm.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { CrmModule } from './crm/crm.module';
     TimesheetsModule,
     PayrollModule,
     CrmModule,
+    ReportsModule,
     HealthModule,
   ],
   providers: [

@@ -36,5 +36,6 @@ import { TaxExposureService } from './panels/tax-exposure.service';
     PerformancePanelService,
     HealthVerdictPanelService,
   ],
+  exports: [PerformancePanelService, MoneyInOutService],
 })
 export class CommandCentreModule {}
