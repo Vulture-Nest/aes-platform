@@ -251,6 +251,118 @@ export interface ManhoursResult {
   status: string;
   rows: ManhoursRow[];
 }
+
+// --- workflows: approvals inbox ---
+export interface ApprovalChainInfo {
+  id: string;
+  module: string;
+  subjectTable: string;
+  subjectId: string;
+  amount: string | null;
+  currency: string | null;
+  requesterId: string;
+  status: string;
+  currentStep: number;
+}
+export interface ApprovalInboxItem {
+  id: string;
+  chainId: string;
+  step: number;
+  approverRole: string;
+  mode: string;
+  decision: string | null;
+  createdAt: string;
+  chain: ApprovalChainInfo;
+}
+
+// --- workflows: requisitions ---
+export interface RequisitionRecord {
+  id: string;
+  purpose: string;
+  amount: string;
+  currency: string;
+  requiredByDate: string;
+  siteId: string | null;
+  requesterId: string;
+  status: string;
+  disbursementReference: string | null;
+}
+
+// --- workflows: travel ---
+export interface TravelRecord {
+  id: string;
+  destination: string;
+  dateFrom: string;
+  dateTo: string;
+  days: number;
+  perDiem: string;
+  advanceAmount: string;
+  currency: string;
+  siteId: string | null;
+  requesterId: string;
+  status: string;
+  refundDue: string | null;
+  refundOwed: string | null;
+}
+
+// --- workflows: budgets ---
+export interface BudgetLineRecord {
+  id: string;
+  category: string;
+  description: string | null;
+  amount: string;
+  currency: string;
+}
+export interface BudgetRecord {
+  id: string;
+  name: string;
+  periodMonth: string | null;
+  siteId: string | null;
+  currency: string;
+  status: string;
+  version: number;
+}
+export interface BudgetActualRow {
+  category: string;
+  budget: number;
+  actual: number;
+  variance: number;
+}
+export interface BudgetDetail extends BudgetRecord {
+  lines: BudgetLineRecord[];
+  actuals?: BudgetActualRow[];
+}
+
+// --- workflows: director withdrawals ---
+export interface DirectorWithdrawalRecord {
+  id: string;
+  amount: string;
+  currency: string;
+  destinationAccount: string;
+  reason: string;
+  status: string;
+  transferReference: string | null;
+}
+
+// --- workflows: petty cash ---
+export interface PettyCashFloatRecord {
+  id: string;
+  siteId: string;
+  currency: string;
+  custodianUserId: string;
+  floatAmount: string;
+  locked: boolean;
+}
+export interface PettyCashTxnRecord {
+  id: string;
+  floatId: string;
+  type: string;
+  amount: string;
+  currency: string;
+  purpose: string | null;
+  status: string;
+  createdAt: string;
+}
 export interface PerformanceResult {
   currency: string;
   bookedOrderValue: number;
@@ -405,6 +517,14 @@ export const api = createApi({
     'PayrollRun',
     'TimesheetPeriods',
     'TimesheetGrid',
+    'Approvals',
+    'Requisitions',
+    'Travel',
+    'Budgets',
+    'Budget',
+    'DirectorWithdrawals',
+    'PettyCashFloats',
+    'PettyCashTxns',
   ],
   endpoints: (build) => ({
     // --- auth ---
@@ -671,6 +791,171 @@ export const api = createApi({
       invalidatesTags: (_r, _e, { id }) => [{ type: 'TimesheetGrid', id }],
     }),
 
+    // --- workflows: approvals inbox ---
+    getApprovalInbox: build.query<ApprovalInboxItem[], void>({
+      query: () => 'v1/approvals/inbox',
+      providesTags: ['Approvals'],
+    }),
+    decideApproval: build.mutation<unknown, { id: string; decision: string; comment?: string }>({
+      query: ({ id, ...body }) => ({ url: `v1/approvals/${id}/decide`, method: 'POST', body }),
+      invalidatesTags: [
+        'Approvals',
+        'Requisitions',
+        'Travel',
+        'Budgets',
+        'DirectorWithdrawals',
+        'PettyCashTxns',
+      ],
+    }),
+
+    // --- workflows: requisitions ---
+    getRequisitions: build.query<RequisitionRecord[], { status?: string } | void>({
+      query: (arg) => {
+        const q = arg && arg.status ? `?status=${arg.status}` : '';
+        return `v1/requisitions${q}`;
+      },
+      providesTags: ['Requisitions'],
+    }),
+    createRequisition: build.mutation<RequisitionRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/requisitions', method: 'POST', body }),
+      invalidatesTags: ['Requisitions'],
+    }),
+    submitRequisition: build.mutation<unknown, string>({
+      query: (id) => ({ url: `v1/requisitions/${id}/submit`, method: 'POST', body: {} }),
+      invalidatesTags: ['Requisitions', 'Approvals'],
+    }),
+    disburseRequisition: build.mutation<unknown, { id: string; accountId: string; reference: string }>({
+      query: ({ id, ...body }) => ({ url: `v1/requisitions/${id}/disburse`, method: 'POST', body }),
+      invalidatesTags: ['Requisitions'],
+    }),
+
+    // --- workflows: travel ---
+    getTravelRequests: build.query<TravelRecord[], { status?: string } | void>({
+      query: (arg) => {
+        const q = arg && arg.status ? `?status=${arg.status}` : '';
+        return `v1/travel${q}`;
+      },
+      providesTags: ['Travel'],
+    }),
+    createTravel: build.mutation<TravelRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/travel', method: 'POST', body }),
+      invalidatesTags: ['Travel'],
+    }),
+    submitTravel: build.mutation<unknown, string>({
+      query: (id) => ({ url: `v1/travel/${id}/submit`, method: 'POST', body: {} }),
+      invalidatesTags: ['Travel', 'Approvals'],
+    }),
+    disburseTravel: build.mutation<unknown, { id: string; accountId: string; reference: string }>({
+      query: ({ id, ...body }) => ({ url: `v1/travel/${id}/disburse`, method: 'POST', body }),
+      invalidatesTags: ['Travel'],
+    }),
+    retireTravel: build.mutation<unknown, { id: string; receiptsKey: string; unspent: number }>({
+      query: ({ id, ...body }) => ({ url: `v1/travel/${id}/retire`, method: 'POST', body }),
+      invalidatesTags: ['Travel'],
+    }),
+
+    // --- workflows: budgets ---
+    getBudgets: build.query<BudgetRecord[], { status?: string } | void>({
+      query: (arg) => {
+        const q = arg && arg.status ? `?status=${arg.status}` : '';
+        return `v1/budgets${q}`;
+      },
+      providesTags: ['Budgets'],
+    }),
+    getBudget: build.query<BudgetDetail, string>({
+      query: (id) => `v1/budgets/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'Budget', id }],
+    }),
+    createBudget: build.mutation<BudgetRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/budgets', method: 'POST', body }),
+      invalidatesTags: ['Budgets'],
+    }),
+    submitBudget: build.mutation<unknown, string>({
+      query: (id) => ({ url: `v1/budgets/${id}/submit`, method: 'POST', body: {} }),
+      invalidatesTags: ['Budgets', 'Approvals'],
+    }),
+
+    // --- workflows: director withdrawals ---
+    getDirectorWithdrawals: build.query<DirectorWithdrawalRecord[], { status?: string } | void>({
+      query: (arg) => {
+        const q = arg && arg.status ? `?status=${arg.status}` : '';
+        return `v1/director-withdrawals${q}`;
+      },
+      providesTags: ['DirectorWithdrawals'],
+    }),
+    createDirectorWithdrawal: build.mutation<DirectorWithdrawalRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/director-withdrawals', method: 'POST', body }),
+      invalidatesTags: ['DirectorWithdrawals'],
+    }),
+    submitDirectorWithdrawal: build.mutation<unknown, string>({
+      query: (id) => ({ url: `v1/director-withdrawals/${id}/submit`, method: 'POST', body: {} }),
+      invalidatesTags: ['DirectorWithdrawals', 'Approvals'],
+    }),
+    completeDirectorWithdrawal: build.mutation<
+      unknown,
+      { id: string; transferMethod: string; transferReference: string }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `v1/director-withdrawals/${id}/complete`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['DirectorWithdrawals'],
+    }),
+
+    // --- workflows: petty cash ---
+    getPettyCashFloats: build.query<PettyCashFloatRecord[], { siteId?: string } | void>({
+      query: (arg) => {
+        const q = arg && arg.siteId ? `?siteId=${arg.siteId}` : '';
+        return `v1/petty-cash/floats${q}`;
+      },
+      providesTags: ['PettyCashFloats'],
+    }),
+    getPettyCashTxns: build.query<PettyCashTxnRecord[], string>({
+      query: (floatId) => `v1/petty-cash/floats/${floatId}/txns`,
+      providesTags: ['PettyCashTxns'],
+    }),
+    createFloat: build.mutation<PettyCashFloatRecord, Record<string, unknown>>({
+      query: (body) => ({ url: 'v1/petty-cash/floats', method: 'POST', body }),
+      invalidatesTags: ['PettyCashFloats'],
+    }),
+    createWithdrawal: build.mutation<PettyCashTxnRecord, { id: string } & Record<string, unknown>>({
+      query: ({ id, ...body }) => ({
+        url: `v1/petty-cash/floats/${id}/withdrawals`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['PettyCashTxns', 'Approvals'],
+    }),
+    confirmWithdrawal: build.mutation<unknown, string>({
+      query: (txnId) => ({
+        url: `v1/petty-cash/withdrawals/${txnId}/confirm`,
+        method: 'POST',
+        body: {},
+      }),
+      invalidatesTags: ['PettyCashTxns'],
+    }),
+    recordCashCount: build.mutation<unknown, { id: string; countedAmount: number }>({
+      query: ({ id, countedAmount }) => ({
+        url: `v1/petty-cash/floats/${id}/count`,
+        method: 'POST',
+        body: { countedAmount },
+      }),
+      invalidatesTags: ['PettyCashFloats', 'PettyCashTxns'],
+    }),
+    topUpFloat: build.mutation<PettyCashTxnRecord, { id: string } & Record<string, unknown>>({
+      query: ({ id, ...body }) => ({
+        url: `v1/petty-cash/floats/${id}/top-up`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['PettyCashTxns', 'Approvals'],
+    }),
+    unlockFloat: build.mutation<unknown, string>({
+      query: (id) => ({ url: `v1/petty-cash/floats/${id}/unlock`, method: 'POST', body: {} }),
+      invalidatesTags: ['PettyCashFloats'],
+    }),
+
     // --- command centre: performance (revenue & profit) ---
     getPerformance: build.query<PerformanceResult, void>({
       query: () => 'v1/command-centre/performance',
@@ -860,6 +1145,33 @@ export const {
   useSubmitTimesheetPeriodMutation,
   useLockTimesheetPeriodMutation,
   useRequestReopenTimesheetMutation,
+  useGetApprovalInboxQuery,
+  useDecideApprovalMutation,
+  useGetRequisitionsQuery,
+  useCreateRequisitionMutation,
+  useSubmitRequisitionMutation,
+  useDisburseRequisitionMutation,
+  useGetTravelRequestsQuery,
+  useCreateTravelMutation,
+  useSubmitTravelMutation,
+  useDisburseTravelMutation,
+  useRetireTravelMutation,
+  useGetBudgetsQuery,
+  useGetBudgetQuery,
+  useCreateBudgetMutation,
+  useSubmitBudgetMutation,
+  useGetDirectorWithdrawalsQuery,
+  useCreateDirectorWithdrawalMutation,
+  useSubmitDirectorWithdrawalMutation,
+  useCompleteDirectorWithdrawalMutation,
+  useGetPettyCashFloatsQuery,
+  useGetPettyCashTxnsQuery,
+  useCreateFloatMutation,
+  useCreateWithdrawalMutation,
+  useConfirmWithdrawalMutation,
+  useRecordCashCountMutation,
+  useTopUpFloatMutation,
+  useUnlockFloatMutation,
   useGetPerformanceQuery,
   useGetOrganisationsQuery,
   useCreateOrganisationMutation,
