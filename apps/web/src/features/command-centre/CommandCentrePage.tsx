@@ -1,6 +1,36 @@
 import { RiseOutlined } from '@ant-design/icons';
 import { Alert, Card, Col, Descriptions, Row, Spin, Statistic, Tag, Typography } from 'antd';
+import dayjs from 'dayjs';
 import { useGetCommandCentreQuery } from '../../api/api';
+
+const MONEY_KEYS =
+  /(amount|value|total|expected|exposure|outstanding|position|due|paid|balance|income|profit|expense|obligation|cash|overhead|requisition|payroll|receivable|shortfall|interest|principal|inflow|outflow|\bnet\b|burn|accrued)/i;
+const RATIO_KEYS = /(ratio|margin|coverage)/i;
+// Counts are never money, even when the key also contains a money-ish word.
+const COUNT_KEYS = /(count|items|number)/i;
+
+const humanizeKey = (k: string) =>
+  k
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b(usd|zwg|zar|vat|paye)\b/gi, (m) => m.toUpperCase())
+    .replace(/^./, (c) => c.toUpperCase());
+
+const isIsoDate = (s: string) => /^\d{4}-\d{2}-\d{2}T/.test(s);
+
+/** Format a scalar for display: money with $, ratios raw, dates friendly, booleans Yes/No. */
+function fmtScalar(key: string, v: unknown): string {
+  if (v == null) return '—';
+  if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+  if (typeof v === 'number') {
+    if (COUNT_KEYS.test(key)) return v.toLocaleString();
+    if (RATIO_KEYS.test(key)) return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    if (MONEY_KEYS.test(key)) return `$${Math.round(v).toLocaleString()}`;
+    return v.toLocaleString(undefined, { maximumFractionDigits: 4 });
+  }
+  if (typeof v === 'string') return isIsoDate(v) ? dayjs(v).format('DD MMM, HH:mm') : v;
+  return String(v);
+}
 
 const PANEL_TITLES: Record<string, string> = {
   cashPosition: 'Cash Position',
@@ -88,33 +118,51 @@ function RevenueProfitCard({ perf }: { perf: Perf }) {
   );
 }
 
-/** Render the primitive (scalar) fields of a panel object as a description list. */
-function Scalars({ data }: { data: unknown }) {
+/**
+ * Friendly render of any panel: humanised labels, formatted values, and nested
+ * objects inlined (e.g. "Overheads $120 · Requisitions $500") — no raw dumps.
+ */
+function PanelBody({ data }: { data: unknown }) {
   if (data == null || typeof data !== 'object') {
     return <Typography.Text type="secondary">{String(data)}</Typography.Text>;
   }
-  const entries = Object.entries(data as Record<string, unknown>).filter(
-    ([, v]) => v == null || typeof v !== 'object',
-  );
-  const nested = Object.entries(data as Record<string, unknown>).filter(
-    ([, v]) => v != null && typeof v === 'object',
-  );
+  const obj = data as Record<string, unknown>;
+  const rows: { label: string; value: string }[] = [];
+  let asOf: string | undefined;
+
+  for (const [k, v] of Object.entries(obj)) {
+    if (k === 'panel') continue;
+    if (k === 'asOf' && typeof v === 'string') {
+      asOf = v;
+      continue;
+    }
+    if (Array.isArray(v)) {
+      rows.push({ label: humanizeKey(k), value: `${v.length} item${v.length === 1 ? '' : 's'}` });
+    } else if (v != null && typeof v === 'object') {
+      const inner = Object.entries(v as Record<string, unknown>)
+        .filter(([, iv]) => iv == null || typeof iv !== 'object')
+        .map(([ik, iv]) => `${humanizeKey(ik)} ${fmtScalar(ik, iv)}`)
+        .join(' · ');
+      if (inner) rows.push({ label: humanizeKey(k), value: inner });
+    } else {
+      rows.push({ label: humanizeKey(k), value: fmtScalar(k, v) });
+    }
+  }
+
   return (
     <>
-      {entries.length > 0 && (
-        <Descriptions size="small" column={1}>
-          {entries.map(([k, v]) => (
-            <Descriptions.Item key={k} label={k}>
-              {String(v)}
-            </Descriptions.Item>
-          ))}
-        </Descriptions>
-      )}
-      {nested.map(([k, v]) => (
-        <Typography.Text key={k} type="secondary" style={{ display: 'block' }}>
-          {k}: {Array.isArray(v) ? `${(v as unknown[]).length} item(s)` : 'details'}
+      <Descriptions size="small" column={1}>
+        {rows.map((r) => (
+          <Descriptions.Item key={r.label} label={r.label}>
+            {r.value}
+          </Descriptions.Item>
+        ))}
+      </Descriptions>
+      {asOf && (
+        <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+          as of {dayjs(asOf).format('DD MMM, HH:mm')}
         </Typography.Text>
-      ))}
+      )}
     </>
   );
 }
@@ -148,7 +196,7 @@ export function CommandCentrePage() {
               {(panel as { error?: string })?.error ? (
                 <Typography.Text type="warning">Panel unavailable</Typography.Text>
               ) : (
-                <Scalars data={panel} />
+                <PanelBody data={panel} />
               )}
             </Card>
           </Col>
