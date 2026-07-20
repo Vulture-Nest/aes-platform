@@ -6,6 +6,7 @@ import {
   FileTextOutlined,
   HomeOutlined,
   LogoutOutlined,
+  ShoppingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { Badge, Button, Dropdown, Layout, Menu } from 'antd';
@@ -21,6 +22,7 @@ const NAV = [
   { key: '/', label: 'Home', icon: <HomeOutlined /> },
   { key: '/requests', label: 'Requests', icon: <FileTextOutlined /> },
   { key: '/approvals', label: 'Approvals', icon: <CheckSquareOutlined /> },
+  { key: '/my-orders', label: 'My Orders', icon: <ShoppingOutlined /> },
   { key: '/command-centre', label: 'Command Centre', icon: <DashboardOutlined /> },
   { key: '/rates', label: 'Exchange Rates', icon: <DollarOutlined /> },
   { key: '/notifications', label: 'Notifications', icon: <BellOutlined /> },

@@ -14,6 +14,10 @@ describe('OrdersService', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const service = new OrdersService(prisma as any, audit as any, lookups as any);
 
+  // A finance manager (may act on any order).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const manager = { id: 'actor', roles: [{ siteId: null, role: 'FINANCE_OFFICER' }] } as any;
+
   beforeEach(() => jest.clearAllMocks());
 
   it('throws NotFound when an order is missing', async () => {
@@ -64,7 +68,7 @@ describe('OrdersService', () => {
       'o1',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { amount: 50, currency: 'USD', receivedDate: new Date('2025-07-01') } as any,
-      'actor',
+      manager,
     );
     expect(res.id).toBe('r1');
     expect(audit.record).toHaveBeenCalledWith(
@@ -85,7 +89,7 @@ describe('OrdersService', () => {
       serviced: true,
       servicedAt: new Date('2025-07-19'),
     });
-    const res = await service.markServiced('o1', 'actor');
+    const res = await service.markServiced('o1', manager);
     expect(res.serviced).toBe(true);
     expect(audit.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'STATUS_CHANGE', tableName: 'orders', recordId: 'o1' }),

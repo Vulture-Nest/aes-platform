@@ -1,8 +1,17 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../audit/audit.service';
+import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LookupService } from '../../settings/lookup.service';
 import { CreateOrderDto, CreateOrderReceiptDto, UpdateOrderDto } from './dto/order.dto';
+
+/** Roles that manage the whole order book (beyond just their assigned orders). */
+const ORDER_MANAGER_ROLES = ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER'];
 
 @Injectable()
 export class OrdersService {
@@ -16,6 +25,14 @@ export class OrdersService {
     return this.prisma.order.findMany({ orderBy: { createdAt: 'desc' } });
   }
 
+  /** Orders assigned to a given user (their "My Orders" list). */
+  listAssigned(userId: string) {
+    return this.prisma.order.findMany({
+      where: { assignedUserId: userId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async findOne(id: string) {
     const order = await this.prisma.order.findUnique({
       where: { id },
@@ -25,6 +42,28 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
     return order;
+  }
+
+  /** Load an order, enforcing that the caller may see/act on it. */
+  async findOneForActor(id: string, user: AuthenticatedUser) {
+    const order = await this.findOne(id);
+    this.assertAccess(order, user, false);
+    return order;
+  }
+
+  /** A manager sees every order; the assignee sees only their own. Auditor = read-only. */
+  private assertAccess(
+    order: { assignedUserId: string | null },
+    user: AuthenticatedUser,
+    write: boolean,
+  ): void {
+    const isManager = user.roles.some((r) => ORDER_MANAGER_ROLES.includes(r.role));
+    const isAuditor = user.roles.some((r) => r.role === 'AUDITOR');
+    const isAssignee = order.assignedUserId === user.id;
+    const allowed = write ? isManager || isAssignee : isManager || isAuditor || isAssignee;
+    if (!allowed) {
+      throw new ForbiddenException('You do not have access to this order');
+    }
   }
 
   async create(dto: CreateOrderDto, actorId: string) {
@@ -49,6 +88,7 @@ export class OrdersService {
         fxRateId: dto.fxRateId ?? null,
         rateType: dto.rateType ?? null,
         closingDate: dto.closingDate ?? null,
+        assignedUserId: dto.assignedUserId ?? null,
         createdBy: actorId,
         updatedBy: actorId,
       },
@@ -63,6 +103,7 @@ export class OrdersService {
         reference: order.reference,
         valueExVat: order.valueExVat.toString(),
         currency: order.currency,
+        assignedUserId: order.assignedUserId,
       },
     });
     return order;
@@ -79,6 +120,7 @@ export class OrdersService {
         fxRateId: dto.fxRateId,
         rateType: dto.rateType,
         closingDate: dto.closingDate,
+        assignedUserId: dto.assignedUserId,
         updatedBy: actorId,
       },
     });
@@ -87,14 +129,15 @@ export class OrdersService {
       action: 'UPDATE',
       tableName: 'orders',
       recordId: id,
-      before: { reference: before.reference, valueExVat: before.valueExVat.toString() },
-      after: { reference: order.reference, valueExVat: order.valueExVat.toString() },
+      before: { reference: before.reference, assignedUserId: before.assignedUserId },
+      after: { reference: order.reference, assignedUserId: order.assignedUserId },
     });
     return order;
   }
 
-  async recordReceipt(orderId: string, dto: CreateOrderReceiptDto, actorId: string) {
-    await this.findOne(orderId);
+  async recordReceipt(orderId: string, dto: CreateOrderReceiptDto, user: AuthenticatedUser) {
+    const order = await this.findOne(orderId);
+    this.assertAccess(order, user, true);
     await this.lookups.assertValid('currency', dto.currency);
     const receipt = await this.prisma.orderReceipt.create({
       data: {
@@ -105,12 +148,12 @@ export class OrdersService {
         rateType: dto.rateType ?? null,
         receivedDate: dto.receivedDate,
         reference: dto.reference ?? null,
-        createdBy: actorId,
-        updatedBy: actorId,
+        createdBy: user.id,
+        updatedBy: user.id,
       },
     });
     await this.audit.record({
-      actorUserId: actorId,
+      actorUserId: user.id,
       action: 'CREATE',
       tableName: 'order_receipts',
       recordId: receipt.id,
@@ -123,14 +166,15 @@ export class OrdersService {
     return receipt;
   }
 
-  async markServiced(orderId: string, actorId: string) {
+  async markServiced(orderId: string, user: AuthenticatedUser) {
     const before = await this.findOne(orderId);
+    this.assertAccess(before, user, true);
     const order = await this.prisma.order.update({
       where: { id: orderId },
-      data: { serviced: true, servicedAt: new Date(), updatedBy: actorId },
+      data: { serviced: true, servicedAt: new Date(), updatedBy: user.id },
     });
     await this.audit.record({
-      actorUserId: actorId,
+      actorUserId: user.id,
       action: 'STATUS_CHANGE',
       tableName: 'orders',
       recordId: orderId,
