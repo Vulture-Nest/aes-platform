@@ -82,6 +82,66 @@ export interface OrderReceiptRecord {
 export interface OrderDetail extends OrderRecord {
   receipts?: OrderReceiptRecord[];
 }
+export interface EmployeeRecord {
+  id: string;
+  worksNo: string;
+  firstName: string;
+  lastName: string;
+  siteId: string;
+}
+export interface TravelRecord {
+  id: string;
+  destination: string;
+  dateFrom: string;
+  dateTo: string;
+  days: number;
+  advanceAmount: string;
+  currency: string;
+  status: string;
+  shortfall: string | null;
+}
+export interface TimesheetPeriodRecord {
+  id: string;
+  siteId: string;
+  month: string;
+  status: string;
+}
+export interface ManhoursRow {
+  employeeId: string;
+  worksNo: string;
+  employeeName: string;
+  hoursNormal: number;
+  hoursOt15: number;
+  hoursOt20: number;
+  ugShift: number;
+  nightHours: number;
+  totalHours: number;
+}
+export interface ManhoursResult {
+  periodId: string;
+  siteId: string;
+  month: string;
+  status: string;
+  rows: ManhoursRow[];
+}
+export interface PettyCashFloatRecord {
+  id: string;
+  siteId: string;
+  currency: string;
+  custodianUserId: string;
+  floatAmount: string;
+  locked: boolean;
+}
+export interface PettyCashTxnRecord {
+  id: string;
+  floatId: string;
+  type: string;
+  amount: string;
+  currency: string;
+  purpose: string | null;
+  status: string;
+  createdAt: string;
+}
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE,
@@ -136,7 +196,18 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Notifications', 'ExchangeRates', 'Requisitions', 'Approvals', 'Orders'],
+  tagTypes: [
+    'Notifications',
+    'ExchangeRates',
+    'Requisitions',
+    'Approvals',
+    'Orders',
+    'Travel',
+    'TimesheetPeriods',
+    'TimesheetGrid',
+    'PettyCashFloats',
+    'PettyCashTxns',
+  ],
   endpoints: (build) => ({
     login: build.mutation<Tokens, { email: string; password: string }>({
       query: (body) => ({ url: 'v1/auth/login', method: 'POST', body }),
@@ -192,6 +263,94 @@ export const api = createApi({
       invalidatesTags: ['Requisitions', 'Approvals'],
     }),
 
+    // Employees (roster for timesheet capture; GET needs site-manager+ on the API)
+    getEmployees: build.query<EmployeeRecord[], void>({ query: () => 'v1/employees' }),
+
+    // Travel & allowances — raise & submit (Finance disburses/retires in the admin app)
+    getTravelRequests: build.query<TravelRecord[], void>({
+      query: () => 'v1/travel',
+      providesTags: ['Travel'],
+    }),
+    createTravel: build.mutation<
+      TravelRecord,
+      {
+        destination: string;
+        dateFrom: string;
+        dateTo: string;
+        days: number;
+        currency: string;
+        siteId?: string;
+      }
+    >({
+      query: (body) => ({ url: 'v1/travel', method: 'POST', body }),
+      invalidatesTags: ['Travel'],
+    }),
+    submitTravel: build.mutation<TravelRecord, string>({
+      query: (id) => ({ url: `v1/travel/${id}/submit`, method: 'POST', body: {} }),
+      invalidatesTags: ['Travel', 'Approvals'],
+    }),
+
+    // Timesheets — capture & submit (Finance/Site-Manager locks in the admin app)
+    getTimesheetPeriods: build.query<TimesheetPeriodRecord[], void>({
+      query: () => 'v1/timesheet-periods',
+      providesTags: ['TimesheetPeriods'],
+    }),
+    getManhours: build.query<ManhoursResult, string>({
+      query: (id) => `v1/timesheet-periods/${id}/manhours`,
+      providesTags: (_r, _e, id) => [{ type: 'TimesheetGrid', id }],
+    }),
+    createTimesheetPeriod: build.mutation<
+      TimesheetPeriodRecord,
+      { siteId: string; month: string }
+    >({
+      query: (body) => ({ url: 'v1/timesheet-periods', method: 'POST', body }),
+      invalidatesTags: ['TimesheetPeriods'],
+    }),
+    upsertTimesheetEntries: build.mutation<
+      unknown,
+      { id: string; rows: Record<string, unknown>[] }
+    >({
+      query: ({ id, rows }) => ({
+        url: `v1/timesheet-periods/${id}/entries`,
+        method: 'POST',
+        body: { rows },
+      }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'TimesheetGrid', id }],
+    }),
+    submitTimesheetPeriod: build.mutation<unknown, string>({
+      query: (id) => ({ url: `v1/timesheet-periods/${id}/submit`, method: 'POST', body: {} }),
+      invalidatesTags: ['TimesheetPeriods'],
+    }),
+
+    // Petty cash — raise withdrawals & confirm (Finance opens/tops-up/unlocks in admin)
+    getPettyCashFloats: build.query<PettyCashFloatRecord[], void>({
+      query: () => 'v1/petty-cash/floats',
+      providesTags: ['PettyCashFloats'],
+    }),
+    getPettyCashTxns: build.query<PettyCashTxnRecord[], string>({
+      query: (floatId) => `v1/petty-cash/floats/${floatId}/txns`,
+      providesTags: ['PettyCashTxns'],
+    }),
+    createWithdrawal: build.mutation<
+      PettyCashTxnRecord,
+      { id: string; amount: number; purpose: string }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `v1/petty-cash/floats/${id}/withdrawals`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['PettyCashTxns', 'Approvals'],
+    }),
+    confirmWithdrawal: build.mutation<unknown, string>({
+      query: (txnId) => ({
+        url: `v1/petty-cash/withdrawals/${txnId}/confirm`,
+        method: 'POST',
+        body: {},
+      }),
+      invalidatesTags: ['PettyCashTxns'],
+    }),
+
     // Approvals inbox
     getApprovalInbox: build.query<ApprovalInboxItem[], void>({
       query: () => 'v1/approvals/inbox',
@@ -244,6 +403,19 @@ export const {
   useGetRequisitionsQuery,
   useCreateRequisitionMutation,
   useSubmitRequisitionMutation,
+  useGetEmployeesQuery,
+  useGetTravelRequestsQuery,
+  useCreateTravelMutation,
+  useSubmitTravelMutation,
+  useGetTimesheetPeriodsQuery,
+  useGetManhoursQuery,
+  useCreateTimesheetPeriodMutation,
+  useUpsertTimesheetEntriesMutation,
+  useSubmitTimesheetPeriodMutation,
+  useGetPettyCashFloatsQuery,
+  useGetPettyCashTxnsQuery,
+  useCreateWithdrawalMutation,
+  useConfirmWithdrawalMutation,
   useGetApprovalInboxQuery,
   useDecideApprovalMutation,
   useGetAssignedOrdersQuery,
