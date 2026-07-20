@@ -9,6 +9,7 @@ import {
   ContactsOutlined,
   CreditCardOutlined,
   DashboardOutlined,
+  DeploymentUnitOutlined,
   DollarOutlined,
   DownloadOutlined,
   ExportOutlined,
@@ -23,13 +24,15 @@ import {
   ProfileOutlined,
   SolutionOutlined,
   SettingOutlined,
+  ShopOutlined,
   ShoppingOutlined,
   SlidersOutlined,
   TeamOutlined,
+  ToolOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
 import { Button, Dropdown, Layout, Menu, Typography } from 'antd';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLogoutMutation } from '../api/api';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
@@ -38,186 +41,165 @@ import { hasAnyRole, type Role } from '../rbac/roles';
 import { AES } from '../theme';
 import logoWhite from '../assets/aes-logo-white.png';
 
-interface NavItem {
+interface NavLeaf {
   key: string;
   label: string;
   icon: ReactNode;
   roles?: Role[];
 }
+interface NavGroup {
+  key: string;
+  label: string;
+  icon: ReactNode;
+  children: NavLeaf[];
+}
+type NavNode = NavLeaf | NavGroup;
 
-const NAV: NavItem[] = [
+const isGroup = (n: NavNode): n is NavGroup => 'children' in n;
+
+const FINANCE_VIEW: Role[] = ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR'];
+const ALL_STAFF: Role[] = [
+  'SITE_CLERK',
+  'SITE_MANAGER',
+  'OPS_STAFF',
+  'OPS_DIRECTOR',
+  'FINANCE_OFFICER',
+  'FINANCE_DIRECTOR',
+  'DIRECTOR',
+  'SYS_ADMIN',
+  'AUDITOR',
+];
+
+// Two quick-access items stay top-level; everything else is grouped into collapsible
+// submenus. A group is only shown when the user can see at least one of its children.
+const NAV: NavNode[] = [
   { key: '/', label: 'Dashboard', icon: <DashboardOutlined /> },
-  { key: '/users', label: 'Users & Roles', icon: <TeamOutlined />, roles: ['SYS_ADMIN'] },
-  { key: '/sites', label: 'Sites', icon: <BankOutlined />, roles: ['SYS_ADMIN'] },
-  {
-    key: '/exchange-rates',
-    label: 'Exchange Rates',
-    icon: <DollarOutlined />,
-    roles: ['FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'SYS_ADMIN'],
-  },
-  {
-    key: '/statutory-rates',
-    label: 'Statutory Rates',
-    icon: <PercentageOutlined />,
-    roles: ['FINANCE_DIRECTOR', 'SYS_ADMIN'],
-  },
-  {
-    key: '/thresholds',
-    label: 'Thresholds',
-    icon: <SlidersOutlined />,
-    roles: ['FINANCE_DIRECTOR', 'SYS_ADMIN'],
-  },
-  {
-    key: '/delegation',
-    label: 'Delegation',
-    icon: <ApartmentOutlined />,
-    roles: ['FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'SYS_ADMIN'],
-  },
-  {
-    key: '/approval-matrix',
-    label: 'Approval Matrix',
-    icon: <NodeIndexOutlined />,
-    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR'],
-  },
-  {
-    key: '/danger-rules',
-    label: 'Danger Rules',
-    icon: <AlertOutlined />,
-    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR'],
-  },
-  {
-    key: '/accounts',
-    label: 'Ledger Accounts',
-    icon: <WalletOutlined />,
-    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER'],
-  },
-  {
-    key: '/employees',
-    label: 'Employees',
-    icon: <IdcardOutlined />,
-    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER'],
-  },
-  {
-    key: '/clients',
-    label: 'Clients',
-    icon: <ContactsOutlined />,
-    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR'],
-  },
-  {
-    key: '/contracts',
-    label: 'Contracts',
-    icon: <FileDoneOutlined />,
-    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR'],
-  },
-  {
-    key: '/orders',
-    label: 'Orders',
-    icon: <ShoppingOutlined />,
-    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR'],
-  },
-  {
-    key: '/expenses',
-    label: 'Expenses',
-    icon: <CreditCardOutlined />,
-    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'AUDITOR'],
-  },
-  {
-    key: '/timesheets',
-    label: 'Timesheets',
-    icon: <ClockCircleOutlined />,
-    roles: [
-      'SITE_CLERK',
-      'SITE_MANAGER',
-      'OPS_STAFF',
-      'OPS_DIRECTOR',
-      'FINANCE_OFFICER',
-      'FINANCE_DIRECTOR',
-      'DIRECTOR',
-      'SYS_ADMIN',
-      'AUDITOR',
-    ],
-  },
-  {
-    key: '/payroll',
-    label: 'Payroll',
-    icon: <SolutionOutlined />,
-    roles: ['FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN'],
-  },
-  {
-    key: '/reports',
-    label: 'Reports',
-    icon: <DownloadOutlined />,
-    roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'OPS_DIRECTOR', 'DIRECTOR', 'AUDITOR'],
-  },
   { key: '/approvals', label: 'My Approvals', icon: <CheckSquareOutlined /> },
   {
-    key: '/requisitions',
-    label: 'Requisitions',
-    icon: <ProfileOutlined />,
-    roles: [
-      'SITE_CLERK',
-      'SITE_MANAGER',
-      'OPS_STAFF',
-      'FINANCE_OFFICER',
-      'FINANCE_DIRECTOR',
-      'OPS_DIRECTOR',
-      'DIRECTOR',
-      'SYS_ADMIN',
-      'AUDITOR',
+    key: 'grp:sales',
+    label: 'Sales & CRM',
+    icon: <ShopOutlined />,
+    children: [
+      { key: '/clients', label: 'Clients', icon: <ContactsOutlined />, roles: FINANCE_VIEW },
+      { key: '/contracts', label: 'Contracts', icon: <FileDoneOutlined />, roles: FINANCE_VIEW },
+      { key: '/orders', label: 'Orders', icon: <ShoppingOutlined />, roles: FINANCE_VIEW },
+      {
+        key: '/business-development',
+        label: 'Business Dev',
+        icon: <FundProjectionScreenOutlined />,
+        roles: ['OPS_STAFF', 'OPS_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN', 'FINANCE_DIRECTOR', 'AUDITOR'],
+      },
     ],
   },
   {
-    key: '/travel',
-    label: 'Travel',
-    icon: <CarOutlined />,
-    roles: [
-      'SITE_CLERK',
-      'SITE_MANAGER',
-      'OPS_STAFF',
-      'FINANCE_OFFICER',
-      'FINANCE_DIRECTOR',
-      'OPS_DIRECTOR',
-      'DIRECTOR',
-      'SYS_ADMIN',
-      'AUDITOR',
+    key: 'grp:finance',
+    label: 'Finance',
+    icon: <DollarOutlined />,
+    children: [
+      { key: '/expenses', label: 'Expenses', icon: <CreditCardOutlined />, roles: FINANCE_VIEW },
+      {
+        key: '/accounts',
+        label: 'Ledger Accounts',
+        icon: <WalletOutlined />,
+        roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER'],
+      },
+      {
+        key: '/reports',
+        label: 'Reports',
+        icon: <DownloadOutlined />,
+        roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'OPS_DIRECTOR', 'DIRECTOR', 'AUDITOR'],
+      },
     ],
   },
   {
-    key: '/petty-cash',
-    label: 'Petty Cash',
-    icon: <MoneyCollectOutlined />,
-    roles: [
-      'SITE_CLERK',
-      'SITE_MANAGER',
-      'OPS_STAFF',
-      'FINANCE_OFFICER',
-      'FINANCE_DIRECTOR',
-      'OPS_DIRECTOR',
-      'DIRECTOR',
-      'SYS_ADMIN',
-      'AUDITOR',
+    key: 'grp:workflows',
+    label: 'Workflows',
+    icon: <DeploymentUnitOutlined />,
+    children: [
+      { key: '/requisitions', label: 'Requisitions', icon: <ProfileOutlined />, roles: ALL_STAFF },
+      { key: '/travel', label: 'Travel', icon: <CarOutlined />, roles: ALL_STAFF },
+      { key: '/petty-cash', label: 'Petty Cash', icon: <MoneyCollectOutlined />, roles: ALL_STAFF },
+      {
+        key: '/budgets',
+        label: 'Budgets',
+        icon: <PieChartOutlined />,
+        roles: ['FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN', 'AUDITOR'],
+      },
+      {
+        key: '/director-withdrawals',
+        label: 'Dir. Withdrawals',
+        icon: <ExportOutlined />,
+        roles: ['DIRECTOR', 'SYS_ADMIN', 'AUDITOR'],
+      },
     ],
   },
   {
-    key: '/budgets',
-    label: 'Budgets',
-    icon: <PieChartOutlined />,
-    roles: ['FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN', 'AUDITOR'],
+    key: 'grp:people',
+    label: 'People & Payroll',
+    icon: <TeamOutlined />,
+    children: [
+      {
+        key: '/employees',
+        label: 'Employees',
+        icon: <IdcardOutlined />,
+        roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR', 'FINANCE_OFFICER'],
+      },
+      { key: '/timesheets', label: 'Timesheets', icon: <ClockCircleOutlined />, roles: ALL_STAFF },
+      {
+        key: '/payroll',
+        label: 'Payroll',
+        icon: <SolutionOutlined />,
+        roles: ['FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN'],
+      },
+    ],
   },
   {
-    key: '/director-withdrawals',
-    label: 'Dir. Withdrawals',
-    icon: <ExportOutlined />,
-    roles: ['DIRECTOR', 'SYS_ADMIN', 'AUDITOR'],
+    key: 'grp:config',
+    label: 'Configuration',
+    icon: <ToolOutlined />,
+    children: [
+      {
+        key: '/exchange-rates',
+        label: 'Exchange Rates',
+        icon: <DollarOutlined />,
+        roles: ['FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'SYS_ADMIN'],
+      },
+      {
+        key: '/statutory-rates',
+        label: 'Statutory Rates',
+        icon: <PercentageOutlined />,
+        roles: ['FINANCE_DIRECTOR', 'SYS_ADMIN'],
+      },
+      {
+        key: '/thresholds',
+        label: 'Thresholds',
+        icon: <SlidersOutlined />,
+        roles: ['FINANCE_DIRECTOR', 'SYS_ADMIN'],
+      },
+      {
+        key: '/delegation',
+        label: 'Delegation',
+        icon: <ApartmentOutlined />,
+        roles: ['FINANCE_DIRECTOR', 'OPS_DIRECTOR', 'SYS_ADMIN'],
+      },
+      {
+        key: '/approval-matrix',
+        label: 'Approval Matrix',
+        icon: <NodeIndexOutlined />,
+        roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR'],
+      },
+      {
+        key: '/danger-rules',
+        label: 'Danger Rules',
+        icon: <AlertOutlined />,
+        roles: ['SYS_ADMIN', 'FINANCE_DIRECTOR'],
+      },
+      { key: '/users', label: 'Users & Roles', icon: <TeamOutlined />, roles: ['SYS_ADMIN'] },
+      { key: '/sites', label: 'Sites', icon: <BankOutlined />, roles: ['SYS_ADMIN'] },
+      { key: '/audit', label: 'Audit Log', icon: <AuditOutlined />, roles: ['SYS_ADMIN', 'AUDITOR'] },
+      { key: '/settings', label: 'Settings', icon: <SettingOutlined />, roles: ['SYS_ADMIN'] },
+    ],
   },
-  {
-    key: '/business-development',
-    label: 'Business Dev',
-    icon: <FundProjectionScreenOutlined />,
-    roles: ['OPS_STAFF', 'OPS_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN', 'FINANCE_DIRECTOR', 'AUDITOR'],
-  },
-  { key: '/audit', label: 'Audit Log', icon: <AuditOutlined />, roles: ['SYS_ADMIN', 'AUDITOR'] },
-  { key: '/settings', label: 'Settings', icon: <SettingOutlined />, roles: ['SYS_ADMIN'] },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -228,11 +210,34 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const refreshToken = useAppSelector((s) => s.auth.refreshToken);
   const [logout] = useLogoutMutation();
 
-  const items = NAV.filter((n) => hasAnyRole(user, n.roles ?? [])).map((n) => ({
-    key: n.key,
-    icon: n.icon,
-    label: n.label,
-  }));
+  const leaf = (n: NavLeaf) => ({ key: n.key, icon: n.icon, label: n.label });
+
+  // Build the menu: leaves the user can see, and groups that still have ≥1 visible child.
+  const items = NAV.flatMap((n) => {
+    if (!isGroup(n)) {
+      return hasAnyRole(user, n.roles ?? []) ? [leaf(n)] : [];
+    }
+    const visible = n.children.filter((c) => hasAnyRole(user, c.roles ?? []));
+    return visible.length > 0
+      ? [{ key: n.key, icon: n.icon, label: n.label, children: visible.map(leaf) }]
+      : [];
+  });
+
+  // Keep the group that owns the current route expanded (users can still toggle others).
+  const activeGroup = useMemo(
+    () =>
+      NAV.find(
+        (n): n is NavGroup => isGroup(n) && n.children.some((c) => c.key === location.pathname),
+      )?.key,
+    [location.pathname],
+  );
+  const [openKeys, setOpenKeys] = useState<string[]>(activeGroup ? [activeGroup] : []);
+  useEffect(() => {
+    if (activeGroup && !openKeys.includes(activeGroup)) {
+      setOpenKeys((keys) => [...keys, activeGroup]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeGroup]);
 
   const onLogout = async () => {
     if (refreshToken) await logout({ refreshToken }).catch(() => undefined);
@@ -265,8 +270,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
           theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
+          openKeys={openKeys}
+          onOpenChange={(keys) => setOpenKeys(keys)}
           items={items}
-          onClick={({ key }) => navigate(key)}
+          onClick={({ key }) => {
+            if (!key.startsWith('grp:')) navigate(key);
+          }}
         />
       </Layout.Sider>
       <Layout>
