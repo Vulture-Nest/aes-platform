@@ -7,6 +7,7 @@ import { DebtInterestWatchService } from './panels/debt-interest-watch.service';
 import { HealthVerdictPanelService } from './panels/health-verdict.service';
 import { MoneyInOutService } from './panels/money-in-out.service';
 import { PendingObligationsService } from './panels/pending-obligations.service';
+import { PerformancePanelService } from './panels/performance-panel.service';
 import { ReceivablesAgeingService } from './panels/receivables-ageing.service';
 import { TaxExposureService } from './panels/tax-exposure.service';
 
@@ -36,6 +37,7 @@ export class CommandCentreController {
     private readonly receivablesAgeing: ReceivablesAgeingService,
     private readonly taxExposure: TaxExposureService,
     private readonly pendingObligations: PendingObligationsService,
+    private readonly performance: PerformancePanelService,
     private readonly healthVerdict: HealthVerdictPanelService,
   ) {}
 
@@ -64,6 +66,7 @@ export class CommandCentreController {
       receivablesAgeing,
       taxExposure,
       pendingObligations,
+      performance,
       healthVerdict,
     ] = await Promise.all([
       this.safe('cashPosition', () => this.cashPosition.compute()),
@@ -73,6 +76,7 @@ export class CommandCentreController {
       this.safe('receivablesAgeing', () => this.receivablesAgeing.compute()),
       this.safe('taxExposure', () => this.taxExposure.compute()),
       this.safe('pendingObligations', () => this.pendingObligations.compute()),
+      this.safe('performance', () => this.performance.compute()),
       this.safe('healthVerdict', () => this.healthVerdict.compute()),
     ]);
 
@@ -84,6 +88,7 @@ export class CommandCentreController {
       receivablesAgeing,
       taxExposure,
       pendingObligations,
+      performance,
       healthVerdict,
     };
   }
@@ -128,6 +133,12 @@ export class CommandCentreController {
   @ApiOperation({ summary: 'Pending obligations panel' })
   pendingObligationsPanel() {
     return this.pendingObligations.compute();
+  }
+
+  @Get('performance')
+  @ApiOperation({ summary: 'Performance panel — revenue, expenses, operating profit, margin' })
+  performancePanel() {
+    return this.performance.compute();
   }
 
   @Get('health-verdict')

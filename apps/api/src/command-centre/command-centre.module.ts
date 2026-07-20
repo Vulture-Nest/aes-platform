@@ -10,6 +10,7 @@ import { DebtInterestWatchService } from './panels/debt-interest-watch.service';
 import { HealthVerdictPanelService } from './panels/health-verdict.service';
 import { MoneyInOutService } from './panels/money-in-out.service';
 import { PendingObligationsService } from './panels/pending-obligations.service';
+import { PerformancePanelService } from './panels/performance-panel.service';
 import { ReceivablesAgeingService } from './panels/receivables-ageing.service';
 import { TaxExposureService } from './panels/tax-exposure.service';
 
@@ -32,6 +33,7 @@ import { TaxExposureService } from './panels/tax-exposure.service';
     ReceivablesAgeingService,
     TaxExposureService,
     PendingObligationsService,
+    PerformancePanelService,
     HealthVerdictPanelService,
   ],
 })

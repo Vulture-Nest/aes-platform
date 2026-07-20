@@ -3,21 +3,26 @@ import {
   BankOutlined,
   CheckCircleFilled,
   ExclamationCircleFilled,
+  FileDoneOutlined,
   IdcardOutlined,
   RiseOutlined,
+  ShoppingOutlined,
   TeamOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
-import { Card, Col, Empty, List, Row, Tag, Typography } from 'antd';
+import { Card, Col, Empty, List, Row, Statistic, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import {
   useGetAccountsQuery,
   useGetApprovalMatrixQuery,
   useGetAuditQuery,
+  useGetContractsQuery,
   useGetDangerRulesQuery,
   useGetEmployeesQuery,
   useGetExchangeRatesQuery,
   useGetLookupsQuery,
+  useGetOrdersQuery,
+  useGetPerformanceQuery,
   useGetSitesQuery,
   useGetStatutoryRatesQuery,
   useGetThresholdsQuery,
@@ -68,11 +73,20 @@ export function DashboardPage() {
   const dangerRules = useGetDangerRulesQuery();
   const lookups = useGetLookupsQuery('');
   const audit = useGetAuditQuery({ take: 8 });
+  const orders = useGetOrdersQuery();
+  const contracts = useGetContractsQuery();
+  const performance = useGetPerformanceQuery();
 
   const userRows = users.data ?? [];
   const siteRows = sites.data ?? [];
   const accountRows = accounts.data ?? [];
   const employeeRows = employees.data ?? [];
+  const orderRows = orders.data ?? [];
+  const contractRows = contracts.data ?? [];
+  const perf = performance.data;
+  const servicedOrders = orderRows.filter((o) => o.serviced).length;
+  const fmtUsd = (n: number) => `$${Math.round(n).toLocaleString()}`;
+  const pct = (m: number | null) => (m === null ? '—' : `${(m * 100).toFixed(1)}%`);
 
   // Users by role (counts each role assignment).
   const roleSegments = countBy(
@@ -131,7 +145,7 @@ export function DashboardPage() {
 
       {/* KPI row */}
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} xl={6}>
+        <Col xs={24} sm={12} xl={4}>
           <KpiCard
             icon={<TeamOutlined />}
             label="Users"
@@ -141,7 +155,7 @@ export function DashboardPage() {
             sub={`${roleSegments.length} role${roleSegments.length === 1 ? '' : 's'} in use`}
           />
         </Col>
-        <Col xs={24} sm={12} xl={6}>
+        <Col xs={24} sm={12} xl={4}>
           <KpiCard
             icon={<BankOutlined />}
             label="Sites"
@@ -151,7 +165,7 @@ export function DashboardPage() {
             sub={`${activeSites} active`}
           />
         </Col>
-        <Col xs={24} sm={12} xl={6}>
+        <Col xs={24} sm={12} xl={4}>
           <KpiCard
             icon={<IdcardOutlined />}
             label="Employees"
@@ -161,7 +175,7 @@ export function DashboardPage() {
             sub={`${employeesByType.length} employment type${employeesByType.length === 1 ? '' : 's'}`}
           />
         </Col>
-        <Col xs={24} sm={12} xl={6}>
+        <Col xs={24} sm={12} xl={4}>
           <KpiCard
             icon={<WalletOutlined />}
             label="Ledger accounts"
@@ -171,7 +185,108 @@ export function DashboardPage() {
             sub={`${accountsByCurrency.length} currenc${accountsByCurrency.length === 1 ? 'y' : 'ies'}`}
           />
         </Col>
+        <Col xs={24} sm={12} xl={4}>
+          <KpiCard
+            icon={<ShoppingOutlined />}
+            label="Orders"
+            value={orderRows.length}
+            accent="#14b8a6"
+            loading={orders.isLoading}
+            sub={`${servicedOrders} serviced`}
+          />
+        </Col>
+        <Col xs={24} sm={12} xl={4}>
+          <KpiCard
+            icon={<FileDoneOutlined />}
+            label="Contracts"
+            value={contractRows.length}
+            accent="#e5636b"
+            loading={contracts.isLoading}
+            sub={perf ? `${fmtUsd(perf.bookedOrderValue)} order book` : 'client agreements'}
+          />
+        </Col>
       </Row>
+
+      {/* Revenue & profit */}
+      <Card
+        title="Revenue & profit"
+        style={{ marginTop: 16 }}
+        extra={
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            USD · revenue recognised when an order is serviced
+          </Typography.Text>
+        }
+        loading={performance.isLoading}
+      >
+        {perf ? (
+          <Row gutter={[16, 16]} align="middle">
+            <Col xs={24} md={7}>
+              <div
+                style={{
+                  background: perf.operatingProfit >= 0 ? '#f4faf0' : '#fdf1f0',
+                  border: `1px solid ${perf.operatingProfit >= 0 ? '#dcefcf' : '#f3d4d0'}`,
+                  borderRadius: 10,
+                  padding: '14px 16px',
+                }}
+              >
+                <div style={{ fontSize: 13, color: '#6b7280' }}>Operating profit</div>
+                <div
+                  style={{
+                    fontSize: 30,
+                    fontWeight: 700,
+                    color: perf.operatingProfit >= 0 ? AES.green : '#e5636b',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {fmtUsd(perf.operatingProfit)}
+                </div>
+                <Tag color={perf.operatingProfit >= 0 ? 'green' : 'red'} style={{ marginTop: 4 }}>
+                  <RiseOutlined /> {pct(perf.margin)} margin
+                </Tag>
+              </div>
+            </Col>
+            <Col xs={24} md={17}>
+              <Row gutter={[16, 16]}>
+                <Col xs={12} md={8}>
+                  <Statistic
+                    title="Recognised revenue"
+                    value={fmtUsd(perf.income)}
+                    valueStyle={{ fontSize: 22 }}
+                  />
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {perf.servicedOrderCount} serviced · claims {fmtUsd(perf.claimsIncome)}
+                  </Typography.Text>
+                </Col>
+                <Col xs={12} md={8}>
+                  <Statistic
+                    title="Expenses"
+                    value={fmtUsd(perf.expenses)}
+                    valueStyle={{ fontSize: 22 }}
+                  />
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    order {fmtUsd(perf.expenseBreakdown.order)} · gen{' '}
+                    {fmtUsd(perf.expenseBreakdown.general)} · o/h{' '}
+                    {fmtUsd(perf.expenseBreakdown.overheads)} · loan{' '}
+                    {fmtUsd(perf.expenseBreakdown.loanInterest)}
+                  </Typography.Text>
+                </Col>
+                <Col xs={12} md={8}>
+                  <Statistic
+                    title="Booked order value"
+                    value={fmtUsd(perf.bookedOrderValue)}
+                    valueStyle={{ fontSize: 22 }}
+                  />
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {perf.orderCount} orders (pipeline)
+                  </Typography.Text>
+                </Col>
+              </Row>
+            </Col>
+          </Row>
+        ) : (
+          <Empty description="No revenue data yet" />
+        )}
+      </Card>
 
       {/* Trend + role donut */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
