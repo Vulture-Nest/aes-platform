@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../theme/app_theme.dart';
 import 'cubit/auth_cubit.dart';
 
 /// Email + password sign-in against the local-JWT API. On success the router
@@ -35,35 +36,49 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: BlocBuilder<AuthCubit, AuthState>(
-                builder: (context, state) {
-                  final busy = state is AuthAuthenticating;
-                  final error = state is AuthUnauthenticated ? state.error : null;
-                  return Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          'AES Operations',
-                          style: Theme.of(context).textTheme.headlineSmall,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Sign in to continue',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 32),
-                        TextFormField(
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppTheme.authGradient),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Card(
+                  elevation: 12,
+                  shadowColor: Colors.black54,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
+                    child: BlocBuilder<AuthCubit, AuthState>(
+                      builder: (context, state) {
+                        final busy = state is AuthAuthenticating;
+                        final error = state is AuthUnauthenticated ? state.error : null;
+                        return Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Image.asset(AppTheme.logoGreen, height: 48),
+                              const SizedBox(height: 20),
+                              Text(
+                                'Operations & Finance',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Sign in to continue',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: AppTheme.charcoal.withValues(alpha: 0.6),
+                                    ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 28),
+                              TextFormField(
                           controller: _email,
                           enabled: !busy,
                           keyboardType: TextInputType.emailAddress,
@@ -100,20 +115,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                         const SizedBox(height: 24),
-                        FilledButton(
-                          onPressed: busy ? null : _submit,
-                          child: busy
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Sign in'),
-                        ),
-                      ],
+                              FilledButton(
+                                onPressed: busy ? null : _submit,
+                                child: busy
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : const Text('Sign in'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
           ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../models/auth_user.dart';
 import '../../rbac/roles.dart';
+import '../../theme/app_theme.dart';
 import '../auth/cubit/auth_cubit.dart';
 import 'cubit/dashboard_cubit.dart';
 import 'widgets/danger_banner.dart';
@@ -70,36 +71,42 @@ class _HomeScreenState extends State<HomeScreen> {
         : _tiles.where((t) => user.hasAnyRole(t.roles)).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AES Operations'),
-        actions: [
-          IconButton(
-            tooltip: 'Sign out',
-            icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthCubit>().logout(),
-          ),
-        ],
-      ),
       body: RefreshIndicator(
         onRefresh: () => context.read<DashboardCubit>().load(),
         child: ListView(
+          padding: EdgeInsets.zero,
           children: [
+            _Header(user: user, onSignOut: () => context.read<AuthCubit>().logout()),
             BlocBuilder<DashboardCubit, DashboardState>(
-              builder: (context, state) => DangerBanner(
-                alerts: state.dangerAlerts,
-                onTap: () => context.push('/command-centre'),
+              builder: (context, state) => state.dangerAlerts.isEmpty
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: DangerBanner(
+                          alerts: state.dangerAlerts,
+                          onTap: () => context.push('/command-centre'),
+                        ),
+                      ),
+                    ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
+              child: Text(
+                'Quick actions',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.4),
               ),
             ),
-            if (user != null) _Greeting(user: user),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               child: GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.15,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: 1.05,
                 children: [
                   for (final tile in visibleTiles)
                     _DashboardCard(
@@ -132,19 +139,62 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _Greeting extends StatelessWidget {
-  const _Greeting({required this.user});
-  final AuthUser user;
+/// Branded gradient header: logo, greeting, role, and sign-out.
+class _Header extends StatelessWidget {
+  const _Header({required this.user, required this.onSignOut});
+  final AuthUser? user;
+  final VoidCallback onSignOut;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+    final topPad = MediaQuery.of(context).padding.top;
+    final role = user == null || user!.roles.isEmpty
+        ? ''
+        : user!.roles.first.role.split('_').map((w) => '${w[0]}${w.substring(1).toLowerCase()}').join(' ');
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, topPad + 16, 12, 22),
+      decoration: const BoxDecoration(
+        gradient: AppTheme.authGradient,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Signed in as', style: Theme.of(context).textTheme.labelMedium),
-          Text(user.email, style: Theme.of(context).textTheme.titleMedium),
+          Row(
+            children: [
+              Image.asset(AppTheme.logoWhite, height: 28),
+              const Spacer(),
+              IconButton(
+                tooltip: 'Sign out',
+                icon: const Icon(Icons.logout, color: Colors.white),
+                onPressed: onSignOut,
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'Welcome back',
+            style: TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            user?.email ?? '',
+            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+          if (role.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                role,
+                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -158,7 +208,6 @@ class _DashboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -167,13 +216,28 @@ class _DashboardCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(tile.icon, size: 36, color: scheme.primary),
-              const SizedBox(height: 12),
+              Container(
+                height: 48,
+                width: 48,
+                decoration: const BoxDecoration(color: AppTheme.greenSoft, shape: BoxShape.circle),
+                child: Icon(tile.icon, size: 26, color: AppTheme.greenDark),
+              ),
+              const Spacer(),
               Text(
                 tile.label,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.charcoal),
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Text(
+                    'Open',
+                    style: TextStyle(fontSize: 12, color: AppTheme.charcoal.withValues(alpha: 0.5)),
+                  ),
+                  const Icon(Icons.arrow_forward, size: 13, color: AppTheme.greenDark),
+                ],
               ),
             ],
           ),
