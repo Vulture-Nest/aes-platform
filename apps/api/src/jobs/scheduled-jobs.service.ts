@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ApprovalService } from '../approvals/approval.service';
+import { AlertService } from '../command-centre/danger/alert.service';
 import { DangerEngineService } from '../command-centre/danger/danger-engine.service';
 import { AppConfig } from '../config/configuration';
 import { RequisitionsService } from '../workflows/requisitions/requisitions.service';
@@ -22,6 +23,7 @@ export class ScheduledJobsService {
   constructor(
     private readonly config: ConfigService<AppConfig, true>,
     private readonly danger: DangerEngineService,
+    private readonly alerts: AlertService,
     private readonly requisitions: RequisitionsService,
     private readonly travel: TravelService,
     private readonly approvals: ApprovalService,
@@ -51,6 +53,15 @@ export class ScheduledJobsService {
   @Cron(CronExpression.EVERY_HOUR, { name: 'danger-eval' })
   dangerEvaluation(): Promise<void> {
     return this.run('danger.evaluate', () => this.danger.evaluate());
+  }
+
+  /**
+   * Repeat-until-acknowledged: re-ping the directors about every still-active DANGER
+   * alert every 4 hours until someone acknowledges it (or the condition resolves).
+   */
+  @Cron('0 */4 * * *', { name: 'danger-alert-repeat', timeZone: TZ })
+  dangerAlertRepeat(): Promise<void> {
+    return this.run('alerts.reNotifyUnacknowledged', () => this.alerts.reNotifyUnacknowledged());
   }
 
   /** Re-test approved-pending-funds items: promote now-funded ones, escalate near-deadline ones. */

@@ -126,6 +126,28 @@ export class AlertService {
     });
   }
 
+  /**
+   * Repeat-until-acknowledged (spec §14). Re-fan-out every still-active DANGER alert so
+   * the directors keep being pinged until they acknowledge it in-app (or the underlying
+   * condition resolves). WATCH/INFO alerts are one-shot and never repeated. Called on a
+   * schedule; raiseOrRefresh already suppresses the initial re-notify on refresh, so this
+   * is the only path that re-sends.
+   */
+  async reNotifyUnacknowledged(): Promise<{ reNotified: number }> {
+    const active = await this.prisma.alert.findMany({
+      where: { severity: AlertSeverity.DANGER, acknowledgedAt: null, resolvedAt: null },
+    });
+    for (const alert of active) {
+      await this.fanOut(alert);
+    }
+    if (active.length > 0) {
+      this.logger.log(
+        `Repeat-until-ack: re-notified ${active.length} unacknowledged DANGER alert(s)`,
+      );
+    }
+    return { reNotified: active.length };
+  }
+
   /** Distinct user ids holding at least one of the given roles. */
   private async userIdsWithRoles(roles: string[]): Promise<string[]> {
     const rows = await this.prisma.userSiteRole.findMany({
