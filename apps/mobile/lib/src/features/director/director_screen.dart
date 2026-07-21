@@ -14,7 +14,7 @@ Color _statusColor(String status) => switch (status) {
       'POSTED_AWAITING_TRANSFER' => AppTheme.watch,
       'REJECTED' => AppTheme.danger,
       'RETURNED' => AppTheme.watch,
-      _ => AppTheme.charcoal.withValues(alpha: 0.55),
+      _ => const Color(0xFF8A8F98),
     };
 
 /// Director actions: raise a withdrawal, track co-approval, and complete the

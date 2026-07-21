@@ -125,6 +125,8 @@ class _AesAppState extends State<AesApp> {
           title: 'AES Operations',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: ThemeMode.system,
           routerConfig: _router,
         ),
       ),

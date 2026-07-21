@@ -286,10 +286,10 @@ class _DashboardCard extends StatelessWidget {
                   const Spacer(),
                   Text(
                     tile.label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.charcoal,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -297,7 +297,10 @@ class _DashboardCard extends StatelessWidget {
                     tile.subtitle ?? 'Open',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: AppTheme.charcoal.withValues(alpha: 0.5)),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+                    ),
                   ),
                 ],
               ),
