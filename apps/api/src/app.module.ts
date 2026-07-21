@@ -28,9 +28,11 @@ import { DangerModule } from './command-centre/danger/danger.module';
 import { CommandCentreModule } from './command-centre/command-centre.module';
 import { HrModule } from './hr/hr.module';
 import { TimesheetsModule } from './timesheets/timesheets.module';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PayrollModule } from './payroll/payroll.module';
 import { CrmModule } from './crm/crm.module';
 import { ReportsModule } from './reports/reports.module';
+import { JobsModule } from './jobs/jobs.module';
 
 @Module({
   imports: [
@@ -40,6 +42,7 @@ import { ReportsModule } from './reports/reports.module';
       load: [configuration],
       validate: validateEnv,
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     StorageModule,
     AuditModule,
@@ -64,6 +67,7 @@ import { ReportsModule } from './reports/reports.module';
     PayrollModule,
     CrmModule,
     ReportsModule,
+    JobsModule,
     HealthModule,
   ],
   providers: [

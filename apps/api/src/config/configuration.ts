@@ -28,6 +28,10 @@ export interface AppConfig {
     /** Configurable ceiling on total hours captured against a single employee-day. */
     maxHoursPerDay: number;
   };
+  scheduler: {
+    /** In-process cron jobs (danger eval, pending-funds re-test). Off in tests/CI. */
+    enabled: boolean;
+  };
 }
 
 export default (): AppConfig => ({
@@ -59,5 +63,8 @@ export default (): AppConfig => ({
   },
   timesheets: {
     maxHoursPerDay: parseInt(process.env.TIMESHEET_MAX_HOURS_PER_DAY ?? '24', 10),
+  },
+  scheduler: {
+    enabled: (process.env.SCHEDULER_ENABLED ?? 'true').toLowerCase() !== 'false',
   },
 });
