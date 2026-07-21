@@ -76,7 +76,12 @@ lib/
 
 ## Status
 
-Foundation shipped: local-JWT auth (login, session restore, refresh, sign-out), role-aware
-router guard, home dashboard (role tiles + persistent danger banner), theming. Feature screens
-(approvals, requests, petty cash, orders, command centre, director actions) and offline-first
-draft capture land in subsequent stages.
+Shipped so far:
+- **Foundation** — local-JWT auth (login, session restore, refresh, sign-out), role-aware
+  router guard, home dashboard (role tiles + persistent danger banner), theming.
+- **Approvals inbox** — approve/reject/return, biometric confirm on money items.
+- **Requests** — raise & track requisitions and travel (create → submit → status timeline),
+  with camera/gallery **receipt capture** uploaded via the attachments API.
+
+Still to come: petty-cash requests, orders board, command centre, director actions, and
+offline-first draft capture (Drift/SQLite outbound queue) + FCM push.
