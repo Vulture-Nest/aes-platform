@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'api/dio_client.dart';
 import 'config/flavor_config.dart';
 import 'data/alerts_repository.dart';
+import 'data/approvals_repository.dart';
 import 'data/auth_repository.dart';
 import 'data/token_store.dart';
 import 'features/auth/cubit/auth_cubit.dart';
 import 'features/home/cubit/dashboard_cubit.dart';
 import 'router/app_router.dart';
+import 'services/biometric_authenticator.dart';
 import 'theme/app_theme.dart';
 
 /// Root widget. Builds the auth-aware dio client + repositories for the flavor,
@@ -27,6 +29,8 @@ class AesApp extends StatefulWidget {
 class _AesAppState extends State<AesApp> {
   late final AuthRepository _authRepository;
   late final AlertsRepository _alertsRepository;
+  late final ApprovalsRepository _approvalsRepository;
+  late final BiometricAuthenticator _biometric;
   late final AuthCubit _authCubit;
   late final GoRouter _router;
 
@@ -42,6 +46,8 @@ class _AesAppState extends State<AesApp> {
     );
     _authRepository = AuthRepository(dio);
     _alertsRepository = AlertsRepository(dio);
+    _approvalsRepository = ApprovalsRepository(dio);
+    _biometric = LocalAuthBiometricAuthenticator();
     _authCubit = AuthCubit(authRepository: _authRepository, tokenStore: tokenStore);
     _router = buildRouter(_authCubit);
     _authCubit.bootstrap();
@@ -59,6 +65,8 @@ class _AesAppState extends State<AesApp> {
       providers: [
         RepositoryProvider<AuthRepository>.value(value: _authRepository),
         RepositoryProvider<AlertsRepository>.value(value: _alertsRepository),
+        RepositoryProvider<ApprovalsRepository>.value(value: _approvalsRepository),
+        RepositoryProvider<BiometricAuthenticator>.value(value: _biometric),
       ],
       child: MultiBlocProvider(
         providers: [

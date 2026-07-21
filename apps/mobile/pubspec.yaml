@@ -20,6 +20,8 @@ dependencies:
   dio: ^5.4.0
   # Local secure config / token storage
   flutter_secure_storage: ^9.0.0
+  # Biometric (Face ID / fingerprint) confirmation on money approvals
+  local_auth: ^2.2.0
 
 dev_dependencies:
   flutter_test:
