@@ -32,15 +32,11 @@ const LEADERSHIP: Role[] = [
 ];
 
 const SITE_STAFF: Role[] = ['SITE_CLERK', 'SITE_MANAGER', 'OPS_STAFF'];
-const TIMESHEET_ROLES: Role[] = [
-  'SITE_CLERK',
-  'SITE_MANAGER',
-  'OPS_STAFF',
-  'OPS_DIRECTOR',
-  'FINANCE_OFFICER',
-  'FINANCE_DIRECTOR',
-  'SYS_ADMIN',
-];
+// Timesheets in the field app is a CAPTURE surface — only roles that can capture
+// see it (matches canCapture on the page). Finance/Ops directors view & lock
+// timesheets in the admin console instead, so the nav here no longer dangles a
+// page they can open but can't act on.
+const TIMESHEET_ROLES: Role[] = ['SITE_CLERK', 'SITE_MANAGER', 'OPS_STAFF', 'SYS_ADMIN'];
 
 const NAV: { key: string; label: string; icon: ReactNode; roles?: Role[] }[] = [
   { key: '/', label: 'Home', icon: <HomeOutlined /> },
