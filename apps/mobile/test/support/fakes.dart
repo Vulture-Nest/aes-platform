@@ -177,10 +177,14 @@ class FakeAttachmentsRepository extends AttachmentsRepository {
   }
 }
 
+/// A connectivity failure (no status code) — what the offline path keys on.
+const offlineError = ApiException('Cannot reach the server. Check your connection.');
+
 class FakeRequisitionsRepository extends RequisitionsRepository {
-  FakeRequisitionsRepository({this.items = const []}) : super(Dio());
+  FakeRequisitionsRepository({this.items = const [], this.offline = false}) : super(Dio());
 
   List<Requisition> items;
+  final bool offline;
   final List<NewRequisition> created = [];
   final List<String> submitted = [];
 
@@ -189,6 +193,7 @@ class FakeRequisitionsRepository extends RequisitionsRepository {
 
   @override
   Future<Requisition> create(NewRequisition input) async {
+    if (offline) throw offlineError;
     created.add(input);
     return Requisition(
       id: 'req-${created.length}',
@@ -206,9 +211,10 @@ class FakeRequisitionsRepository extends RequisitionsRepository {
 }
 
 class FakeTravelRepository extends TravelRepository {
-  FakeTravelRepository({this.items = const []}) : super(Dio());
+  FakeTravelRepository({this.items = const [], this.offline = false}) : super(Dio());
 
   List<TravelRequest> items;
+  final bool offline;
   final List<NewTravel> created = [];
   final List<String> submitted = [];
 
@@ -217,6 +223,7 @@ class FakeTravelRepository extends TravelRepository {
 
   @override
   Future<TravelRequest> create(NewTravel input) async {
+    if (offline) throw offlineError;
     created.add(input);
     return TravelRequest(
       id: 'trv-${created.length}',
@@ -265,10 +272,12 @@ CapturedReceipt fakeCaptured() => CapturedReceipt(
     );
 
 class FakePettyCashRepository extends PettyCashRepository {
-  FakePettyCashRepository({this.floatList = const [], this.txnList = const []}) : super(Dio());
+  FakePettyCashRepository({this.floatList = const [], this.txnList = const [], this.offline = false})
+      : super(Dio());
 
   List<PettyCashFloat> floatList;
   List<PettyCashTxn> txnList;
+  final bool offline;
   final List<({String floatId, double amount, String purpose, String? receiptKey})> withdrawals = [];
 
   @override
@@ -284,6 +293,7 @@ class FakePettyCashRepository extends PettyCashRepository {
     required String purpose,
     String? receiptKey,
   }) async {
+    if (offline) throw offlineError;
     withdrawals.add((floatId: floatId, amount: amount, purpose: purpose, receiptKey: receiptKey));
     final txn = PettyCashTxn(
       id: 'txn-${withdrawals.length}',

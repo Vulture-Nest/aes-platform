@@ -34,6 +34,16 @@ class NewTravel {
           'destinationClass': destinationClass,
         if (grade != null && grade!.isNotEmpty) 'grade': grade,
       };
+
+  factory NewTravel.fromMap(Map<String, dynamic> m) => NewTravel(
+        destination: m['destination'] as String? ?? '',
+        dateFrom: DateTime.parse(m['dateFrom'] as String),
+        dateTo: DateTime.parse(m['dateTo'] as String),
+        days: (m['days'] as num?)?.toInt() ?? 1,
+        currency: m['currency'] as String? ?? 'USD',
+        destinationClass: m['destinationClass'] as String?,
+        grade: m['grade'] as String?,
+      );
 }
 
 /// Wraps `/v1/travel` — list, create (DRAFT), submit into the approval engine.

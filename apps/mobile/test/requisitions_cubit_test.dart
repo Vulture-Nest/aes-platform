@@ -1,3 +1,4 @@
+import 'package:aes_mobile/src/data/outbox_store.dart';
 import 'package:aes_mobile/src/data/requisitions_repository.dart';
 import 'package:aes_mobile/src/features/requests/cubit/requisitions_cubit.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,8 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/fakes.dart';
 
 void main() {
-  RequisitionsCubit build(FakeRequisitionsRepository repo, FakeAttachmentsRepository att) =>
-      RequisitionsCubit(repository: repo, attachments: att);
+  RequisitionsCubit build(
+    FakeRequisitionsRepository repo, {
+    FakeAttachmentsRepository? att,
+    OutboxStore? outbox,
+  }) =>
+      RequisitionsCubit(
+        repository: repo,
+        attachments: att ?? FakeAttachmentsRepository(),
+        outbox: outbox ?? InMemoryOutboxStore(),
+      );
 
   NewRequisition input() => NewRequisition(
         purpose: 'Fuel',
@@ -16,7 +25,7 @@ void main() {
       );
 
   test('load populates the list', () async {
-    final cubit = build(FakeRequisitionsRepository(items: [draftRequisition()]), FakeAttachmentsRepository());
+    final cubit = build(FakeRequisitionsRepository(items: [draftRequisition()]));
     await cubit.load();
     expect(cubit.state.items, hasLength(1));
   });
@@ -24,20 +33,21 @@ void main() {
   test('create without a receipt does not upload and prepends the new draft', () async {
     final repo = FakeRequisitionsRepository();
     final att = FakeAttachmentsRepository();
-    final cubit = build(repo, att);
+    final cubit = build(repo, att: att);
 
-    final created = await cubit.create(input());
+    final result = await cubit.create(input());
 
-    expect(created, isNotNull);
+    expect(result.ok, isTrue);
+    expect(result.createdId, isNotNull);
     expect(att.uploads, 0);
     expect(repo.created.single.attachmentKey, isNull);
-    expect(cubit.state.items.first.id, created!.id);
+    expect(cubit.state.items.first.id, result.createdId);
   });
 
   test('create with a receipt uploads first and attaches the returned key', () async {
     final repo = FakeRequisitionsRepository();
     final att = FakeAttachmentsRepository(key: 'attachments/x/receipt.jpg');
-    final cubit = build(repo, att);
+    final cubit = build(repo, att: att);
 
     await cubit.create(input(), receipt: fakeCaptured());
 
@@ -45,9 +55,30 @@ void main() {
     expect(repo.created.single.attachmentKey, 'attachments/x/receipt.jpg');
   });
 
+  test('create with submit posts then submits', () async {
+    final repo = FakeRequisitionsRepository();
+    final cubit = build(repo);
+    final result = await cubit.create(input(), submit: true);
+    expect(repo.submitted, [result.createdId]);
+  });
+
+  test('offline create queues the draft to the outbox instead of failing', () async {
+    final outbox = InMemoryOutboxStore();
+    final cubit = build(FakeRequisitionsRepository(offline: true), outbox: outbox);
+
+    final result = await cubit.create(input(), submit: true);
+
+    expect(result.queuedOffline, isTrue);
+    expect(result.ok, isTrue);
+    final queued = await outbox.all();
+    expect(queued, hasLength(1));
+    expect(queued.single.payload['purpose'], 'Fuel');
+    expect(queued.single.submitAfter, isTrue);
+  });
+
   test('submit forwards to the repo and reloads', () async {
     final repo = FakeRequisitionsRepository(items: [draftRequisition(id: 'r9')]);
-    final cubit = build(repo, FakeAttachmentsRepository());
+    final cubit = build(repo);
     await cubit.load();
 
     final error = await cubit.submit('r9');

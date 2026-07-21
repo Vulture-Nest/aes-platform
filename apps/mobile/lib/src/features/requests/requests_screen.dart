@@ -5,6 +5,7 @@ import '../../models/request_status.dart';
 import '../../models/requisition.dart';
 import '../../models/travel_request.dart';
 import '../../theme/money.dart';
+import 'cubit/outbox_cubit.dart';
 import 'cubit/petty_cash_cubit.dart';
 import 'cubit/request_list_state.dart';
 import 'cubit/requisitions_cubit.dart';
@@ -67,18 +68,27 @@ class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProvid
   Future<void> _create() async {
     final requisitions = context.read<RequisitionsCubit>();
     final travel = context.read<TravelCubit>();
+    final outbox = context.read<OutboxCubit>();
+    final messenger = ScaffoldMessenger.of(context);
+    final String? message;
     if (_tabs.index == 0) {
-      await Navigator.of(context).push(
+      message = await Navigator.of(context).push<String>(
         MaterialPageRoute(
           builder: (_) => BlocProvider.value(value: requisitions, child: const RequisitionForm()),
         ),
       );
     } else {
-      await Navigator.of(context).push(
+      message = await Navigator.of(context).push<String>(
         MaterialPageRoute(
           builder: (_) => BlocProvider.value(value: travel, child: const TravelForm()),
         ),
       );
+    }
+    await outbox.refresh();
+    if (message != null) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -104,10 +114,64 @@ class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProvid
               label: Text(_tabs.index == 0 ? 'New requisition' : 'New travel'),
             )
           : null,
-      body: TabBarView(
-        controller: _tabs,
-        children: const [_RequisitionsTab(), _TravelTab(), PettyCashTab()],
+      body: Column(
+        children: [
+          const _PendingSyncBanner(),
+          Expanded(
+            child: TabBarView(
+              controller: _tabs,
+              children: const [_RequisitionsTab(), _TravelTab(), PettyCashTab()],
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+/// Shown at the top of the hub when there are drafts queued offline; offers a
+/// manual "Sync now" and reports the result.
+class _PendingSyncBanner extends StatelessWidget {
+  const _PendingSyncBanner();
+
+  Future<void> _sync(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final summary = await context.read<OutboxCubit>().syncNow();
+    final parts = <String>[
+      if (summary.synced > 0) '${summary.synced} synced',
+      if (summary.failed > 0) '${summary.failed} still pending',
+      if (summary.conflicts.isNotEmpty) '${summary.conflicts.length} rejected',
+    ];
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(parts.isEmpty ? 'Nothing to sync' : parts.join(' · '))),
+      );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<OutboxCubit, OutboxState>(
+      builder: (context, state) {
+        if (state.pending == 0) return const SizedBox.shrink();
+        return Material(
+          color: Theme.of(context).colorScheme.secondaryContainer,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.cloud_upload_outlined, size: 20),
+                const SizedBox(width: 12),
+                Expanded(child: Text('${state.pending} draft(s) saved offline')),
+                if (state.syncing)
+                  const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                else
+                  TextButton(onPressed: () => _sync(context), child: const Text('Sync now')),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -9,6 +9,7 @@ import 'data/approvals_repository.dart';
 import 'data/attachments_repository.dart';
 import 'data/command_centre_repository.dart';
 import 'data/auth_repository.dart';
+import 'data/outbox_store.dart';
 import 'data/petty_cash_repository.dart';
 import 'data/requisitions_repository.dart';
 import 'data/token_store.dart';
@@ -16,6 +17,8 @@ import 'data/travel_repository.dart';
 import 'features/auth/cubit/auth_cubit.dart';
 import 'features/home/cubit/dashboard_cubit.dart';
 import 'router/app_router.dart';
+import 'services/connectivity_monitor.dart';
+import 'services/sync_service.dart';
 import 'services/biometric_authenticator.dart';
 import 'services/receipt_capture.dart';
 import 'theme/app_theme.dart';
@@ -41,6 +44,8 @@ class _AesAppState extends State<AesApp> {
   late final PettyCashRepository _pettyCashRepository;
   late final AttachmentsRepository _attachmentsRepository;
   late final CommandCentreRepository _commandCentreRepository;
+  late final OutboxStore _outboxStore;
+  late final SyncService _syncService;
   late final BiometricAuthenticator _biometric;
   late final ReceiptCapture _receiptCapture;
   late final AuthCubit _authCubit;
@@ -64,6 +69,14 @@ class _AesAppState extends State<AesApp> {
     _pettyCashRepository = PettyCashRepository(dio);
     _attachmentsRepository = AttachmentsRepository(dio);
     _commandCentreRepository = CommandCentreRepository(dio);
+    _outboxStore = SqfliteOutboxStore();
+    _syncService = SyncService(
+      store: _outboxStore,
+      connectivity: PlusConnectivityMonitor(),
+      requisitions: _requisitionsRepository,
+      travel: _travelRepository,
+      pettyCash: _pettyCashRepository,
+    )..start();
     _biometric = LocalAuthBiometricAuthenticator();
     _receiptCapture = ImagePickerReceiptCapture();
     _authCubit = AuthCubit(authRepository: _authRepository, tokenStore: tokenStore);
@@ -73,6 +86,7 @@ class _AesAppState extends State<AesApp> {
 
   @override
   void dispose() {
+    _syncService.dispose();
     _authCubit.close();
     super.dispose();
   }
@@ -89,6 +103,8 @@ class _AesAppState extends State<AesApp> {
         RepositoryProvider<PettyCashRepository>.value(value: _pettyCashRepository),
         RepositoryProvider<AttachmentsRepository>.value(value: _attachmentsRepository),
         RepositoryProvider<CommandCentreRepository>.value(value: _commandCentreRepository),
+        RepositoryProvider<OutboxStore>.value(value: _outboxStore),
+        RepositoryProvider<SyncService>.value(value: _syncService),
         RepositoryProvider<BiometricAuthenticator>.value(value: _biometric),
         RepositoryProvider<ReceiptCapture>.value(value: _receiptCapture),
       ],

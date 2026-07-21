@@ -85,6 +85,23 @@ Shipped so far:
   the attachments API.
 - **Command Centre** — health-verdict banner + summary panels (cash, money in/out, coverage,
   obligations, performance, receivables, tax) and the active **alert feed with acknowledge**.
+- **Offline-first drafts** — requisitions/travel/petty-cash captured with no signal are queued
+  to a local **SQLite outbox** and auto-synced when connectivity returns (plus a manual "Sync
+  now"). Server-wins: transient failures stay queued, business rejections drop + report.
 
-Still to come: orders board, director actions, and offline-first draft capture (Drift/SQLite
-outbound queue) + FCM push.
+### Offline sync
+
+`OutboxStore` (sqflite) persists queued drafts across restarts. `SyncService` flushes them when
+`ConnectivityMonitor` reports online — transient errors (offline / 5xx) keep the item; 4xx
+rejections drop it and surface a conflict. Persistence + connectivity are abstracted behind
+interfaces so the sync logic is fully unit-tested with in-memory fakes.
+
+### Push (FCM)
+
+`PushRouter` maps a notification's subject to an in-app deep link (alerts → command centre,
+approvals → inbox, requisitions/travel/petty-cash → requests). The FCM transport
+(`firebase_messaging`) is wired **per environment once a Firebase project + platform config**
+(`google-services.json` / `GoogleService-Info.plist`) are provisioned — external credentials, so
+the default build ships a `NoopPushService` and stays fully functional without them.
+
+Still to come: orders board and director actions.

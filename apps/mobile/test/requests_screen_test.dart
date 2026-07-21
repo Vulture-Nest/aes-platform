@@ -1,7 +1,11 @@
+import 'package:aes_mobile/src/data/outbox_store.dart';
+import 'package:aes_mobile/src/features/requests/cubit/outbox_cubit.dart';
 import 'package:aes_mobile/src/features/requests/cubit/petty_cash_cubit.dart';
 import 'package:aes_mobile/src/features/requests/cubit/requisitions_cubit.dart';
 import 'package:aes_mobile/src/features/requests/cubit/travel_cubit.dart';
 import 'package:aes_mobile/src/features/requests/requests_screen.dart';
+import 'package:aes_mobile/src/services/connectivity_monitor.dart';
+import 'package:aes_mobile/src/services/sync_service.dart';
 import 'package:aes_mobile/src/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,18 +20,32 @@ void main() {
     FakeTravelRepository? travelRepo,
     FakePettyCashRepository? pettyRepo,
   }) async {
+    final outbox = InMemoryOutboxStore();
     final requisitions = RequisitionsCubit(
       repository: reqRepo ?? FakeRequisitionsRepository(),
       attachments: FakeAttachmentsRepository(),
+      outbox: outbox,
     );
-    final travel = TravelCubit(travelRepo ?? FakeTravelRepository());
+    final travel = TravelCubit(travelRepo ?? FakeTravelRepository(), outbox: outbox);
     final pettyCash = PettyCashCubit(
       repository: pettyRepo ?? FakePettyCashRepository(),
       attachments: FakeAttachmentsRepository(),
+      outbox: outbox,
+    );
+    final outboxCubit = OutboxCubit(
+      store: outbox,
+      sync: SyncService(
+        store: outbox,
+        connectivity: const AlwaysOnlineMonitor(),
+        requisitions: reqRepo ?? FakeRequisitionsRepository(),
+        travel: travelRepo ?? FakeTravelRepository(),
+        pettyCash: pettyRepo ?? FakePettyCashRepository(),
+      ),
     );
     addTearDown(requisitions.close);
     addTearDown(travel.close);
     addTearDown(pettyCash.close);
+    addTearDown(outboxCubit.close);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -37,6 +55,7 @@ void main() {
             BlocProvider.value(value: requisitions),
             BlocProvider.value(value: travel),
             BlocProvider.value(value: pettyCash),
+            BlocProvider.value(value: outboxCubit),
           ],
           child: const RequestsScreen(),
         ),

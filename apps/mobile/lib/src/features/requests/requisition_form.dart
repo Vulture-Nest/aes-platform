@@ -64,18 +64,18 @@ class _RequisitionFormState extends State<RequisitionForm> {
       currency: _currency,
       requiredByDate: _requiredBy,
     );
-    final created = await cubit.create(input, receipt: _receipt);
-    if (created == null) {
-      if (mounted) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(cubit.state.error ?? 'Could not save requisition')),
-        );
-      }
-      return;
+    final result = await cubit.create(input, receipt: _receipt, submit: submit);
+    if (!mounted) return;
+    if (result.ok) {
+      Navigator.of(context).pop(
+        result.queuedOffline ? 'Saved offline — will sync when connected' : null,
+      );
+    } else {
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.error ?? 'Could not save requisition')),
+      );
     }
-    if (submit) await cubit.submit(created.id);
-    if (mounted) Navigator.of(context).pop();
   }
 
   @override

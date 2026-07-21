@@ -28,7 +28,8 @@ class _PettyCashFloatScreenState extends State<PettyCashFloatScreen> {
 
   Future<void> _newWithdrawal() async {
     final cubit = context.read<PettyCashCubit>();
-    await Navigator.of(context).push(
+    final messenger = ScaffoldMessenger.of(context);
+    final message = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => BlocProvider.value(
           value: cubit,
@@ -36,6 +37,11 @@ class _PettyCashFloatScreenState extends State<PettyCashFloatScreen> {
         ),
       ),
     );
+    if (message != null) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   @override

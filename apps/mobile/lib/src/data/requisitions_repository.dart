@@ -26,6 +26,14 @@ class NewRequisition {
         'requiredByDate': requiredByDate.toIso8601String(),
         if (attachmentKey != null) 'attachmentKey': attachmentKey,
       };
+
+  factory NewRequisition.fromMap(Map<String, dynamic> m) => NewRequisition(
+        purpose: m['purpose'] as String? ?? '',
+        amount: (m['amount'] as num?)?.toDouble() ?? 0,
+        currency: m['currency'] as String? ?? 'USD',
+        requiredByDate: DateTime.parse(m['requiredByDate'] as String),
+        attachmentKey: m['attachmentKey'] as String?,
+      );
 }
 
 /// Wraps `/v1/requisitions` — list, create (DRAFT), submit into the approval engine.
