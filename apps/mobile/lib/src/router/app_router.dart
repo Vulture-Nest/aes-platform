@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../data/alerts_repository.dart';
 import '../data/approvals_repository.dart';
 import '../data/attachments_repository.dart';
+import '../data/command_centre_repository.dart';
 import '../data/petty_cash_repository.dart';
 import '../data/requisitions_repository.dart';
 import '../data/travel_repository.dart';
@@ -13,6 +15,8 @@ import '../features/approvals/approvals_screen.dart';
 import '../features/approvals/cubit/approvals_cubit.dart';
 import '../features/auth/cubit/auth_cubit.dart';
 import '../features/auth/login_screen.dart';
+import '../features/command_centre/command_centre_screen.dart';
+import '../features/command_centre/cubit/command_centre_cubit.dart';
 import '../features/home/home_screen.dart';
 import '../features/requests/cubit/petty_cash_cubit.dart';
 import '../features/requests/cubit/requisitions_cubit.dart';
@@ -101,6 +105,17 @@ GoRouter buildRouter(AuthCubit authCubit) {
             ),
           ],
           child: const RequestsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/command-centre',
+        name: 'command-centre',
+        builder: (context, __) => BlocProvider(
+          create: (context) => CommandCentreCubit(
+            repository: context.read<CommandCentreRepository>(),
+            alerts: context.read<AlertsRepository>(),
+          ),
+          child: const CommandCentreScreen(),
         ),
       ),
     ],

@@ -30,4 +30,13 @@ class AlertsRepository {
       throw api;
     }
   }
+
+  /// Acknowledge an alert (stops the repeat-until-ack pings on DANGER alerts).
+  Future<void> acknowledge(String alertId) async {
+    try {
+      await _dio.post<Map<String, dynamic>>('/v1/alerts/$alertId/ack');
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
+    }
+  }
 }

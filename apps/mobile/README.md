@@ -83,6 +83,8 @@ Shipped so far:
 - **Requests** — raise & track requisitions, travel and **petty-cash** (float withdrawals):
   create → submit → status timeline, with camera/gallery **receipt capture** uploaded via
   the attachments API.
+- **Command Centre** — health-verdict banner + summary panels (cash, money in/out, coverage,
+  obligations, performance, receivables, tax) and the active **alert feed with acknowledge**.
 
-Still to come: orders board, command centre, director actions, and offline-first draft
-capture (Drift/SQLite outbound queue) + FCM push.
+Still to come: orders board, director actions, and offline-first draft capture (Drift/SQLite
+outbound queue) + FCM push.

@@ -38,7 +38,7 @@ const _tiles = <_Tile>[
     Roles.director,
     Roles.sysAdmin,
   }),
-  _Tile('Command Centre', Icons.insights_outlined, Roles.commandCentre),
+  _Tile('Command Centre', Icons.insights_outlined, Roles.commandCentre, route: '/command-centre'),
   _Tile('Director Actions', Icons.gavel_outlined, Roles.directors),
 ];
 
@@ -87,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
             BlocBuilder<DashboardCubit, DashboardState>(
               builder: (context, state) => DangerBanner(
                 alerts: state.dangerAlerts,
-                onTap: () => _comingSoon(context, 'Command Centre'),
+                onTap: () => context.push('/command-centre'),
               ),
             ),
             if (user != null) _Greeting(user: user),
