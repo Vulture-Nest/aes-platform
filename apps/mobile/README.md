@@ -41,15 +41,23 @@ Two entrypoints select the flavor and API base URL at launch:
 ```bash
 flutter pub get
 
-flutter run --flavor dev  -t lib/main_dev.dart    # dev
-flutter run --flavor prod -t lib/main_prod.dart   # prod
+# Android emulator — the host machine's API is reached at 10.0.2.2 (not localhost):
+flutter run --flavor dev -t lib/main_dev.dart --dart-define=API_BASE_URL=http://10.0.2.2:3000
+
+# iOS simulator / desktop — localhost works, so the default base URL is fine:
+flutter run --flavor dev  -t lib/main_dev.dart
+flutter run --flavor prod -t lib/main_prod.dart
 
 flutter test        # unit + widget tests
 flutter analyze
 ```
 
-> Platform folders (`android/`, `ios/`) are generated with `flutter create .` on first
-> checkout — they are intentionally not committed. Web is **not** a Flutter target here.
+> The **`android/`** platform is committed and configured for the app's plugins
+> (INTERNET/CAMERA/USE_BIOMETRIC/READ_MEDIA_IMAGES permissions, cleartext to the local API
+> via a network-security config, `MainActivity : FlutterFragmentActivity` for `local_auth`,
+> and `dev`/`prod` product flavors). The **`ios/`** folder is still generated with
+> `flutter create . --platforms=ios` on first checkout (add the equivalent `Info.plist`
+> usage strings there). Web is **not** a Flutter target here.
 
 ## Structure
 
