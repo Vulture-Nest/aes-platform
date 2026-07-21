@@ -45,20 +45,22 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _busy = true);
-    final error = await context.read<PettyCashCubit>().createWithdrawal(
+    final result = await context.read<PettyCashCubit>().createWithdrawal(
           widget.float.id,
           amount: double.parse(_amount.text),
           purpose: _purpose.text.trim(),
           receipt: _receipt,
         );
     if (!mounted) return;
-    if (error == null) {
-      Navigator.of(context).pop();
+    if (result.ok) {
+      Navigator.of(context).pop(
+        result.queuedOffline ? 'Saved offline — will sync when connected' : null,
+      );
     } else {
       setState(() => _busy = false);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(error)));
+        ..showSnackBar(SnackBar(content: Text(result.error ?? 'Could not save withdrawal')));
     }
   }
 

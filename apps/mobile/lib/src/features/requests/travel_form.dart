@@ -59,18 +59,18 @@ class _TravelFormState extends State<TravelForm> {
       destinationClass: _destinationClass.text.trim(),
       grade: _grade.text.trim(),
     );
-    final created = await cubit.create(input);
-    if (created == null) {
-      if (mounted) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(cubit.state.error ?? 'Could not save travel request')),
-        );
-      }
-      return;
+    final result = await cubit.create(input, submit: submit);
+    if (!mounted) return;
+    if (result.ok) {
+      Navigator.of(context).pop(
+        result.queuedOffline ? 'Saved offline — will sync when connected' : null,
+      );
+    } else {
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.error ?? 'Could not save travel request')),
+      );
     }
-    if (submit) await cubit.submit(created.id);
-    if (mounted) Navigator.of(context).pop();
   }
 
   @override

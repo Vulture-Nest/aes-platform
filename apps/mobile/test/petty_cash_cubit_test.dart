@@ -1,3 +1,4 @@
+import 'package:aes_mobile/src/data/outbox_store.dart';
 import 'package:aes_mobile/src/features/requests/cubit/petty_cash_cubit.dart';
 import 'package:aes_mobile/src/models/petty_cash.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,8 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/fakes.dart';
 
 void main() {
-  PettyCashCubit build(FakePettyCashRepository repo, {FakeAttachmentsRepository? att}) =>
-      PettyCashCubit(repository: repo, attachments: att ?? FakeAttachmentsRepository());
+  PettyCashCubit build(
+    FakePettyCashRepository repo, {
+    FakeAttachmentsRepository? att,
+    OutboxStore? outbox,
+  }) =>
+      PettyCashCubit(
+        repository: repo,
+        attachments: att ?? FakeAttachmentsRepository(),
+        outbox: outbox ?? InMemoryOutboxStore(),
+      );
 
   test('loadFloats populates floats', () async {
     final cubit = build(FakePettyCashRepository(floatList: [usdFloat()]));
@@ -20,9 +29,9 @@ void main() {
     final att = FakeAttachmentsRepository();
     final cubit = build(repo, att: att);
 
-    final error = await cubit.createWithdrawal('f1', amount: 40, purpose: 'Tyres');
+    final result = await cubit.createWithdrawal('f1', amount: 40, purpose: 'Tyres');
 
-    expect(error, isNull);
+    expect(result.ok, isTrue);
     expect(att.uploads, 0);
     expect(repo.withdrawals.single.amount, 40);
     expect(repo.withdrawals.single.purpose, 'Tyres');
@@ -39,6 +48,18 @@ void main() {
 
     expect(att.uploads, 1);
     expect(repo.withdrawals.single.receiptKey, 'attachments/z/receipt.jpg');
+  });
+
+  test('offline withdrawal queues to the outbox with the float id', () async {
+    final outbox = InMemoryOutboxStore();
+    final cubit = build(FakePettyCashRepository(offline: true), outbox: outbox);
+
+    final result = await cubit.createWithdrawal('f1', amount: 30, purpose: 'Spares');
+
+    expect(result.queuedOffline, isTrue);
+    final queued = await outbox.all();
+    expect(queued.single.floatId, 'f1');
+    expect(queued.single.payload['amount'], 30);
   });
 
   test('loadTxns populates the selected float transactions', () async {

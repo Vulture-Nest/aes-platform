@@ -8,6 +8,7 @@ import '../data/alerts_repository.dart';
 import '../data/approvals_repository.dart';
 import '../data/attachments_repository.dart';
 import '../data/command_centre_repository.dart';
+import '../data/outbox_store.dart';
 import '../data/petty_cash_repository.dart';
 import '../data/requisitions_repository.dart';
 import '../data/travel_repository.dart';
@@ -18,11 +19,13 @@ import '../features/auth/login_screen.dart';
 import '../features/command_centre/command_centre_screen.dart';
 import '../features/command_centre/cubit/command_centre_cubit.dart';
 import '../features/home/home_screen.dart';
+import '../features/requests/cubit/outbox_cubit.dart';
 import '../features/requests/cubit/petty_cash_cubit.dart';
 import '../features/requests/cubit/requisitions_cubit.dart';
 import '../features/requests/cubit/travel_cubit.dart';
 import '../features/requests/requests_screen.dart';
 import '../services/biometric_authenticator.dart';
+import '../services/sync_service.dart';
 
 /// Bridges a Bloc/Cubit [Stream] to a [Listenable] so go_router re-evaluates its
 /// redirect whenever auth state changes.
@@ -92,16 +95,27 @@ GoRouter buildRouter(AuthCubit authCubit) {
               create: (context) => RequisitionsCubit(
                 repository: context.read<RequisitionsRepository>(),
                 attachments: context.read<AttachmentsRepository>(),
+                outbox: context.read<OutboxStore>(),
               ),
             ),
             BlocProvider(
-              create: (context) => TravelCubit(context.read<TravelRepository>()),
+              create: (context) => TravelCubit(
+                context.read<TravelRepository>(),
+                outbox: context.read<OutboxStore>(),
+              ),
             ),
             BlocProvider(
               create: (context) => PettyCashCubit(
                 repository: context.read<PettyCashRepository>(),
                 attachments: context.read<AttachmentsRepository>(),
+                outbox: context.read<OutboxStore>(),
               ),
+            ),
+            BlocProvider(
+              create: (context) => OutboxCubit(
+                store: context.read<OutboxStore>(),
+                sync: context.read<SyncService>(),
+              )..refresh(),
             ),
           ],
           child: const RequestsScreen(),

@@ -1,16 +1,22 @@
 import 'package:bloc/bloc.dart';
 
 import '../../../api/api_exception.dart';
+import '../../../data/outbox_store.dart';
 import '../../../data/travel_repository.dart';
+import '../../../models/outbox_item.dart';
 import '../../../models/travel_request.dart';
 import 'request_list_state.dart';
+import 'save_result.dart';
 
 /// Loads + creates + submits travel requests. Per-diem/advance are computed by
-/// the API from the rate table, so the client only supplies trip details.
+/// the API from the rate table. Offline drafts are queued to the outbox.
 class TravelCubit extends Cubit<RequestListState<TravelRequest>> {
-  TravelCubit(this._repo) : super(const RequestListState<TravelRequest>());
+  TravelCubit(this._repo, {required OutboxStore outbox})
+      : _outbox = outbox,
+        super(const RequestListState<TravelRequest>());
 
   final TravelRepository _repo;
+  final OutboxStore _outbox;
 
   Future<void> load() async {
     emit(state.copyWith(loading: true, clearError: true));
@@ -21,14 +27,27 @@ class TravelCubit extends Cubit<RequestListState<TravelRequest>> {
     }
   }
 
-  Future<TravelRequest?> create(NewTravel input) async {
+  Future<SaveResult> create(NewTravel input, {bool submit = false}) async {
     try {
       final created = await _repo.create(input);
+      if (submit) await _repo.submit(created.id);
       emit(RequestListState(items: [created, ...state.items]));
-      return created;
+      return SaveResult.created(created.id);
     } on ApiException catch (e) {
+      if (e.statusCode == null) {
+        await _outbox.enqueue(
+          OutboxItem(
+            id: DateTime.now().microsecondsSinceEpoch.toString(),
+            kind: OutboxKind.travel,
+            payload: input.toJson(),
+            submitAfter: submit,
+            createdAt: DateTime.now(),
+          ),
+        );
+        return SaveResult.queued();
+      }
       emit(state.copyWith(error: e.message));
-      return null;
+      return SaveResult.failed(e.message);
     }
   }
 
