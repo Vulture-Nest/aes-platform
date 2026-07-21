@@ -248,7 +248,7 @@ export class PayrollService implements OnModuleInit {
     });
 
     // Idempotent replace: wipe prior lines then re-create, and set CHECKED, atomically.
-    const updated = await this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.rlsTx(async (tx) => {
       await tx.payrollLine.deleteMany({ where: { runId } });
       if (lineData.length > 0) {
         await tx.payrollLine.createMany({ data: lineData });

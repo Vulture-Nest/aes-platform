@@ -349,17 +349,17 @@ export class ApprovalService {
    * still-undecided steps are cleared so a resubmission starts clean.
    */
   private async returnChain(chain: ApprovalChain, _steps: Approval[]): Promise<ChainWithSteps> {
-    await this.prisma.$transaction([
-      this.prisma.approvalChain.update({
+    await this.prisma.rlsTx(async (tx) => {
+      await tx.approvalChain.update({
         where: { id: chain.id },
         data: { status: ApprovalStatus.RETURNED, currentStep: 1 },
-      }),
+      });
       // Clear remaining (undecided) decisions on other steps.
-      this.prisma.approval.updateMany({
+      await tx.approval.updateMany({
         where: { chainId: chain.id, decision: null },
         data: { decision: null, decidedByUserId: null, decidedAt: null, comment: null },
-      }),
-    ]);
+      });
+    });
     await this.audit.record({
       actorUserId: null,
       action: 'STATUS_CHANGE',
