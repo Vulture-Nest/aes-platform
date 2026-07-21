@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../data/approvals_repository.dart';
 import '../data/attachments_repository.dart';
+import '../data/petty_cash_repository.dart';
 import '../data/requisitions_repository.dart';
 import '../data/travel_repository.dart';
 import '../features/approvals/approvals_screen.dart';
@@ -13,6 +14,7 @@ import '../features/approvals/cubit/approvals_cubit.dart';
 import '../features/auth/cubit/auth_cubit.dart';
 import '../features/auth/login_screen.dart';
 import '../features/home/home_screen.dart';
+import '../features/requests/cubit/petty_cash_cubit.dart';
 import '../features/requests/cubit/requisitions_cubit.dart';
 import '../features/requests/cubit/travel_cubit.dart';
 import '../features/requests/requests_screen.dart';
@@ -90,6 +92,12 @@ GoRouter buildRouter(AuthCubit authCubit) {
             ),
             BlocProvider(
               create: (context) => TravelCubit(context.read<TravelRepository>()),
+            ),
+            BlocProvider(
+              create: (context) => PettyCashCubit(
+                repository: context.read<PettyCashRepository>(),
+                attachments: context.read<AttachmentsRepository>(),
+              ),
             ),
           ],
           child: const RequestsScreen(),
