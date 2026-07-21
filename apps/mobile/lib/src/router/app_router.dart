@@ -1,11 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../data/approvals_repository.dart';
+import '../features/approvals/approvals_screen.dart';
+import '../features/approvals/cubit/approvals_cubit.dart';
 import '../features/auth/cubit/auth_cubit.dart';
 import '../features/auth/login_screen.dart';
 import '../features/home/home_screen.dart';
+import '../services/biometric_authenticator.dart';
 
 /// Bridges a Bloc/Cubit [Stream] to a [Listenable] so go_router re-evaluates its
 /// redirect whenever auth state changes.
@@ -55,6 +60,17 @@ GoRouter buildRouter(AuthCubit authCubit) {
       GoRoute(path: '/splash', builder: (_, __) => const _SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/', name: 'home', builder: (_, __) => const HomeScreen()),
+      GoRoute(
+        path: '/approvals',
+        name: 'approvals',
+        builder: (context, __) => BlocProvider(
+          create: (context) => ApprovalsCubit(
+            repository: context.read<ApprovalsRepository>(),
+            biometric: context.read<BiometricAuthenticator>(),
+          ),
+          child: const ApprovalsScreen(),
+        ),
+      ),
     ],
   );
 }

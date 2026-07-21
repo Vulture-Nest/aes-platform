@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../models/auth_user.dart';
 import '../../rbac/roles.dart';
@@ -7,19 +8,23 @@ import '../auth/cubit/auth_cubit.dart';
 import 'cubit/dashboard_cubit.dart';
 import 'widgets/danger_banner.dart';
 
-/// A role-gated dashboard destination.
+/// A role-gated dashboard destination. [route] navigates when set; otherwise the
+/// tile shows a "coming soon" hint until its screen ships.
 class _Tile {
-  const _Tile(this.label, this.icon, this.roles);
+  const _Tile(this.label, this.icon, this.roles, {this.route});
   final String label;
   final IconData icon;
   final Set<String> roles;
+  final String? route;
 }
 
 const _tiles = <_Tile>[
-  _Tile('Approvals', Icons.fact_check_outlined, {
-    ...Roles.siteApprovers,
-    ...Roles.financeApprovers,
-  }),
+  _Tile(
+    'Approvals',
+    Icons.fact_check_outlined,
+    {...Roles.siteApprovers, ...Roles.financeApprovers},
+    route: '/approvals',
+  ),
   _Tile('Requests', Icons.note_add_outlined, Roles.requestCapture),
   _Tile('Petty Cash', Icons.savings_outlined, {
     Roles.siteClerk,
@@ -99,7 +104,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   for (final tile in visibleTiles)
                     _DashboardCard(
                       tile: tile,
-                      onTap: () => _comingSoon(context, tile.label),
+                      onTap: () => tile.route != null
+                          ? context.push(tile.route!)
+                          : _comingSoon(context, tile.label),
                     ),
                 ],
               ),
