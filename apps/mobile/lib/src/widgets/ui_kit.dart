@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme/app_theme.dart';
 
@@ -17,8 +18,14 @@ PreferredSizeWidget gradientAppBar(
     actionsIconTheme: const IconThemeData(color: Colors.white),
     elevation: 0,
     scrolledUnderElevation: 0,
-    backgroundColor: Colors.transparent,
-    flexibleSpace: const DecoratedBox(decoration: BoxDecoration(gradient: AppTheme.authGradient)),
+    // Charcoal fallback so the white title is always on a dark background even
+    // if the gradient fails to paint; the gradient Container fills the bar.
+    backgroundColor: AppTheme.charcoal,
+    surfaceTintColor: Colors.transparent,
+    flexibleSpace: Container(
+      decoration: const BoxDecoration(gradient: AppTheme.authGradient),
+    ),
+    systemOverlayStyle: SystemUiOverlayStyle.light,
     actions: actions,
     bottom: bottom,
   );
