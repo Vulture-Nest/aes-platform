@@ -6,6 +6,7 @@ import { validateEnv } from './config/env.validation';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { RlsModule } from './rls/rls.module';
 import { RlsMiddleware } from './rls/rls.middleware';
+import { CryptoModule } from './crypto/crypto.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { StorageModule } from './storage/storage.module';
 import { HealthModule } from './health/health.module';
@@ -47,6 +48,7 @@ import { JobsModule } from './jobs/jobs.module';
     }),
     ScheduleModule.forRoot(),
     RlsModule,
+    CryptoModule,
     PrismaModule,
     StorageModule,
     AuditModule,

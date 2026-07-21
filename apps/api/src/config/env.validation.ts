@@ -99,6 +99,13 @@ export class EnvironmentVariables {
   @IsBoolean()
   @Transform(toBool)
   SCHEDULER_ENABLED = true;
+
+  // --- Security ---
+  // AES-256-GCM key (32 bytes as 64 hex chars or base64) for encrypting sensitive columns
+  // at rest. Optional in dev (columns stay plaintext with a warning); required in prod.
+  @IsString()
+  @IsOptional()
+  PAYROLL_ENCRYPTION_KEY?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

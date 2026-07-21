@@ -20,6 +20,7 @@ function makeService() {
     },
     userSiteRole: { findMany: jest.fn() },
     $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
+    rlsTx: jest.fn().mockImplementation((cb: any) => cb(prisma)),
   };
   const audit = { record: jest.fn() };
   const notifications = { send: jest.fn() };
