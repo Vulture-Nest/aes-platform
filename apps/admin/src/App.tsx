@@ -21,6 +21,7 @@ import { ContractsPage } from './features/contracts/ContractsPage';
 import { ExpensesPage } from './features/expenses/ExpensesPage';
 import { OrdersPage } from './features/orders/OrdersPage';
 import { PayrollPage } from './features/payroll/PayrollPage';
+import { ComplianceCalendarPage } from './features/compliance/ComplianceCalendarPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { TimesheetsPage } from './features/timesheets/TimesheetsPage';
 import { ApprovalsInboxPage } from './features/workflows/ApprovalsInboxPage';
@@ -194,6 +195,16 @@ function Shell() {
           element={
             <ProtectedRoute roles={['FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN']}>
               <PayrollPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/compliance-calendar"
+          element={
+            <ProtectedRoute
+              roles={['FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'DIRECTOR', 'SYS_ADMIN', 'AUDITOR']}
+            >
+              <ComplianceCalendarPage />
             </ProtectedRoute>
           }
         />

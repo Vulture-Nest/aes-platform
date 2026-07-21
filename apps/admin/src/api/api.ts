@@ -210,6 +210,23 @@ export interface PayrollRunDetail extends PayrollRunRecord {
   createdAt: string;
   lines: PayrollLineRecord[];
 }
+export interface ComplianceObligationRecord {
+  id: string;
+  head: string;
+  label: string;
+  periodMonth: string;
+  siteId: string | null;
+  amount: string;
+  currency: string;
+  dueDate: string;
+  status: string;
+  sourceTable: string | null;
+  sourceId: string | null;
+  remittanceReference: string | null;
+  remittedByUserId: string | null;
+  remittedAt: string | null;
+  createdAt: string;
+}
 export interface TimesheetPeriodRecord {
   id: string;
   siteId: string;
@@ -527,6 +544,7 @@ export const api = createApi({
     'DirectorWithdrawals',
     'PettyCashFloats',
     'PettyCashTxns',
+    'ComplianceObligations',
   ],
   endpoints: (build) => ({
     // --- auth ---
@@ -737,6 +755,33 @@ export const api = createApi({
     submitPayrollRun: build.mutation<unknown, string>({
       query: (id) => ({ url: `v1/payroll-runs/${id}/submit`, method: 'POST', body: {} }),
       invalidatesTags: (_r, _e, id) => ['PayrollRuns', { type: 'PayrollRun', id }],
+    }),
+
+    // --- statutory compliance calendar ---
+    getComplianceObligations: build.query<ComplianceObligationRecord[], { status?: string } | void>({
+      query: (arg) => {
+        const q = arg && arg.status ? `?status=${arg.status}` : '';
+        return `v1/compliance-obligations${q}`;
+      },
+      providesTags: ['ComplianceObligations'],
+    }),
+    generateComplianceFromRun: build.mutation<
+      { generated: number; obligations: ComplianceObligationRecord[] },
+      string
+    >({
+      query: (runId) => ({ url: `v1/compliance-obligations/from-run/${runId}`, method: 'POST', body: {} }),
+      invalidatesTags: ['ComplianceObligations'],
+    }),
+    remitComplianceObligation: build.mutation<
+      ComplianceObligationRecord,
+      { id: string; reference: string }
+    >({
+      query: ({ id, reference }) => ({
+        url: `v1/compliance-obligations/${id}/remit`,
+        method: 'POST',
+        body: { reference },
+      }),
+      invalidatesTags: ['ComplianceObligations'],
     }),
 
     // --- timesheet periods ---
@@ -1153,6 +1198,9 @@ export const {
   useCreatePayrollRunMutation,
   useComputePayrollRunMutation,
   useSubmitPayrollRunMutation,
+  useGetComplianceObligationsQuery,
+  useGenerateComplianceFromRunMutation,
+  useRemitComplianceObligationMutation,
   useGetTimesheetPeriodsQuery,
   useGetTimesheetGridQuery,
   useGetManhoursQuery,

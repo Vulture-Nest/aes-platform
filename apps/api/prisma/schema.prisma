@@ -1212,6 +1212,35 @@ model PayrollLine {
   @@map("payroll_lines")
 }
 
+/// Statutory compliance calendar (spec §13/§16): one remittance obligation per head
+/// per period (PAYE incl. AIDS levy, NSSA ee+er, ZIMDEF, NEC, MIPF), generated from an
+/// approved payroll run with a statutory due date. Overdue/due-soon obligations feed the
+/// danger engine; remittance capture records the reference + who paid.
+model ComplianceObligation {
+  id                 String    @id @default(uuid()) @db.Uuid
+  head               String // PAYE | NSSA | ZIMDEF | NEC | MIPF | VAT
+  label              String
+  periodMonth        String    @map("period_month") // YYYY-MM
+  siteId             String?   @map("site_id") @db.Uuid
+  amount             Decimal   @db.Decimal(20, 2)
+  currency           String
+  dueDate            DateTime  @map("due_date")
+  status             String    @default("PENDING") // PENDING | REMITTED
+  sourceTable        String?   @map("source_table")
+  sourceId           String?   @map("source_id") @db.Uuid
+  remittanceReference String?  @map("remittance_reference")
+  remittedByUserId   String?   @map("remitted_by_user_id") @db.Uuid
+  remittedAt         DateTime? @map("remitted_at")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status, dueDate])
+  @@map("compliance_obligations")
+}
+
 // ---------------------------------------------------------------------------
 // Settings — admin-managed lookup catalog (configurable reference values)
 // ---------------------------------------------------------------------------
