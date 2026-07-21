@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/approval_decision.dart';
 import '../../models/approval_item.dart';
 import '../../theme/money.dart';
+import '../../widgets/ui_kit.dart';
 import 'cubit/approvals_cubit.dart';
 
 /// The approvals inbox: pending steps awaiting the signed-in user. One-tap
@@ -47,7 +48,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Approvals')),
+      appBar: gradientAppBar('Approvals'),
       body: BlocBuilder<ApprovalsCubit, ApprovalsState>(
         builder: (context, state) {
           if (state.loading && state.items.isEmpty) {

@@ -13,6 +13,7 @@ import 'cubit/travel_cubit.dart';
 import 'petty_cash_tab.dart';
 import 'requisition_form.dart';
 import 'travel_form.dart';
+import '../../widgets/ui_kit.dart';
 import 'widgets/request_widgets.dart';
 
 /// Normalised view of a request row for the shared list + detail UI.
@@ -95,10 +96,13 @@ class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Requests'),
+      appBar: gradientAppBar(
+        'Requests',
         bottom: TabBar(
           controller: _tabs,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
           tabs: const [
             Tab(text: 'Requisitions'),
             Tab(text: 'Travel'),

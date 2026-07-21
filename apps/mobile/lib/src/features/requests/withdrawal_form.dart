@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../models/petty_cash.dart';
 import '../../services/receipt_capture.dart';
+import '../../widgets/ui_kit.dart';
 import 'cubit/petty_cash_cubit.dart';
 
 /// Raise a petty-cash withdrawal against a float, with an optional receipt.
@@ -67,7 +68,7 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Withdraw · ${widget.float.currency}')),
+      appBar: gradientAppBar('Withdraw · ${widget.float.currency}'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
