@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// AES brand palette + Material 3 theme, matching the admin/web apps
-/// (green #6DBE45, charcoal #222429, Roboto).
+/// AES brand palette + Material 3 light & dark themes, matching the admin/web
+/// apps (green #6DBE45, charcoal #222429, Roboto). The charcoal→green gradient
+/// (login/splash/app bars) is identical in both modes.
 class AppTheme {
   AppTheme._();
 
-  // Brand palette (sourced from the corporate site, mirrors apps/*/theme.ts).
+  // Brand palette (mirrors apps/*/theme.ts).
   static const green = Color(0xFF6DBE45);
   static const greenDark = Color(0xFF579A34);
   static const greenSoft = Color(0xFFEEF7E6);
@@ -18,13 +19,15 @@ class AppTheme {
   static const seed = green;
 
   static const scaffold = Color(0xFFF5F7F3);
+  static const _darkScaffold = Color(0xFF121316);
+  static const _darkSurface = Color(0xFF1E2025);
 
   // Brand assets.
   static const logoWhite = 'assets/images/aes-logo-white.png';
   static const logoGreen = 'assets/images/aes-logo-green.png';
   static const mark = 'assets/images/aes-mark.png';
 
-  /// Login / splash backdrop — charcoal fading into brand green.
+  /// Login / splash / app-bar backdrop — charcoal fading into brand green.
   static const authGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -32,51 +35,62 @@ class AppTheme {
     stops: [0.0, 0.55, 1.0],
   );
 
-  static ThemeData light() {
+  static ThemeData light() => _build(Brightness.light);
+  static ThemeData dark() => _build(Brightness.dark);
+
+  static ThemeData _build(Brightness brightness) {
+    final dark = brightness == Brightness.dark;
     final scheme = ColorScheme.fromSeed(
       seedColor: green,
-      primary: greenDark,
+      brightness: brightness,
+      primary: dark ? green : greenDark,
       secondary: green,
+      surface: dark ? _darkSurface : Colors.white,
       surfaceTint: Colors.transparent,
     );
+    final scaffoldBg = dark ? _darkScaffold : scaffold;
+    final cardColor = dark ? _darkSurface : Colors.white;
+    final border = (dark ? Colors.white : charcoal).withValues(alpha: dark ? 0.10 : 0.06);
+    final inputBorder = (dark ? Colors.white : charcoal).withValues(alpha: dark ? 0.20 : 0.15);
 
     return ThemeData(
       colorScheme: scheme,
       useMaterial3: true,
-      scaffoldBackgroundColor: scaffold,
-      appBarTheme: const AppBarTheme(
+      brightness: brightness,
+      scaffoldBackgroundColor: scaffoldBg,
+      appBarTheme: AppBarTheme(
         centerTitle: false,
-        backgroundColor: scaffold,
+        backgroundColor: scaffoldBg,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: charcoal,
+        foregroundColor: scheme.onSurface,
         titleTextStyle: TextStyle(
-          color: charcoal,
+          color: scheme.onSurface,
           fontSize: 22,
           fontWeight: FontWeight.w700,
         ),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: Colors.white,
+        color: cardColor,
         surfaceTintColor: Colors.transparent,
         margin: const EdgeInsets.only(bottom: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: charcoal.withValues(alpha: 0.06)),
+          side: BorderSide(color: border),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: cardColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: charcoal.withValues(alpha: 0.15)),
+          borderSide: BorderSide(color: inputBorder),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: charcoal.withValues(alpha: 0.15)),
+          borderSide: BorderSide(color: inputBorder),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -85,8 +99,8 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: greenDark,
-          foregroundColor: Colors.white,
+          backgroundColor: dark ? green : greenDark,
+          foregroundColor: dark ? charcoal : Colors.white,
           minimumSize: const Size.fromHeight(52),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -95,18 +109,18 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(48),
-          foregroundColor: charcoal,
-          side: BorderSide(color: charcoal.withValues(alpha: 0.18)),
+          foregroundColor: scheme.onSurface,
+          side: BorderSide(color: inputBorder),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: charcoal,
+        backgroundColor: dark ? const Color(0xFF2A2D33) : charcoal,
         contentTextStyle: const TextStyle(color: Colors.white),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
-      dividerTheme: DividerThemeData(color: charcoal.withValues(alpha: 0.08), space: 24),
+      dividerTheme: DividerThemeData(color: scheme.onSurface.withValues(alpha: 0.08), space: 24),
     );
   }
 }

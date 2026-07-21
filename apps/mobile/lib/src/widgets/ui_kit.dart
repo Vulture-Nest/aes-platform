@@ -47,7 +47,7 @@ class SectionLabel extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.8,
-          color: AppTheme.charcoal.withValues(alpha: 0.55),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
         ),
       ),
     );
@@ -86,7 +86,8 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isError ? AppTheme.danger : AppTheme.charcoal.withValues(alpha: 0.4);
+    final color =
+        isError ? AppTheme.danger : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45);
     return ListView(
       children: [
         const SizedBox(height: 120),
