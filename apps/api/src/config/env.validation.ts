@@ -94,6 +94,11 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   SEED_ADMIN_PASSWORD = 'ChangeMe!123';
+
+  // --- Scheduler (in-process cron; disable in tests/CI or non-leader instances) ---
+  @IsBoolean()
+  @Transform(toBool)
+  SCHEDULER_ENABLED = true;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {
