@@ -23,15 +23,15 @@ export class AuditController {
       createdAt: q.from || q.to ? { gte: q.from, lte: q.to } : undefined,
     };
 
-    const [total, items] = await this.prisma.$transaction([
-      this.prisma.auditLog.count({ where }),
-      this.prisma.auditLog.findMany({
+    const { total, items } = await this.prisma.rlsTx(async (tx) => ({
+      total: await tx.auditLog.count({ where }),
+      items: await tx.auditLog.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         take: q.take,
         skip: q.skip,
       }),
-    ]);
+    }));
 
     return { total, take: q.take, skip: q.skip, items };
   }

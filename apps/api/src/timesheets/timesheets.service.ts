@@ -171,28 +171,31 @@ export class TimesheetsService implements OnModuleInit {
     }
 
     let anomalies = 0;
-    const ops = dto.rows.map((row) => {
+    const rows = dto.rows.map((row) => {
       const data = this.rowToData(row);
       if (data.anomalyFlag) {
         anomalies += 1;
       }
-      const date = row.date;
-      return this.prisma.timesheetEntry.upsert({
-        where: {
-          periodId_employeeId_date: { periodId: id, employeeId: row.employeeId, date },
-        },
-        create: {
-          periodId: id,
-          employeeId: row.employeeId,
-          date,
-          ...data,
-          createdBy: actorId,
-          updatedBy: actorId,
-        },
-        update: { ...data, updatedBy: actorId },
-      });
+      return { row, data };
     });
-    await this.prisma.$transaction(ops);
+    await this.prisma.rlsTx(async (tx) => {
+      for (const { row, data } of rows) {
+        await tx.timesheetEntry.upsert({
+          where: {
+            periodId_employeeId_date: { periodId: id, employeeId: row.employeeId, date: row.date },
+          },
+          create: {
+            periodId: id,
+            employeeId: row.employeeId,
+            date: row.date,
+            ...data,
+            createdBy: actorId,
+            updatedBy: actorId,
+          },
+          update: { ...data, updatedBy: actorId },
+        });
+      }
+    });
 
     await this.audit.record({
       actorUserId: actorId,

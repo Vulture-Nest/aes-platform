@@ -4,6 +4,8 @@ import { APP_GUARD } from '@nestjs/core';
 import configuration from './config/configuration';
 import { validateEnv } from './config/env.validation';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
+import { RlsModule } from './rls/rls.module';
+import { RlsMiddleware } from './rls/rls.middleware';
 import { PrismaModule } from './prisma/prisma.module';
 import { StorageModule } from './storage/storage.module';
 import { HealthModule } from './health/health.module';
@@ -44,6 +46,7 @@ import { JobsModule } from './jobs/jobs.module';
       validate: validateEnv,
     }),
     ScheduleModule.forRoot(),
+    RlsModule,
     PrismaModule,
     StorageModule,
     AuditModule,
@@ -80,6 +83,7 @@ import { JobsModule } from './jobs/jobs.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+    // RlsMiddleware first so the RLS AsyncLocalStorage context wraps the whole request.
+    consumer.apply(RlsMiddleware, CorrelationIdMiddleware).forRoutes('*');
   }
 }
