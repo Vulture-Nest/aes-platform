@@ -17,14 +17,16 @@ class FlavorConfig {
 
   String get name => flavor.name;
 
+  // Override the base URL at launch with --dart-define=API_BASE_URL=...
+  // On the Android emulator the host machine's API is reached via 10.0.2.2, e.g.
+  //   flutter run --flavor dev -t lib/main_dev.dart --dart-define=API_BASE_URL=http://10.0.2.2:3000
   static const dev = FlavorConfig(
     flavor: Flavor.dev,
-    apiBaseUrl: 'http://localhost:3000',
+    apiBaseUrl: String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:3000'),
   );
 
   static const prod = FlavorConfig(
     flavor: Flavor.prod,
-    // Override per deployment (e.g. --dart-define=API_BASE_URL=...).
-    apiBaseUrl: 'https://api.aes.example',
+    apiBaseUrl: String.fromEnvironment('API_BASE_URL', defaultValue: 'https://api.aes.example'),
   );
 }
