@@ -31,6 +31,9 @@ export interface AppConfig {
   scheduler: {
     /** In-process cron jobs (danger eval, pending-funds re-test). Off in tests/CI. */
     enabled: boolean;
+    /** Approval SLA: reminder after T1 hours, escalate to directors after T2 hours. */
+    approvalT1Hours: number;
+    approvalT2Hours: number;
   };
 }
 
@@ -66,5 +69,7 @@ export default (): AppConfig => ({
   },
   scheduler: {
     enabled: (process.env.SCHEDULER_ENABLED ?? 'true').toLowerCase() !== 'false',
+    approvalT1Hours: parseInt(process.env.APPROVAL_SLA_T1_HOURS ?? '24', 10),
+    approvalT2Hours: parseInt(process.env.APPROVAL_SLA_T2_HOURS ?? '48', 10),
   },
 });

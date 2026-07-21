@@ -348,6 +348,10 @@ model Approval {
   decidedAt       DateTime?         @map("decided_at")
   comment         String?
   createdAt       DateTime          @default(now()) @map("created_at")
+  /// When this step became active (SLA clock start), plus reminder/escalation stamps.
+  activatedAt     DateTime          @default(now()) @map("activated_at")
+  remindedAt      DateTime?         @map("reminded_at")
+  escalatedAt     DateTime?         @map("escalated_at")
 
   @@index([chainId])
   @@map("approvals")
