@@ -8,6 +8,8 @@ import '../data/alerts_repository.dart';
 import '../data/approvals_repository.dart';
 import '../data/attachments_repository.dart';
 import '../data/command_centre_repository.dart';
+import '../data/director_repository.dart';
+import '../data/orders_repository.dart';
 import '../data/outbox_store.dart';
 import '../data/petty_cash_repository.dart';
 import '../data/requisitions_repository.dart';
@@ -18,7 +20,11 @@ import '../features/auth/cubit/auth_cubit.dart';
 import '../features/auth/login_screen.dart';
 import '../features/command_centre/command_centre_screen.dart';
 import '../features/command_centre/cubit/command_centre_cubit.dart';
+import '../features/director/cubit/director_cubit.dart';
+import '../features/director/director_screen.dart';
 import '../features/home/home_screen.dart';
+import '../features/orders/cubit/orders_cubit.dart';
+import '../features/orders/orders_screen.dart';
 import '../theme/app_theme.dart';
 import '../features/requests/cubit/outbox_cubit.dart';
 import '../features/requests/cubit/petty_cash_cubit.dart';
@@ -131,6 +137,22 @@ GoRouter buildRouter(AuthCubit authCubit) {
             alerts: context.read<AlertsRepository>(),
           ),
           child: const CommandCentreScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/orders',
+        name: 'orders',
+        builder: (context, __) => BlocProvider(
+          create: (context) => OrdersCubit(context.read<OrdersRepository>()),
+          child: const OrdersScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/director',
+        name: 'director',
+        builder: (context, __) => BlocProvider(
+          create: (context) => DirectorCubit(context.read<DirectorRepository>()),
+          child: const DirectorScreen(),
         ),
       ),
     ],
