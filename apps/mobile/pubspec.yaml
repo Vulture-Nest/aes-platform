@@ -34,6 +34,28 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.0
   bloc_test: ^9.1.7
+  # Branding: native launch splash + app launcher icons (run their :create tasks)
+  flutter_native_splash: ^2.4.1
+  flutter_launcher_icons: ^0.14.1
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/
+
+# Native launch splash — brand charcoal with the AES mark (dark status/nav bars).
+flutter_native_splash:
+  color: "#222429"
+  image: assets/images/aes-mark.png
+  android_12:
+    color: "#222429"
+    image: assets/images/aes-mark.png
+    icon_background_color: "#222429"
+
+# App launcher icon generated from the AES mark.
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/aes-mark.png"
+  adaptive_icon_background: "#222429"
+  adaptive_icon_foreground: "assets/images/aes-mark.png"

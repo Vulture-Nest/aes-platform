@@ -19,6 +19,7 @@ import '../features/auth/login_screen.dart';
 import '../features/command_centre/command_centre_screen.dart';
 import '../features/command_centre/cubit/command_centre_cubit.dart';
 import '../features/home/home_screen.dart';
+import '../theme/app_theme.dart';
 import '../features/requests/cubit/outbox_cubit.dart';
 import '../features/requests/cubit/petty_cash_cubit.dart';
 import '../features/requests/cubit/requisitions_cubit.dart';
@@ -136,12 +137,34 @@ GoRouter buildRouter(AuthCubit authCubit) {
   );
 }
 
-/// Shown while the stored session is being validated on launch.
+/// Shown while the stored session is being validated on launch — matches the
+/// native launch splash for a seamless hand-off.
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppTheme.authGradient),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(AppTheme.logoWhite, height: 64),
+              const SizedBox(height: 32),
+              const SizedBox(
+                height: 26,
+                width: 26,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  valueColor: AlwaysStoppedAnimation(Colors.white70),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
