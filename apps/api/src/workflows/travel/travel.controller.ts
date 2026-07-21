@@ -62,6 +62,16 @@ export class TravelController {
     return this.travel.create(dto, actorId);
   }
 
+  @Post('re-check-funds')
+  @HttpCode(HttpStatus.OK)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR')
+  @ApiOperation({
+    summary: 'Re-test pending-funds travel requests against the ledger; promote any now funded',
+  })
+  reCheckFunds() {
+    return this.travel.reTestPendingFunds();
+  }
+
   @Post(':id/submit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Submit a travel request into the approval engine (merit-only)' })

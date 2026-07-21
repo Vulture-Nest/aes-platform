@@ -1,5 +1,12 @@
-import { DollarOutlined, PlusOutlined, RollbackOutlined, SendOutlined } from '@ant-design/icons';
 import {
+  DollarOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  RollbackOutlined,
+  SendOutlined,
+} from '@ant-design/icons';
+import {
+  Alert,
   App,
   Button,
   DatePicker,
@@ -21,6 +28,7 @@ import {
   useGetAccountsQuery,
   useGetSitesQuery,
   useGetTravelRequestsQuery,
+  useReCheckTravelFundsMutation,
   useRetireTravelMutation,
   useSubmitTravelMutation,
   type TravelRecord,
@@ -46,6 +54,7 @@ export function TravelPage() {
   const [submit] = useSubmitTravelMutation();
   const [disburse, disburseState] = useDisburseTravelMutation();
   const [retire, retireState] = useRetireTravelMutation();
+  const [reCheck, reCheckState] = useReCheckTravelFundsMutation();
   const { message } = App.useApp();
   const user = useAppSelector((s) => s.auth.user);
   const canPay = hasAnyRole(user, ['FINANCE_OFFICER', 'FINANCE_DIRECTOR']);
@@ -84,6 +93,19 @@ export function TravelPage() {
     }
   };
 
+  const onReCheck = async () => {
+    try {
+      const r = await reCheck().unwrap();
+      message.success(
+        r.checked === 0
+          ? 'No travel requests pending funds'
+          : `Re-checked ${r.checked} pending — ${r.promoted.length} now ready to pay`,
+      );
+    } catch (e) {
+      message.error(errorMessage(e));
+    }
+  };
+
   const submitDisburse = async (v: { accountId: string; reference: string }) => {
     if (!disburseFor) return;
     await guard(disburse({ id: disburseFor.id, ...v }).unwrap(), 'Advance disbursed');
@@ -104,9 +126,16 @@ export function TravelPage() {
         <Typography.Title level={3} style={{ margin: 0 }}>
           Travel &amp; allowances
         </Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>
-          New travel request
-        </Button>
+        <Space>
+          {canPay && (
+            <Button icon={<ReloadOutlined />} loading={reCheckState.isLoading} onClick={onReCheck}>
+              Re-check funds
+            </Button>
+          )}
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>
+            New travel request
+          </Button>
+        </Space>
       </Space>
       <Typography.Paragraph type="secondary">
         Per-diem advances: raise → submit → disburse once approved → retire against receipts.
@@ -147,11 +176,13 @@ export function TravelPage() {
                     </Button>
                   </Popconfirm>
                 )}
-                {canPay && r.status === 'APPROVED_READY_TO_PAY' && (
-                  <Button size="small" icon={<DollarOutlined />} onClick={() => setDisburseFor(r)}>
-                    Disburse
-                  </Button>
-                )}
+                {canPay &&
+                  (r.status === 'APPROVED_READY_TO_PAY' ||
+                    r.status === 'APPROVED_PENDING_FUNDS') && (
+                    <Button size="small" icon={<DollarOutlined />} onClick={() => setDisburseFor(r)}>
+                      Disburse
+                    </Button>
+                  )}
                 {canPay && r.status === 'DISBURSED' && (
                   <Button size="small" icon={<RollbackOutlined />} onClick={() => setRetireFor(r)}>
                     Retire
@@ -210,6 +241,17 @@ export function TravelPage() {
         confirmLoading={disburseState.isLoading}
         destroyOnClose
       >
+        {disburseFor?.status === 'APPROVED_PENDING_FUNDS' && (
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message="Funds short"
+            description={`The ledger doesn't currently cover this (shortfall ${disburseFor.currency} ${Number(
+              disburseFor.shortfall ?? 0,
+            ).toLocaleString()}). Disbursing anyway is a Finance override.`}
+          />
+        )}
         <Form form={disburseForm} layout="vertical" onFinish={submitDisburse}>
           <Form.Item name="accountId" label="Source account" rules={[{ required: true }]}>
             <Select

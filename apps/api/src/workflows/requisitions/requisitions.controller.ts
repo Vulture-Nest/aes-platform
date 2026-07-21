@@ -62,6 +62,16 @@ export class RequisitionsController {
     return this.requisitions.create(dto, actorId);
   }
 
+  @Post('re-check-funds')
+  @HttpCode(HttpStatus.OK)
+  @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR')
+  @ApiOperation({
+    summary: 'Re-test pending-funds requisitions against the ledger; promote any now funded',
+  })
+  reCheckFunds() {
+    return this.requisitions.reTestPendingFunds();
+  }
+
   @Post(':id/submit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Submit a requisition into the approval engine (merit-only)' })

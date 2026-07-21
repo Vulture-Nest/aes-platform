@@ -1,5 +1,6 @@
-import { DollarOutlined, PlusOutlined, SendOutlined } from '@ant-design/icons';
+import { DollarOutlined, PlusOutlined, ReloadOutlined, SendOutlined } from '@ant-design/icons';
 import {
+  Alert,
   App,
   Button,
   DatePicker,
@@ -21,6 +22,7 @@ import {
   useGetAccountsQuery,
   useGetRequisitionsQuery,
   useGetSitesQuery,
+  useReCheckRequisitionFundsMutation,
   useSubmitRequisitionMutation,
   type RequisitionRecord,
 } from '../../api/api';
@@ -44,6 +46,7 @@ export function RequisitionsPage() {
   const [create, createState] = useCreateRequisitionMutation();
   const [submit] = useSubmitRequisitionMutation();
   const [disburse, disburseState] = useDisburseRequisitionMutation();
+  const [reCheck, reCheckState] = useReCheckRequisitionFundsMutation();
   const { message } = App.useApp();
   const user = useAppSelector((s) => s.auth.user);
   const canDisburse = hasAnyRole(user, ['FINANCE_OFFICER', 'FINANCE_DIRECTOR']);
@@ -79,6 +82,19 @@ export function RequisitionsPage() {
     }
   };
 
+  const onReCheck = async () => {
+    try {
+      const r = await reCheck().unwrap();
+      message.success(
+        r.checked === 0
+          ? 'No requisitions pending funds'
+          : `Re-checked ${r.checked} pending — ${r.promoted.length} now ready to pay`,
+      );
+    } catch (e) {
+      message.error(errorMessage(e));
+    }
+  };
+
   const submitDisburse = async (v: { accountId: string; reference: string }) => {
     if (!disburseFor) return;
     try {
@@ -97,9 +113,16 @@ export function RequisitionsPage() {
         <Typography.Title level={3} style={{ margin: 0 }}>
           Cash requisitions
         </Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>
-          New requisition
-        </Button>
+        <Space>
+          {canDisburse && (
+            <Button icon={<ReloadOutlined />} loading={reCheckState.isLoading} onClick={onReCheck}>
+              Re-check funds
+            </Button>
+          )}
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>
+            New requisition
+          </Button>
+        </Space>
       </Space>
       <Typography.Paragraph type="secondary">
         Raise → submit for approval → Finance disburses once approved and funded.
@@ -136,11 +159,13 @@ export function RequisitionsPage() {
                     </Button>
                   </Popconfirm>
                 )}
-                {canDisburse && r.status === 'APPROVED_READY_TO_PAY' && (
-                  <Button size="small" icon={<DollarOutlined />} onClick={() => setDisburseFor(r)}>
-                    Disburse
-                  </Button>
-                )}
+                {canDisburse &&
+                  (r.status === 'APPROVED_READY_TO_PAY' ||
+                    r.status === 'APPROVED_PENDING_FUNDS') && (
+                    <Button size="small" icon={<DollarOutlined />} onClick={() => setDisburseFor(r)}>
+                      Disburse
+                    </Button>
+                  )}
               </Space>
             ),
           },
@@ -190,6 +215,17 @@ export function RequisitionsPage() {
         confirmLoading={disburseState.isLoading}
         destroyOnClose
       >
+        {disburseFor?.status === 'APPROVED_PENDING_FUNDS' && (
+          <Alert
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message="Funds short"
+            description={`The ledger doesn't currently cover this (shortfall ${disburseFor.currency} ${Number(
+              disburseFor.shortfall ?? 0,
+            ).toLocaleString()}). Disbursing anyway is a Finance override.`}
+          />
+        )}
         <Form form={disburseForm} layout="vertical" onFinish={submitDisburse}>
           <Form.Item name="accountId" label="Source account" rules={[{ required: true }]}>
             <Select
