@@ -9,6 +9,8 @@ import 'data/approvals_repository.dart';
 import 'data/attachments_repository.dart';
 import 'data/command_centre_repository.dart';
 import 'data/auth_repository.dart';
+import 'data/director_repository.dart';
+import 'data/orders_repository.dart';
 import 'data/outbox_store.dart';
 import 'data/petty_cash_repository.dart';
 import 'data/requisitions_repository.dart';
@@ -44,6 +46,8 @@ class _AesAppState extends State<AesApp> {
   late final PettyCashRepository _pettyCashRepository;
   late final AttachmentsRepository _attachmentsRepository;
   late final CommandCentreRepository _commandCentreRepository;
+  late final OrdersRepository _ordersRepository;
+  late final DirectorRepository _directorRepository;
   late final OutboxStore _outboxStore;
   late final SyncService _syncService;
   late final BiometricAuthenticator _biometric;
@@ -69,6 +73,8 @@ class _AesAppState extends State<AesApp> {
     _pettyCashRepository = PettyCashRepository(dio);
     _attachmentsRepository = AttachmentsRepository(dio);
     _commandCentreRepository = CommandCentreRepository(dio);
+    _ordersRepository = OrdersRepository(dio);
+    _directorRepository = DirectorRepository(dio);
     _outboxStore = SqfliteOutboxStore();
     _syncService = SyncService(
       store: _outboxStore,
@@ -103,6 +109,8 @@ class _AesAppState extends State<AesApp> {
         RepositoryProvider<PettyCashRepository>.value(value: _pettyCashRepository),
         RepositoryProvider<AttachmentsRepository>.value(value: _attachmentsRepository),
         RepositoryProvider<CommandCentreRepository>.value(value: _commandCentreRepository),
+        RepositoryProvider<OrdersRepository>.value(value: _ordersRepository),
+        RepositoryProvider<DirectorRepository>.value(value: _directorRepository),
         RepositoryProvider<OutboxStore>.value(value: _outboxStore),
         RepositoryProvider<SyncService>.value(value: _syncService),
         RepositoryProvider<BiometricAuthenticator>.value(value: _biometric),

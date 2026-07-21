@@ -5,6 +5,8 @@ import 'package:aes_mobile/src/data/alerts_repository.dart';
 import 'package:aes_mobile/src/data/approvals_repository.dart';
 import 'package:aes_mobile/src/data/attachments_repository.dart';
 import 'package:aes_mobile/src/data/command_centre_repository.dart';
+import 'package:aes_mobile/src/data/director_repository.dart';
+import 'package:aes_mobile/src/data/orders_repository.dart';
 import 'package:aes_mobile/src/data/auth_repository.dart';
 import 'package:aes_mobile/src/data/petty_cash_repository.dart';
 import 'package:aes_mobile/src/data/requisitions_repository.dart';
@@ -13,6 +15,8 @@ import 'package:aes_mobile/src/models/alert.dart';
 import 'package:aes_mobile/src/models/approval_decision.dart';
 import 'package:aes_mobile/src/models/approval_item.dart';
 import 'package:aes_mobile/src/models/command_centre.dart';
+import 'package:aes_mobile/src/models/director_withdrawal.dart';
+import 'package:aes_mobile/src/models/order.dart';
 import 'package:aes_mobile/src/models/auth_user.dart';
 import 'package:aes_mobile/src/models/petty_cash.dart';
 import 'package:aes_mobile/src/models/requisition.dart';
@@ -314,4 +318,85 @@ PettyCashFloat usdFloat({String id = 'f1', bool locked = false}) => PettyCashFlo
       currency: 'USD',
       floatAmount: 500,
       locked: locked,
+    );
+
+class FakeOrdersRepository extends OrdersRepository {
+  FakeOrdersRepository({this.items = const []}) : super(Dio());
+
+  List<Order> items;
+  final List<String> serviced = [];
+
+  @override
+  Future<List<Order>> list() async => items;
+
+  @override
+  Future<Map<String, String>> clientNames() async => {'c1': 'Mimosa Mine'};
+
+  @override
+  Future<void> markServiced(String id) async => serviced.add(id);
+
+  @override
+  Future<Order> findOne(String id) async {
+    final o = items.firstWhere((e) => e.id == id);
+    // After mark-serviced the server would report it serviced.
+    return Order(
+      id: o.id,
+      reference: o.reference,
+      clientId: o.clientId,
+      valueExVat: o.valueExVat,
+      currency: o.currency,
+      serviced: true,
+      closingDate: o.closingDate,
+    );
+  }
+}
+
+Order openOrder({String id = 'o1', bool serviced = false, double value = 1000}) => Order(
+      id: id,
+      reference: 'ORD-$id',
+      clientId: 'c1',
+      valueExVat: value,
+      currency: 'USD',
+      serviced: serviced,
+    );
+
+class FakeDirectorRepository extends DirectorRepository {
+  FakeDirectorRepository({this.items = const []}) : super(Dio());
+
+  List<DirectorWithdrawal> items;
+  final List<NewWithdrawal> created = [];
+  final List<String> submitted = [];
+  final List<({String id, String method, String ref})> completed = [];
+
+  @override
+  Future<List<DirectorWithdrawal>> list() async => items;
+
+  @override
+  Future<DirectorWithdrawal> create(NewWithdrawal input) async {
+    created.add(input);
+    return DirectorWithdrawal(
+      id: 'dw-${created.length}',
+      amount: input.amount,
+      currency: input.currency,
+      destinationAccount: input.destinationAccount,
+      reason: input.reason,
+      status: 'DRAFT',
+    );
+  }
+
+  @override
+  Future<void> submit(String id) async => submitted.add(id);
+
+  @override
+  Future<void> complete(String id, {required String transferMethod, required String transferReference}) async =>
+      completed.add((id: id, method: transferMethod, ref: transferReference));
+}
+
+DirectorWithdrawal draftWithdrawal({String id = 'dw1', String status = 'DRAFT'}) => DirectorWithdrawal(
+      id: id,
+      amount: 2000,
+      currency: 'USD',
+      destinationAccount: 'ACC-123',
+      reason: 'Dividend',
+      status: status,
     );
