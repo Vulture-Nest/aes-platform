@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../models/petty_cash.dart';
 import '../../theme/money.dart';
+import '../../widgets/ui_kit.dart';
 import 'cubit/petty_cash_cubit.dart';
 import 'widgets/request_widgets.dart';
 import 'withdrawal_form.dart';
@@ -48,7 +49,7 @@ class _PettyCashFloatScreenState extends State<PettyCashFloatScreen> {
   Widget build(BuildContext context) {
     final f = widget.float;
     return Scaffold(
-      appBar: AppBar(title: Text('${f.currency} petty cash')),
+      appBar: gradientAppBar('${f.currency} petty cash'),
       floatingActionButton: f.locked
           ? null
           : FloatingActionButton.extended(

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../data/requisitions_repository.dart';
 import '../../services/receipt_capture.dart';
+import '../../widgets/ui_kit.dart';
 import 'cubit/requisitions_cubit.dart';
 
 /// Raise a new cash requisition, optionally attaching a camera/gallery receipt.
@@ -82,7 +83,7 @@ class _RequisitionFormState extends State<RequisitionForm> {
   Widget build(BuildContext context) {
     final dateLabel = _requiredBy.toIso8601String().substring(0, 10);
     return Scaffold(
-      appBar: AppBar(title: const Text('New requisition')),
+      appBar: gradientAppBar('New requisition'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),

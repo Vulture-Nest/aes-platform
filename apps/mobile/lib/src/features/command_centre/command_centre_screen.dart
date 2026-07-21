@@ -5,6 +5,7 @@ import '../../models/alert.dart';
 import '../../models/command_centre.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/money.dart';
+import '../../widgets/ui_kit.dart';
 import 'cubit/command_centre_cubit.dart';
 
 /// Command Centre: a health verdict banner over summary panels, plus the active
@@ -28,7 +29,7 @@ class _CommandCentreScreenState extends State<CommandCentreScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Command Centre')),
+      appBar: gradientAppBar('Command Centre'),
       body: BlocBuilder<CommandCentreCubit, CommandCentreState>(
         builder: (context, state) {
           if (state.loading && state.dashboard == null) {

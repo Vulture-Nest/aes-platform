@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../data/travel_repository.dart';
+import '../../widgets/ui_kit.dart';
 import 'cubit/travel_cubit.dart';
 
 /// Raise a new travel request. Per-diem/advance are computed server-side from the
@@ -78,7 +79,7 @@ class _TravelFormState extends State<TravelForm> {
     final rangeLabel =
         '${_dates.start.toIso8601String().substring(0, 10)} → ${_dates.end.toIso8601String().substring(0, 10)}  ($_days days)';
     return Scaffold(
-      appBar: AppBar(title: const Text('New travel request')),
+      appBar: gradientAppBar('New travel request'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
