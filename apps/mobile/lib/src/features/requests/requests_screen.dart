@@ -5,9 +5,11 @@ import '../../models/request_status.dart';
 import '../../models/requisition.dart';
 import '../../models/travel_request.dart';
 import '../../theme/money.dart';
+import 'cubit/petty_cash_cubit.dart';
 import 'cubit/request_list_state.dart';
 import 'cubit/requisitions_cubit.dart';
 import 'cubit/travel_cubit.dart';
+import 'petty_cash_tab.dart';
 import 'requisition_form.dart';
 import 'travel_form.dart';
 import 'widgets/request_widgets.dart';
@@ -42,7 +44,7 @@ class RequestsScreen extends StatefulWidget {
 }
 
 class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 2, vsync: this);
+  late final TabController _tabs = TabController(length: 3, vsync: this);
 
   @override
   void initState() {
@@ -51,6 +53,7 @@ class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProvid
       if (!mounted) return;
       context.read<RequisitionsCubit>().load();
       context.read<TravelCubit>().load();
+      context.read<PettyCashCubit>().loadFloats();
     });
     _tabs.addListener(() => setState(() {}));
   }
@@ -86,17 +89,24 @@ class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProvid
         title: const Text('Requests'),
         bottom: TabBar(
           controller: _tabs,
-          tabs: const [Tab(text: 'Requisitions'), Tab(text: 'Travel')],
+          tabs: const [
+            Tab(text: 'Requisitions'),
+            Tab(text: 'Travel'),
+            Tab(text: 'Petty Cash'),
+          ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _create,
-        icon: const Icon(Icons.add),
-        label: Text(_tabs.index == 0 ? 'New requisition' : 'New travel'),
-      ),
+      // Petty-cash withdrawals are raised against a specific float, so no hub FAB there.
+      floatingActionButton: _tabs.index < 2
+          ? FloatingActionButton.extended(
+              onPressed: _create,
+              icon: const Icon(Icons.add),
+              label: Text(_tabs.index == 0 ? 'New requisition' : 'New travel'),
+            )
+          : null,
       body: TabBarView(
         controller: _tabs,
-        children: const [_RequisitionsTab(), _TravelTab()],
+        children: const [_RequisitionsTab(), _TravelTab(), PettyCashTab()],
       ),
     );
   }

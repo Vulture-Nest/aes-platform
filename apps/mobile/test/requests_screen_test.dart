@@ -1,3 +1,4 @@
+import 'package:aes_mobile/src/features/requests/cubit/petty_cash_cubit.dart';
 import 'package:aes_mobile/src/features/requests/cubit/requisitions_cubit.dart';
 import 'package:aes_mobile/src/features/requests/cubit/travel_cubit.dart';
 import 'package:aes_mobile/src/features/requests/requests_screen.dart';
@@ -13,14 +14,20 @@ void main() {
     WidgetTester tester, {
     FakeRequisitionsRepository? reqRepo,
     FakeTravelRepository? travelRepo,
+    FakePettyCashRepository? pettyRepo,
   }) async {
     final requisitions = RequisitionsCubit(
       repository: reqRepo ?? FakeRequisitionsRepository(),
       attachments: FakeAttachmentsRepository(),
     );
     final travel = TravelCubit(travelRepo ?? FakeTravelRepository());
+    final pettyCash = PettyCashCubit(
+      repository: pettyRepo ?? FakePettyCashRepository(),
+      attachments: FakeAttachmentsRepository(),
+    );
     addTearDown(requisitions.close);
     addTearDown(travel.close);
+    addTearDown(pettyCash.close);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -29,6 +36,7 @@ void main() {
           providers: [
             BlocProvider.value(value: requisitions),
             BlocProvider.value(value: travel),
+            BlocProvider.value(value: pettyCash),
           ],
           child: const RequestsScreen(),
         ),
@@ -66,5 +74,16 @@ void main() {
   testWidgets('empty state invites raising a request', (tester) async {
     await pump(tester);
     expect(find.textContaining('No requests yet'), findsOneWidget);
+  });
+
+  testWidgets('petty cash tab lists floats and hides the hub FAB', (tester) async {
+    await pump(tester, pettyRepo: FakePettyCashRepository(floatList: [usdFloat()]));
+
+    await tester.tap(find.text('Petty Cash'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('USD float'), findsOneWidget);
+    // The create FAB is only for requisitions/travel, not petty cash.
+    expect(find.byType(FloatingActionButton), findsNothing);
   });
 }

@@ -5,12 +5,14 @@ import 'package:aes_mobile/src/data/alerts_repository.dart';
 import 'package:aes_mobile/src/data/approvals_repository.dart';
 import 'package:aes_mobile/src/data/attachments_repository.dart';
 import 'package:aes_mobile/src/data/auth_repository.dart';
+import 'package:aes_mobile/src/data/petty_cash_repository.dart';
 import 'package:aes_mobile/src/data/requisitions_repository.dart';
 import 'package:aes_mobile/src/data/travel_repository.dart';
 import 'package:aes_mobile/src/models/alert.dart';
 import 'package:aes_mobile/src/models/approval_decision.dart';
 import 'package:aes_mobile/src/models/approval_item.dart';
 import 'package:aes_mobile/src/models/auth_user.dart';
+import 'package:aes_mobile/src/models/petty_cash.dart';
 import 'package:aes_mobile/src/models/requisition.dart';
 import 'package:aes_mobile/src/models/site_role.dart';
 import 'package:aes_mobile/src/models/token_pair.dart';
@@ -222,4 +224,46 @@ CapturedReceipt fakeCaptured() => CapturedReceipt(
       bytes: Uint8List.fromList([1, 2, 3, 4]),
       filename: 'receipt.jpg',
       contentType: 'image/jpeg',
+    );
+
+class FakePettyCashRepository extends PettyCashRepository {
+  FakePettyCashRepository({this.floatList = const [], this.txnList = const []}) : super(Dio());
+
+  List<PettyCashFloat> floatList;
+  List<PettyCashTxn> txnList;
+  final List<({String floatId, double amount, String purpose, String? receiptKey})> withdrawals = [];
+
+  @override
+  Future<List<PettyCashFloat>> floats() async => floatList;
+
+  @override
+  Future<List<PettyCashTxn>> txns(String floatId) async => txnList;
+
+  @override
+  Future<PettyCashTxn> createWithdrawal(
+    String floatId, {
+    required double amount,
+    required String purpose,
+    String? receiptKey,
+  }) async {
+    withdrawals.add((floatId: floatId, amount: amount, purpose: purpose, receiptKey: receiptKey));
+    final txn = PettyCashTxn(
+      id: 'txn-${withdrawals.length}',
+      type: 'WITHDRAWAL',
+      amount: amount,
+      currency: 'USD',
+      status: 'DRAFT',
+      purpose: purpose,
+      receiptKey: receiptKey,
+    );
+    txnList = [txn, ...txnList];
+    return txn;
+  }
+}
+
+PettyCashFloat usdFloat({String id = 'f1', bool locked = false}) => PettyCashFloat(
+      id: id,
+      currency: 'USD',
+      floatAmount: 500,
+      locked: locked,
     );
