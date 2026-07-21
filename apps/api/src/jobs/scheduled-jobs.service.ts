@@ -4,6 +4,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { ApprovalService } from '../approvals/approval.service';
 import { AlertService } from '../command-centre/danger/alert.service';
 import { DangerEngineService } from '../command-centre/danger/danger-engine.service';
+import { ComplianceService } from '../compliance/compliance.service';
 import { AppConfig } from '../config/configuration';
 import { RequisitionsService } from '../workflows/requisitions/requisitions.service';
 import { TravelService } from '../workflows/travel/travel.service';
@@ -27,6 +28,7 @@ export class ScheduledJobsService {
     private readonly requisitions: RequisitionsService,
     private readonly travel: TravelService,
     private readonly approvals: ApprovalService,
+    private readonly compliance: ComplianceService,
   ) {}
 
   private get enabled(): boolean {
@@ -85,6 +87,17 @@ export class ScheduledJobsService {
     const sched = this.config.get('scheduler', { infer: true });
     return this.run('approvals.slaTimers', () =>
       this.approvals.runSlaTimers(new Date(), sched.approvalT1Hours, sched.approvalT2Hours),
+    );
+  }
+
+  /**
+   * Statutory compliance calendar: raise DANGER on overdue remittances and WATCH on anything
+   * due within a week. Runs each morning; DANGER alerts inherit the repeat-until-ack treatment.
+   */
+  @Cron('0 8 * * *', { name: 'compliance-due', timeZone: TZ })
+  complianceDueCheck(): Promise<void> {
+    return this.run('compliance.checkDueAndOverdue', () =>
+      this.compliance.checkDueAndOverdue(new Date()),
     );
   }
 }
