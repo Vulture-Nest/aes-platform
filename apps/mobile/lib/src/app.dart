@@ -1,42 +1,75 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import 'api/dio_client.dart';
 import 'config/flavor_config.dart';
-import 'data/health_repository.dart';
-import 'features/home/cubit/health_cubit.dart';
+import 'data/alerts_repository.dart';
+import 'data/auth_repository.dart';
+import 'data/token_store.dart';
+import 'features/auth/cubit/auth_cubit.dart';
+import 'features/home/cubit/dashboard_cubit.dart';
 import 'router/app_router.dart';
+import 'theme/app_theme.dart';
 
-/// Root widget. Builds the dio client + repositories for the flavor and exposes
-/// them (plus the app-level cubits) to the widget tree via BLoC providers.
-/// USD/ZWG formatting and Africa/Harare localisation land in the S7 stage.
-class AesApp extends StatelessWidget {
+/// Root widget. Builds the auth-aware dio client + repositories for the flavor,
+/// restores any stored session on launch, and exposes the app-level cubits +
+/// router to the widget tree via BLoC providers.
+class AesApp extends StatefulWidget {
   const AesApp({super.key, required this.config});
 
   final FlavorConfig config;
 
   @override
-  Widget build(BuildContext context) {
-    final healthRepository = HealthRepository(buildDioClient(config));
+  State<AesApp> createState() => _AesAppState();
+}
 
+class _AesAppState extends State<AesApp> {
+  late final AuthRepository _authRepository;
+  late final AlertsRepository _alertsRepository;
+  late final AuthCubit _authCubit;
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    final tokenStore = SecureTokenStore();
+    final dio = buildDioClient(
+      widget.config,
+      tokenStore: tokenStore,
+      // Read lazily: _authCubit is assigned just below and only invoked on a 401.
+      onAuthFailure: () => _authCubit.sessionExpired(),
+    );
+    _authRepository = AuthRepository(dio);
+    _alertsRepository = AlertsRepository(dio);
+    _authCubit = AuthCubit(authRepository: _authRepository, tokenStore: tokenStore);
+    _router = buildRouter(_authCubit);
+    _authCubit.bootstrap();
+  }
+
+  @override
+  void dispose() {
+    _authCubit.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MultiRepositoryProvider(
       providers: [
-        RepositoryProvider<HealthRepository>.value(value: healthRepository),
+        RepositoryProvider<AuthRepository>.value(value: _authRepository),
+        RepositoryProvider<AlertsRepository>.value(value: _alertsRepository),
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider<HealthCubit>(
-            create: (_) => HealthCubit(healthRepository),
-          ),
+          BlocProvider<AuthCubit>.value(value: _authCubit),
+          BlocProvider<DashboardCubit>(create: (_) => DashboardCubit(_alertsRepository)),
         ],
         child: MaterialApp.router(
-          title: 'AES Platform',
+          title: 'AES Operations',
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0B6E4F)),
-            useMaterial3: true,
-          ),
-          routerConfig: buildRouter(config),
+          theme: AppTheme.light(),
+          routerConfig: _router,
         ),
       ),
     );
