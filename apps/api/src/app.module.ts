@@ -34,6 +34,7 @@ import { TimesheetsModule } from './timesheets/timesheets.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PayrollModule } from './payroll/payroll.module';
 import { ComplianceModule } from './compliance/compliance.module';
+import { AttachmentsModule } from './attachments/attachments.module';
 import { CrmModule } from './crm/crm.module';
 import { ReportsModule } from './reports/reports.module';
 import { JobsModule } from './jobs/jobs.module';
@@ -72,6 +73,7 @@ import { JobsModule } from './jobs/jobs.module';
     TimesheetsModule,
     PayrollModule,
     ComplianceModule,
+    AttachmentsModule,
     CrmModule,
     ReportsModule,
     JobsModule,
