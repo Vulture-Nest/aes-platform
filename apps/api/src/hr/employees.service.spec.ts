@@ -1,8 +1,14 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
-import { EmployeesService, maskAccountNo } from './employees.service';
+import { CryptoService } from '../crypto/crypto.service';
+import { EmployeesService } from './employees.service';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+/** CryptoService with no key configured → encrypt/decrypt are pass-throughs (masking still applies). */
+function makeCrypto() {
+  return new CryptoService({ get: () => ({ encryptionKey: null }) } as any);
+}
 
 function makeService() {
   const prisma = {
@@ -18,7 +24,7 @@ function makeService() {
   };
   const audit = { record: jest.fn() };
   const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
-  const service = new EmployeesService(prisma as any, audit as any, lookups as any);
+  const service = new EmployeesService(prisma as any, audit as any, lookups as any, makeCrypto());
   return { service, prisma, audit, lookups };
 }
 
@@ -47,17 +53,29 @@ const baseEmployee = {
   payMode: 'CLIENT_RATIO',
 };
 
-describe('maskAccountNo', () => {
+describe('CryptoService.maskAccountNo', () => {
+  const crypto = makeCrypto();
+
   it('masks all but the last 4 digits', () => {
-    expect(maskAccountNo('01120345678')).toBe('*******5678');
+    expect(crypto.maskAccountNo('01120345678')).toBe('*******5678');
   });
 
   it('passes through null', () => {
-    expect(maskAccountNo(null)).toBeNull();
+    expect(crypto.maskAccountNo(null)).toBeNull();
   });
 
   it('handles short numbers', () => {
-    expect(maskAccountNo('12')).toBe('12');
+    expect(crypto.maskAccountNo('12')).toBe('12');
+  });
+
+  it('round-trips encryption and masks the decrypted value', () => {
+    const withKey = new CryptoService({
+      get: () => ({ encryptionKey: '0'.repeat(64) }),
+    } as any);
+    const stored = withKey.encrypt('01120345678');
+    expect(stored?.startsWith('enc:v1:')).toBe(true);
+    expect(withKey.decrypt(stored)).toBe('01120345678');
+    expect(withKey.maskAccountNo(stored)).toBe('*******5678');
   });
 });
 

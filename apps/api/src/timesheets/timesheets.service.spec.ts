@@ -22,6 +22,7 @@ function makeService(maxHoursPerDay = 24) {
       upsert: jest.fn(),
     },
     $transaction: jest.fn().mockResolvedValue([]),
+    rlsTx: jest.fn().mockImplementation(async (cb: any) => cb(prisma)),
   };
   const audit = { record: jest.fn() };
   const approvals = { submit: jest.fn().mockResolvedValue({ id: 'chain1' }) };
@@ -160,7 +161,7 @@ describe('TimesheetsService.upsertEntries', () => {
     );
 
     expect(result).toEqual({ upserted: 2, anomalies: 1 });
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.rlsTx).toHaveBeenCalledTimes(1);
   });
 });
 

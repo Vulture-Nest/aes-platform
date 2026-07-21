@@ -7,6 +7,7 @@ import {
 import { Employee, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { CryptoService } from '../crypto/crypto.service';
 import { LookupService } from '../settings/lookup.service';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
 import { CreateEmployeeDto, ListEmployeesQueryDto, UpdateEmployeeDto } from './dto/employee.dto';
@@ -16,23 +17,19 @@ const SUBJECT_TABLE = 'employees';
 /** Read shape returned by the API: `accountNo` masked to the last 4 digits. */
 export type EmployeeView = Omit<Employee, 'accountNo'> & { accountNo: string | null };
 
-/** Mask all but the last 4 characters of a bank account number (payroll privacy). */
-export function maskAccountNo(accountNo: string | null): string | null {
-  if (!accountNo) {
-    return accountNo;
-  }
-  const last4 = accountNo.slice(-4);
-  const hiddenLen = Math.max(accountNo.length - 4, 0);
-  return `${'*'.repeat(hiddenLen)}${last4}`;
-}
-
 @Injectable()
 export class EmployeesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly lookups: LookupService,
+    private readonly crypto: CryptoService,
   ) {}
+
+  /** Map a raw Employee row to its masked read view (account number decrypted + masked). */
+  private toView(employee: Employee): EmployeeView {
+    return { ...employee, accountNo: this.crypto.maskAccountNo(employee.accountNo) };
+  }
 
   // -------------------------------------------------------------------------
   // Reads
@@ -73,7 +70,7 @@ export class EmployeesService {
       after: { event: 'employee_list_view', count: employees.length, filter: query },
     });
 
-    return employees.map(toView);
+    return employees.map((e) => this.toView(e));
   }
 
   /** Get one employee (masked + audited), enforcing site scope for site managers. */
@@ -89,7 +86,7 @@ export class EmployeesService {
       after: { event: 'employee_view' },
     });
 
-    return toView(employee);
+    return this.toView(employee);
   }
 
   // -------------------------------------------------------------------------
@@ -126,7 +123,7 @@ export class EmployeesService {
         hourlyRate: dto.hourlyRate ?? null,
         bankName: dto.bankName ?? null,
         bankBranch: dto.bankBranch ?? null,
-        accountNo: dto.accountNo ?? null,
+        accountNo: this.crypto.encrypt(dto.accountNo ?? null),
         accountCurrency: dto.accountCurrency ?? null,
         leaveBalance: dto.leaveBalance ?? 0,
         startDate: dto.startDate,
@@ -145,7 +142,7 @@ export class EmployeesService {
       after: { worksNo: employee.worksNo, siteId: employee.siteId },
     });
 
-    return toView(employee);
+    return this.toView(employee);
   }
 
   async update(id: string, dto: UpdateEmployeeDto, actorId: string): Promise<EmployeeView> {
@@ -194,7 +191,7 @@ export class EmployeesService {
         hourlyRate: dto.hourlyRate,
         bankName: dto.bankName,
         bankBranch: dto.bankBranch,
-        accountNo: dto.accountNo,
+        accountNo: dto.accountNo === undefined ? undefined : this.crypto.encrypt(dto.accountNo),
         accountCurrency: dto.accountCurrency,
         leaveBalance: dto.leaveBalance,
         startDate: dto.startDate,
@@ -213,7 +210,7 @@ export class EmployeesService {
       after: { worksNo: employee.worksNo, siteId: employee.siteId },
     });
 
-    return toView(employee);
+    return this.toView(employee);
   }
 
   async remove(id: string, actorId: string): Promise<{ id: string }> {
@@ -286,9 +283,4 @@ export class EmployeesService {
       throw new ForbiddenException('You may only view employees for your own site(s)');
     }
   }
-}
-
-/** Map a raw Employee row to its masked read view. */
-function toView(employee: Employee): EmployeeView {
-  return { ...employee, accountNo: maskAccountNo(employee.accountNo) };
 }

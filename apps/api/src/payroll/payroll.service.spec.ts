@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 import { ApprovalService } from '../approvals/approval.service';
 import { StatusTransitionRegistry } from '../approvals/status-transition.registry';
+import { CryptoService } from '../crypto/crypto.service';
 import { GrossBuildupService } from './calculators/gross-buildup.service';
 import { NssaService } from './calculators/nssa.service';
 import { PayeService } from './calculators/paye.service';
@@ -70,9 +71,11 @@ function makeService() {
     exchangeRate: { findUnique: jest.fn() },
     contract: { findFirst: jest.fn() },
     $transaction: jest.fn(),
+    rlsTx: jest.fn(),
   };
-  // Run the interactive callback form of $transaction against a tx = prisma facade.
+  // Run the interactive callback form of $transaction / rlsTx against a tx = prisma facade.
   prisma.$transaction.mockImplementation(async (cb: any) => cb(prisma));
+  prisma.rlsTx.mockImplementation(async (cb: any) => cb(prisma));
 
   const audit = { record: jest.fn() };
   const approvals = { submit: jest.fn().mockResolvedValue({ id: 'chain1' }) };
@@ -100,6 +103,7 @@ function makeService() {
     new PayeService(),
     new NssaService(),
     new EmployerStatutoryService(),
+    new CryptoService({ get: () => ({ encryptionKey: null }) } as any),
   );
   service.onModuleInit();
   return { service, prisma, audit, approvals, transitions, ledger, statutoryRates };

@@ -21,7 +21,7 @@ import { ApprovalService } from '../approvals/approval.service';
 import { StatusTransitionRegistry } from '../approvals/status-transition.registry';
 import { LedgerService } from '../ledger/ledger.service';
 import { StatutoryRatesService } from '../reference/statutory-rates/statutory-rates.service';
-import { maskAccountNo } from '../hr/employees.service';
+import { CryptoService } from '../crypto/crypto.service';
 import { GrossBuildupService, SplitMode } from './calculators/gross-buildup.service';
 import { NssaService } from './calculators/nssa.service';
 import { PayeService, PayeBand } from './calculators/paye.service';
@@ -83,6 +83,7 @@ export class PayrollService implements OnModuleInit {
     private readonly paye: PayeService,
     private readonly nssa: NssaService,
     private readonly employerStatutory: EmployerStatutoryService,
+    private readonly crypto: CryptoService,
   ) {}
 
   /**
@@ -368,7 +369,7 @@ export class PayrollService implements OnModuleInit {
       const employee = byId.get(line.employeeId);
       return {
         ...line,
-        employee: employee ? { ...employee, accountNo: maskAccountNo(employee.accountNo) } : null,
+        employee: employee ? { ...employee, accountNo: this.crypto.maskAccountNo(employee.accountNo) } : null,
       };
     });
 
@@ -419,7 +420,7 @@ export class PayrollService implements OnModuleInit {
           firstName: employee?.firstName ?? null,
           lastName: employee?.lastName ?? null,
           bankBranch: employee?.bankBranch ?? null,
-          accountNo: maskAccountNo(employee?.accountNo ?? null),
+          accountNo: this.crypto.maskAccountNo(employee?.accountNo ?? null),
           amount: net,
         });
         group.total = this.round2(group.total + net);
@@ -457,7 +458,7 @@ export class PayrollService implements OnModuleInit {
         firstName: employee?.firstName ?? null,
         lastName: employee?.lastName ?? null,
         bankName: employee?.bankName ?? null,
-        accountNo: maskAccountNo(employee?.accountNo ?? null),
+        accountNo: this.crypto.maskAccountNo(employee?.accountNo ?? null),
         earnings: {
           basicUsd: line.basicUsd.toNumber(),
           basicZwg: line.basicZwg.toNumber(),

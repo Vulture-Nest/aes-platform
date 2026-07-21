@@ -35,6 +35,10 @@ export interface AppConfig {
     approvalT1Hours: number;
     approvalT2Hours: number;
   };
+  security: {
+    /** AES-256-GCM key (hex or base64, 32 bytes) for encrypting sensitive columns at rest. */
+    encryptionKey: string | null;
+  };
 }
 
 export default (): AppConfig => ({
@@ -71,5 +75,8 @@ export default (): AppConfig => ({
     enabled: (process.env.SCHEDULER_ENABLED ?? 'true').toLowerCase() !== 'false',
     approvalT1Hours: parseInt(process.env.APPROVAL_SLA_T1_HOURS ?? '24', 10),
     approvalT2Hours: parseInt(process.env.APPROVAL_SLA_T2_HOURS ?? '48', 10),
+  },
+  security: {
+    encryptionKey: process.env.PAYROLL_ENCRYPTION_KEY || null,
   },
 });
