@@ -285,6 +285,7 @@ export interface RequisitionRecord {
   siteId: string | null;
   requesterId: string;
   status: string;
+  shortfall: string | null;
   disbursementReference: string | null;
 }
 
@@ -301,6 +302,7 @@ export interface TravelRecord {
   siteId: string | null;
   requesterId: string;
   status: string;
+  shortfall: string | null;
   refundDue: string | null;
   refundOwed: string | null;
 }
@@ -828,6 +830,13 @@ export const api = createApi({
       query: ({ id, ...body }) => ({ url: `v1/requisitions/${id}/disburse`, method: 'POST', body }),
       invalidatesTags: ['Requisitions'],
     }),
+    reCheckRequisitionFunds: build.mutation<
+      { checked: number; promoted: string[]; escalated: string[] },
+      void
+    >({
+      query: () => ({ url: 'v1/requisitions/re-check-funds', method: 'POST', body: {} }),
+      invalidatesTags: ['Requisitions'],
+    }),
 
     // --- workflows: travel ---
     getTravelRequests: build.query<TravelRecord[], { status?: string } | void>({
@@ -851,6 +860,13 @@ export const api = createApi({
     }),
     retireTravel: build.mutation<unknown, { id: string; receiptsKey: string; unspent: number }>({
       query: ({ id, ...body }) => ({ url: `v1/travel/${id}/retire`, method: 'POST', body }),
+      invalidatesTags: ['Travel'],
+    }),
+    reCheckTravelFunds: build.mutation<
+      { checked: number; promoted: string[]; escalated: string[] },
+      void
+    >({
+      query: () => ({ url: 'v1/travel/re-check-funds', method: 'POST', body: {} }),
       invalidatesTags: ['Travel'],
     }),
 
@@ -1151,11 +1167,13 @@ export const {
   useCreateRequisitionMutation,
   useSubmitRequisitionMutation,
   useDisburseRequisitionMutation,
+  useReCheckRequisitionFundsMutation,
   useGetTravelRequestsQuery,
   useCreateTravelMutation,
   useSubmitTravelMutation,
   useDisburseTravelMutation,
   useRetireTravelMutation,
+  useReCheckTravelFundsMutation,
   useGetBudgetsQuery,
   useGetBudgetQuery,
   useCreateBudgetMutation,
