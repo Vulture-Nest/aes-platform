@@ -1,8 +1,8 @@
 # AES Mobile (Flutter)
 
 **Mobile** client (iOS + Android). State management is **BLoC + Cubit** (`flutter_bloc`),
-go_router for navigation, dio for the API client (generated from the NestJS OpenAPI spec in
-later stages). The **web** experience is a separate React app in [`apps/web`](../web).
+go_router for navigation, dio for the API client. The **web** experience is a separate React
+app in [`apps/web`](../web).
 
 ## Architecture — BLoC + Cubit
 
@@ -12,8 +12,20 @@ Repository (dio)  →  Cubit (business/state logic)  →  BlocBuilder (UI)
 
 - **Repositories** (`lib/src/data/`) wrap dio and expose plain Futures — no state.
 - **Cubits** (`lib/src/features/<feature>/cubit/`) hold state as `sealed` `Equatable` classes
-  and are unit-tested with fake repositories (see `test/health_cubit_test.dart`).
+  and are unit-tested with fake repositories (see `test/auth_cubit_test.dart`).
 - **Widgets** consume state via `BlocBuilder`/`context.read<T>()`.
+
+## Auth — local JWT
+
+Sign-in is **email + password against the local-JWT API** (not a third-party IdP — mirrors the
+admin/web apps). `AuthCubit` drives the whole session:
+
+- `POST /v1/auth/login` → an access + refresh token pair, kept in the platform keychain via
+  `flutter_secure_storage` (`SecureTokenStore`).
+- `AuthInterceptor` attaches the bearer token and, on a `401`, transparently refreshes it once
+  (single-flight) and retries; a failed refresh clears the session and routes back to `/login`.
+- User + roles are always loaded fresh from `GET /v1/auth/me`, so RBAC is never stale. The
+  router guard and dashboard tiles hide anything the API would forbid (`lib/src/rbac/roles.dart`).
 
 ## Flavors
 
@@ -46,13 +58,25 @@ lib/
 ├── main_dev.dart / main_prod.dart      # flavor entrypoints
 ├── main_common.dart                    # shared bootstrap
 └── src/
-    ├── app.dart                        # MultiBlocProvider + MaterialApp.router
+    ├── app.dart                        # providers + router + MaterialApp.router
     ├── config/flavor_config.dart       # flavor + base URL
-    ├── api/dio_client.dart             # dio instance (base URL, interceptors)
-    ├── data/health_repository.dart     # repositories (dio → Futures)
-    ├── router/app_router.dart          # go_router config
+    ├── api/
+    │   ├── dio_client.dart             # dio instance + auth interceptor wiring
+    │   ├── auth_interceptor.dart       # bearer attach + refresh-on-401
+    │   └── api_exception.dart          # friendly error mapping
+    ├── data/                           # repositories (dio → Futures) + token store
+    ├── models/                         # AuthUser, SiteRole, TokenPair, Alert
+    ├── rbac/roles.dart                 # role groups mirroring API RBAC
+    ├── theme/                          # Material 3 theme + USD/ZWG money format
+    ├── router/app_router.dart          # go_router + auth-guard redirect
     └── features/
-        └── home/
-            ├── cubit/health_cubit.dart # Cubit + sealed states
-            └── home_screen.dart        # BlocBuilder UI
+        ├── auth/                       # AuthCubit + login screen
+        └── home/                       # dashboard tiles + danger banner
 ```
+
+## Status
+
+Foundation shipped: local-JWT auth (login, session restore, refresh, sign-out), role-aware
+router guard, home dashboard (role tiles + persistent danger banner), theming. Feature screens
+(approvals, requests, petty cash, orders, command centre, director actions) and offline-first
+draft capture land in subsequent stages.
