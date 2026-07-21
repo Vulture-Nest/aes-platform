@@ -4,6 +4,7 @@ import 'package:aes_mobile/src/api/api_exception.dart';
 import 'package:aes_mobile/src/data/alerts_repository.dart';
 import 'package:aes_mobile/src/data/approvals_repository.dart';
 import 'package:aes_mobile/src/data/attachments_repository.dart';
+import 'package:aes_mobile/src/data/command_centre_repository.dart';
 import 'package:aes_mobile/src/data/auth_repository.dart';
 import 'package:aes_mobile/src/data/petty_cash_repository.dart';
 import 'package:aes_mobile/src/data/requisitions_repository.dart';
@@ -11,6 +12,7 @@ import 'package:aes_mobile/src/data/travel_repository.dart';
 import 'package:aes_mobile/src/models/alert.dart';
 import 'package:aes_mobile/src/models/approval_decision.dart';
 import 'package:aes_mobile/src/models/approval_item.dart';
+import 'package:aes_mobile/src/models/command_centre.dart';
 import 'package:aes_mobile/src/models/auth_user.dart';
 import 'package:aes_mobile/src/models/petty_cash.dart';
 import 'package:aes_mobile/src/models/requisition.dart';
@@ -64,9 +66,45 @@ class FakeAlertsRepository extends AlertsRepository {
   FakeAlertsRepository({this.alerts = const []}) : super(Dio());
 
   final List<Alert> alerts;
+  final List<String> acked = [];
 
   @override
   Future<List<Alert>> activeAlerts() async => alerts;
+
+  @override
+  Future<void> acknowledge(String alertId) async => acked.add(alertId);
+}
+
+class FakeCommandCentreRepository extends CommandCentreRepository {
+  FakeCommandCentreRepository([Map<String, dynamic>? raw]) : raw = raw ?? _default, super(Dio());
+
+  final Map<String, dynamic> raw;
+
+  static final _default = <String, dynamic>{
+    'healthVerdict': {
+      'verdict': 'ACT',
+      'drivers': {'receivables': 250118.77},
+    },
+    'cashPosition': {
+      'usdEquivalent': {
+        'official': {'totalUsd': -1210.32},
+      },
+    },
+    'moneyInOut': {
+      'totals': {'inflow': 25000, 'outflow': 7015, 'net': 17985},
+    },
+    'coverage': {'expectedIn': 250115, 'expectedOut': 6450},
+    'pendingObligations': {
+      'usdEquivalent': {'obligations': 1450, 'unfundedGap': 2660.32},
+    },
+    'performance': {'bookedOrderValue': 255115, 'operatingProfit': 13000, 'margin': 0.6495},
+    'taxExposure': {
+      'assessmentTotals': {'totalWithInterest': 0},
+    },
+  };
+
+  @override
+  Future<CommandCentre> dashboard() async => CommandCentre.fromJson(raw);
 }
 
 Alert dangerAlert(String message) => Alert(

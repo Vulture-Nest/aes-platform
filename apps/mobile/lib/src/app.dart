@@ -7,6 +7,7 @@ import 'config/flavor_config.dart';
 import 'data/alerts_repository.dart';
 import 'data/approvals_repository.dart';
 import 'data/attachments_repository.dart';
+import 'data/command_centre_repository.dart';
 import 'data/auth_repository.dart';
 import 'data/petty_cash_repository.dart';
 import 'data/requisitions_repository.dart';
@@ -39,6 +40,7 @@ class _AesAppState extends State<AesApp> {
   late final TravelRepository _travelRepository;
   late final PettyCashRepository _pettyCashRepository;
   late final AttachmentsRepository _attachmentsRepository;
+  late final CommandCentreRepository _commandCentreRepository;
   late final BiometricAuthenticator _biometric;
   late final ReceiptCapture _receiptCapture;
   late final AuthCubit _authCubit;
@@ -61,6 +63,7 @@ class _AesAppState extends State<AesApp> {
     _travelRepository = TravelRepository(dio);
     _pettyCashRepository = PettyCashRepository(dio);
     _attachmentsRepository = AttachmentsRepository(dio);
+    _commandCentreRepository = CommandCentreRepository(dio);
     _biometric = LocalAuthBiometricAuthenticator();
     _receiptCapture = ImagePickerReceiptCapture();
     _authCubit = AuthCubit(authRepository: _authRepository, tokenStore: tokenStore);
@@ -85,6 +88,7 @@ class _AesAppState extends State<AesApp> {
         RepositoryProvider<TravelRepository>.value(value: _travelRepository),
         RepositoryProvider<PettyCashRepository>.value(value: _pettyCashRepository),
         RepositoryProvider<AttachmentsRepository>.value(value: _attachmentsRepository),
+        RepositoryProvider<CommandCentreRepository>.value(value: _commandCentreRepository),
         RepositoryProvider<BiometricAuthenticator>.value(value: _biometric),
         RepositoryProvider<ReceiptCapture>.value(value: _receiptCapture),
       ],
