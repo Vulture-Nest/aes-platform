@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { ApprovalService } from '../approvals/approval.service';
 import { DangerEngineService } from '../command-centre/danger/danger-engine.service';
 import { AppConfig } from '../config/configuration';
 import { RequisitionsService } from '../workflows/requisitions/requisitions.service';
@@ -23,6 +24,7 @@ export class ScheduledJobsService {
     private readonly danger: DangerEngineService,
     private readonly requisitions: RequisitionsService,
     private readonly travel: TravelService,
+    private readonly approvals: ApprovalService,
   ) {}
 
   private get enabled(): boolean {
@@ -64,5 +66,14 @@ export class ScheduledJobsService {
   @Cron('0 7 * * *', { name: 'travel-unretired', timeZone: TZ })
   travelUnretiredReminders(): Promise<void> {
     return this.run('travel.remindUnretired', () => this.travel.remindUnretired());
+  }
+
+  /** Approval SLA sweep: remind approvers past T1, escalate to directors past T2. */
+  @Cron(CronExpression.EVERY_HOUR, { name: 'approval-sla' })
+  approvalSlaTimers(): Promise<void> {
+    const sched = this.config.get('scheduler', { infer: true });
+    return this.run('approvals.slaTimers', () =>
+      this.approvals.runSlaTimers(new Date(), sched.approvalT1Hours, sched.approvalT2Hours),
+    );
   }
 }

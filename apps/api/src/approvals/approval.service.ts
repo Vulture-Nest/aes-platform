@@ -297,6 +297,11 @@ export class ApprovalService {
       where: { id: chain.id },
       data: { currentStep: nextStep },
     });
+    // Start the SLA clock for the newly-active step (all steps were created at submit).
+    await this.prisma.approval.updateMany({
+      where: { chainId: chain.id, step: nextStep, decision: null },
+      data: { activatedAt: new Date() },
+    });
     await this.audit.record({
       actorUserId: null,
       action: 'STATUS_CHANGE',
@@ -375,24 +380,31 @@ export class ApprovalService {
     return this.reload(chain.id);
   }
 
+  /** Users holding any of the given roles, site-scoped, excluding the requester. */
+  private async resolveApproverUserIds(
+    roles: string[],
+    siteId: string | null,
+    excludeUserId: string,
+  ): Promise<string[]> {
+    if (roles.length === 0) {
+      return [];
+    }
+    const assignments = await this.prisma.userSiteRole.findMany({
+      where: {
+        role: { in: roles },
+        ...(siteId ? { OR: [{ siteId }, { siteId: null }] } : {}),
+      },
+      select: { userId: true },
+    });
+    return [...new Set(assignments.map((a) => a.userId))].filter((id) => id !== excludeUserId);
+  }
+
   /** Notify every user holding a role that is an eligible approver at the given step. */
   private async notifyStep(chain: ChainWithSteps, stepOrder: number): Promise<void> {
     const roles = [
       ...new Set(chain.steps.filter((s) => s.step === stepOrder).map((s) => s.approverRole)),
     ];
-    if (roles.length === 0) {
-      return;
-    }
-    const assignments = await this.prisma.userSiteRole.findMany({
-      where: {
-        role: { in: roles },
-        ...(chain.siteId ? { OR: [{ siteId: chain.siteId }, { siteId: null }] } : {}),
-      },
-      select: { userId: true },
-    });
-    const userIds = [...new Set(assignments.map((a) => a.userId))].filter(
-      (id) => id !== chain.requesterId,
-    );
+    const userIds = await this.resolveApproverUserIds(roles, chain.siteId, chain.requesterId);
     if (userIds.length === 0) {
       return;
     }
@@ -401,6 +413,90 @@ export class ApprovalService {
       template: 'approval.pending',
       payload: { module: chain.module, subjectId: chain.subjectId, step: stepOrder },
       severity: NotificationSeverity.INFO,
+      subjectTable: chain.subjectTable,
+      subjectId: chain.subjectId,
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // SLA timers (polled by the scheduler; state lives in the DB so it survives restarts)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Sweep active, undecided approval steps: remind the approvers once a step has been
+   * pending past T1, escalate to the directors past T2. Idempotent — the reminded_at /
+   * escalated_at stamps mean each fires at most once per step, and a decided step drops
+   * out of the sweep (the timer "cancels" implicitly).
+   */
+  async runSlaTimers(
+    now: Date = new Date(),
+    t1Hours = 24,
+    t2Hours = 48,
+  ): Promise<{ checked: number; reminded: string[]; escalated: string[] }> {
+    const steps = await this.prisma.approval.findMany({
+      where: { decision: null, chain: { status: ApprovalStatus.PENDING } },
+      include: { chain: true },
+    });
+    const active = steps.filter((s) => s.step === s.chain.currentStep);
+    const reminded: string[] = [];
+    const escalated: string[] = [];
+
+    for (const step of active) {
+      const ageHours = (now.getTime() - step.activatedAt.getTime()) / 3_600_000;
+      if (ageHours >= t2Hours && !step.escalatedAt) {
+        await this.escalateStep(step, step.chain);
+        await this.prisma.approval.update({
+          where: { id: step.id },
+          data: { escalatedAt: now, remindedAt: step.remindedAt ?? now },
+        });
+        escalated.push(step.id);
+      } else if (ageHours >= t1Hours && !step.remindedAt) {
+        await this.remindStep(step, step.chain);
+        await this.prisma.approval.update({ where: { id: step.id }, data: { remindedAt: now } });
+        reminded.push(step.id);
+      }
+    }
+    return { checked: active.length, reminded, escalated };
+  }
+
+  private async remindStep(step: Approval, chain: ApprovalChain): Promise<void> {
+    const userIds = await this.resolveApproverUserIds(
+      [step.approverRole],
+      chain.siteId,
+      chain.requesterId,
+    );
+    if (userIds.length === 0) {
+      return;
+    }
+    await this.notifications.send({
+      userIds,
+      template: 'approval.reminder',
+      payload: { module: chain.module, subjectId: chain.subjectId, step: step.step },
+      severity: NotificationSeverity.WATCH,
+      subjectTable: chain.subjectTable,
+      subjectId: chain.subjectId,
+    });
+  }
+
+  private async escalateStep(step: Approval, chain: ApprovalChain): Promise<void> {
+    const directors = await this.resolveApproverUserIds(
+      ['DIRECTOR', 'FINANCE_DIRECTOR', 'OPS_DIRECTOR'],
+      null,
+      chain.requesterId,
+    );
+    if (directors.length === 0) {
+      return;
+    }
+    await this.notifications.send({
+      userIds: directors,
+      template: 'approval.escalated',
+      payload: {
+        module: chain.module,
+        subjectId: chain.subjectId,
+        step: step.step,
+        approverRole: step.approverRole,
+      },
+      severity: NotificationSeverity.DANGER,
       subjectTable: chain.subjectTable,
       subjectId: chain.subjectId,
     });
