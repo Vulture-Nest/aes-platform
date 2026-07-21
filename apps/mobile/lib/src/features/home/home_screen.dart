@@ -25,7 +25,7 @@ const _tiles = <_Tile>[
     {...Roles.siteApprovers, ...Roles.financeApprovers},
     route: '/approvals',
   ),
-  _Tile('Requests', Icons.note_add_outlined, Roles.requestCapture),
+  _Tile('Requests', Icons.note_add_outlined, Roles.requestCapture, route: '/requests'),
   _Tile('Petty Cash', Icons.savings_outlined, {
     Roles.siteClerk,
     Roles.siteManager,

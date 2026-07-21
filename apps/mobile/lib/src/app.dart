@@ -6,12 +6,16 @@ import 'api/dio_client.dart';
 import 'config/flavor_config.dart';
 import 'data/alerts_repository.dart';
 import 'data/approvals_repository.dart';
+import 'data/attachments_repository.dart';
 import 'data/auth_repository.dart';
+import 'data/requisitions_repository.dart';
 import 'data/token_store.dart';
+import 'data/travel_repository.dart';
 import 'features/auth/cubit/auth_cubit.dart';
 import 'features/home/cubit/dashboard_cubit.dart';
 import 'router/app_router.dart';
 import 'services/biometric_authenticator.dart';
+import 'services/receipt_capture.dart';
 import 'theme/app_theme.dart';
 
 /// Root widget. Builds the auth-aware dio client + repositories for the flavor,
@@ -30,7 +34,11 @@ class _AesAppState extends State<AesApp> {
   late final AuthRepository _authRepository;
   late final AlertsRepository _alertsRepository;
   late final ApprovalsRepository _approvalsRepository;
+  late final RequisitionsRepository _requisitionsRepository;
+  late final TravelRepository _travelRepository;
+  late final AttachmentsRepository _attachmentsRepository;
   late final BiometricAuthenticator _biometric;
+  late final ReceiptCapture _receiptCapture;
   late final AuthCubit _authCubit;
   late final GoRouter _router;
 
@@ -47,7 +55,11 @@ class _AesAppState extends State<AesApp> {
     _authRepository = AuthRepository(dio);
     _alertsRepository = AlertsRepository(dio);
     _approvalsRepository = ApprovalsRepository(dio);
+    _requisitionsRepository = RequisitionsRepository(dio);
+    _travelRepository = TravelRepository(dio);
+    _attachmentsRepository = AttachmentsRepository(dio);
     _biometric = LocalAuthBiometricAuthenticator();
+    _receiptCapture = ImagePickerReceiptCapture();
     _authCubit = AuthCubit(authRepository: _authRepository, tokenStore: tokenStore);
     _router = buildRouter(_authCubit);
     _authCubit.bootstrap();
@@ -66,7 +78,11 @@ class _AesAppState extends State<AesApp> {
         RepositoryProvider<AuthRepository>.value(value: _authRepository),
         RepositoryProvider<AlertsRepository>.value(value: _alertsRepository),
         RepositoryProvider<ApprovalsRepository>.value(value: _approvalsRepository),
+        RepositoryProvider<RequisitionsRepository>.value(value: _requisitionsRepository),
+        RepositoryProvider<TravelRepository>.value(value: _travelRepository),
+        RepositoryProvider<AttachmentsRepository>.value(value: _attachmentsRepository),
         RepositoryProvider<BiometricAuthenticator>.value(value: _biometric),
+        RepositoryProvider<ReceiptCapture>.value(value: _receiptCapture),
       ],
       child: MultiBlocProvider(
         providers: [

@@ -1,14 +1,22 @@
+import 'dart:typed_data';
+
 import 'package:aes_mobile/src/api/api_exception.dart';
 import 'package:aes_mobile/src/data/alerts_repository.dart';
 import 'package:aes_mobile/src/data/approvals_repository.dart';
+import 'package:aes_mobile/src/data/attachments_repository.dart';
 import 'package:aes_mobile/src/data/auth_repository.dart';
+import 'package:aes_mobile/src/data/requisitions_repository.dart';
+import 'package:aes_mobile/src/data/travel_repository.dart';
 import 'package:aes_mobile/src/models/alert.dart';
 import 'package:aes_mobile/src/models/approval_decision.dart';
 import 'package:aes_mobile/src/models/approval_item.dart';
 import 'package:aes_mobile/src/models/auth_user.dart';
+import 'package:aes_mobile/src/models/requisition.dart';
 import 'package:aes_mobile/src/models/site_role.dart';
 import 'package:aes_mobile/src/models/token_pair.dart';
+import 'package:aes_mobile/src/models/travel_request.dart';
 import 'package:aes_mobile/src/services/biometric_authenticator.dart';
+import 'package:aes_mobile/src/services/receipt_capture.dart';
 import 'package:dio/dio.dart';
 
 const financeDirector = AuthUser(
@@ -114,4 +122,104 @@ ApprovalItem nonMoneyApproval({String id = 'ap-ts'}) => ApprovalItem(
       subjectId: 's2',
       step: 1,
       approverRole: 'SITE_MANAGER',
+    );
+
+class FakeAttachmentsRepository extends AttachmentsRepository {
+  FakeAttachmentsRepository({this.key = 'attachments/uuid/receipt.jpg'}) : super(Dio());
+
+  final String key;
+  int uploads = 0;
+
+  @override
+  Future<String> upload(Uint8List bytes, {required String filename, required String contentType}) async {
+    uploads++;
+    return key;
+  }
+}
+
+class FakeRequisitionsRepository extends RequisitionsRepository {
+  FakeRequisitionsRepository({this.items = const []}) : super(Dio());
+
+  List<Requisition> items;
+  final List<NewRequisition> created = [];
+  final List<String> submitted = [];
+
+  @override
+  Future<List<Requisition>> list() async => items;
+
+  @override
+  Future<Requisition> create(NewRequisition input) async {
+    created.add(input);
+    return Requisition(
+      id: 'req-${created.length}',
+      purpose: input.purpose,
+      amount: input.amount,
+      currency: input.currency,
+      status: 'DRAFT',
+      requiredByDate: input.requiredByDate,
+      attachmentKey: input.attachmentKey,
+    );
+  }
+
+  @override
+  Future<void> submit(String id) async => submitted.add(id);
+}
+
+class FakeTravelRepository extends TravelRepository {
+  FakeTravelRepository({this.items = const []}) : super(Dio());
+
+  List<TravelRequest> items;
+  final List<NewTravel> created = [];
+  final List<String> submitted = [];
+
+  @override
+  Future<List<TravelRequest>> list() async => items;
+
+  @override
+  Future<TravelRequest> create(NewTravel input) async {
+    created.add(input);
+    return TravelRequest(
+      id: 'trv-${created.length}',
+      destination: input.destination,
+      advanceAmount: 120,
+      currency: input.currency,
+      status: 'DRAFT',
+      dateFrom: input.dateFrom,
+      dateTo: input.dateTo,
+    );
+  }
+
+  @override
+  Future<void> submit(String id) async => submitted.add(id);
+}
+
+/// Receipt capture that returns a fixed image (or null to simulate cancel).
+class FakeReceiptCapture implements ReceiptCapture {
+  FakeReceiptCapture({this.cancel = false});
+
+  final bool cancel;
+
+  @override
+  Future<CapturedReceipt?> capture({required bool fromCamera}) async {
+    if (cancel) return null;
+    return CapturedReceipt(
+      bytes: Uint8List.fromList([1, 2, 3, 4]),
+      filename: 'receipt.jpg',
+      contentType: 'image/jpeg',
+    );
+  }
+}
+
+Requisition draftRequisition({String id = 'r1', String status = 'DRAFT'}) => Requisition(
+      id: id,
+      purpose: 'Fuel top-up',
+      amount: 500,
+      currency: 'USD',
+      status: status,
+    );
+
+CapturedReceipt fakeCaptured() => CapturedReceipt(
+      bytes: Uint8List.fromList([1, 2, 3, 4]),
+      filename: 'receipt.jpg',
+      contentType: 'image/jpeg',
     );
