@@ -4,6 +4,8 @@
 **Sources audited:** `AES_System_Design_Flow_Document (1).pdf` (32pp, incl. Appendix A business rules + Appendix B traceability), `AES_Handover_Guide`, `AES_Build_Flow`, `AES_Additional_Features_Specification.docx`, and the 5 sample workbooks.
 **Code audited:** `apps/api`, `apps/admin`, `apps/web`, `apps/mobile` (via 6 domain audits, cross-checked against the code).
 
+> **Fix log:** ✅ **Tier 1 (G1–G6) closed** on branch `fix/gap-analysis-tier1` (commits `8eaef92`, `e882efe`) — payroll now reproduces the reference paysheets (golden-tested), back-pay/acting feed the run, `decide` is authorised, delegation works, `audit_log` is append-only at the DB, and G4 got the scoped "NOW" hardening (arbitrary-currency payroll deferred per §7). Full suite: 71 suites / 713 tests green. Tiers 2–5 below are still open.
+
 ## What is solid (calibration)
 Appendix A finance math (A.1–A.9) implemented as faithful, unit-tested services; all 8 Command Centre panels; RBAC + per-site scoping + Postgres RLS + segregation-of-duties; multi-currency core (effective-dated append-only rates, `(amount,currency,fx_rate_id,rate_type)` storage, first-class conversions); the generic approval engine + 5 workflow modules; CRM backend; payroll bank-account encryption at rest; migration-parity import (verdict **ACT**); and the 7 additional features' **backend + admin UI**.
 
