@@ -529,15 +529,29 @@ For each account, log into **both** the admin console and the web app and note t
 - To reset a workflow test, raise fresh items (there are no destructive delete endpoints for approved financial data by design).
 - If a role can't log in, an admin can reset the password in **Users & Roles** (or re-create the test user).
 
-## Appendix B — Known open items (expected gaps — not defects)
+## Appendix B — Known open items (expected gaps — **do NOT raise as bugs**)
 
-These are documented in `docs/GAP_ANALYSIS.md` and are **not yet built**, so don't raise them as bugs:
-- **G13** Microsoft Fabric / Power BI / conversational-AI analytics (needs a Fabric tenant).
-- **G15** some formatted/scheduled exports (bank-schedule *file*, ZIMRA returns *pack*, client report, scheduled email/Teams delivery).
-- **G26** MFA enforcement for FD/Directors/Admin.
-- **G27** backups / disaster recovery (deployment concern).
-- **G28** mobile push transport (device-token store) — in-app notifications work; FCM delivery pending Firebase creds.
-- Real **push/email/Teams** delivery is wired but inactive until SMTP / Teams webhook / FCM credentials are set.
+All are documented in `docs/GAP_ANALYSIS.md`. Read this before testing so you don't log expected gaps as defects.
+
+### B.1 — Requires external / third-party setup (**cannot be tested until provisioned**)
+
+These features are **built or wired, but inert** until an external service + its credentials are supplied. Until then the behaviour below is **expected, not a bug** — skip or note "blocked on external setup".
+
+| Item | External dependency (who must provide it) | What you'll see / test impact |
+|------|-------------------------------------------|-------------------------------|
+| **G13** — Fabric / Power BI / "chat-with-your-data" AI analytics | **Microsoft Fabric tenant + paid capacity** (Microsoft 365 / Azure) | No BI dashboards, no Copilot/Data-Agent. Skip entirely — nothing to test in-app. |
+| **Email** alerts & notifications (part of G7) | **SMTP server** creds, or **Microsoft 365 / Graph (Outlook)** | Emails do **not** arrive. In-app notifications **do** work. Set `MAIL_*` env to activate. |
+| **Teams** alerts (part of G7) | **Microsoft Teams Incoming Webhook URL** | No Teams messages. In-app works. Set `TEAMS_WEBHOOK_URL` to activate. |
+| **Mobile push (FCM)** + **G28** | **Google Firebase** project + service-account JSON (+ device-token registration) | No push to the phone. In-app feed + deep-link routing work. Set `FCM_SERVICE_ACCOUNT_JSON` + build the token store to activate. |
+
+> This is why **TC-O.1** notes that push/email/Teams delivery is inactive: the transports are implemented and route by severity, but stay silent (in-app only) until the credentials above are configured.
+
+### B.2 — Not yet built (internal — planned, don't file as bugs)
+
+- **G15** — some formatted/scheduled **exports**: bank-schedule *file*, ZIMRA returns *pack*, per-client report. *(The scheduled-email delivery of reports also depends on SMTP from B.1.)*
+- **G26** — **MFA enforcement** for FD/Directors/Admin (login works; MFA is not yet enforced).
+- **G27** — **backups / disaster recovery** — a deployment/hosting concern (managed-Postgres PITR), not application behaviour.
+- Minor: in-app **help pages**; a residual hard-coded USD/ZWG assumption in a few reporting/danger panels (adding a third currency such as ZAR may not total everywhere yet).
 
 ## Appendix C — Coverage checklist (tick when the whole part passes)
 ☐ A Auth/RBAC ☐ B Admin config ☐ C Financial core ☐ D Import/parity ☐ E Approvals/cash ☐ F Segregation/security ☐ G Command Centre ☐ H Timesheets ☐ I Payroll/Returns ☐ J Back-pay/Acting ☐ K CRM/Marketing ☐ L Boards ☐ M Projects ☐ N Site Reports/SHE/Entities ☐ O Notifications/Reports ☐ P Mobile
