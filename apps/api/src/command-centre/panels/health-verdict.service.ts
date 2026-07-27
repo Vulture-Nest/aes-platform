@@ -2,12 +2,20 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { HealthVerdict, HealthVerdictService } from '../../financial/domain/health-verdict.service';
 import { LoanInterestService } from '../../financial/domain/loan-interest.service';
+import { TaxLedgerConsolidationService } from '../../financial/domain/tax-ledger-consolidation.service';
 import { ExchangeRatesService } from '../../reference/exchange-rates/exchange-rates.service';
 import { RateType } from '../../reference/exchange-rates/rate-type.enum';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /** Currency pair used to convert ZWG amounts into a USD equivalent. */
 const USD_ZWG_PAIR = 'USD/ZWG';
+
+/**
+ * VAT rate applied to order value when ageing receivables. Receivables are the
+ * VAT-inclusive invoice balance a client still owes (order value + VAT − cash
+ * received), matching the operational cashflow workbook's "Outstanding" column.
+ */
+const VAT_RATE = 0.155;
 
 /** Prisma.Decimal | number | null | undefined -> number (guards nulls). */
 function num(value: Prisma.Decimal | number | null | undefined): number {
@@ -87,6 +95,7 @@ export class HealthVerdictPanelService {
     private readonly prisma: PrismaService,
     private readonly healthVerdict: HealthVerdictService,
     private readonly loanInterest: LoanInterestService,
+    private readonly taxConsolidation: TaxLedgerConsolidationService,
     private readonly exchangeRates: ExchangeRatesService,
   ) {}
 
@@ -95,7 +104,7 @@ export class HealthVerdictPanelService {
     const fxRate = await this.officialRate(asOf);
 
     const [receivables, totalCashReceived] = await this.receivablesAndCash(fxRate);
-    const taxLiability = await this.taxLiability(fxRate);
+    const taxLiability = await this.taxLiability(asOf, fxRate);
     const loanBalance = await this.loanBalance(asOf, fxRate);
 
     const drivers: HealthVerdictDrivers = {
@@ -139,9 +148,15 @@ export class HealthVerdictPanelService {
   }
 
   /**
-   * Receivables (outstanding order value owed to us, floored at 0 per order) and the
-   * total cash received against orders — both normalised to USD. Computed in one pass
+   * Receivables (the VAT-inclusive order balance clients still owe) and the total
+   * cash received against orders — both normalised to USD. Computed in one pass
    * over orders and their receipts.
+   *
+   * Receivables = Σ (order value incl VAT − cash received). This mirrors the
+   * operational cashflow workbook's "Outstanding" column: the amount owed is the
+   * VAT-inclusive invoice total, and per-order over-collections (rare) net against
+   * the portfolio rather than being floored, so the total reflects the true net
+   * cash still expected in.
    */
   private async receivablesAndCash(fxRate: number): Promise<[number, number]> {
     const orders = await this.prisma.order.findMany({
@@ -162,28 +177,35 @@ export class HealthVerdictPanelService {
       );
       totalCashReceived += receivedForOrder;
 
-      const value = this.toUsd(num(order.valueExVat), order.currency, fxRate);
-      const outstanding = value - receivedForOrder;
-      if (outstanding > 0) {
-        receivables += outstanding;
-      }
+      const valueInclVat = this.toUsd(num(order.valueExVat), order.currency, fxRate) * (1 + VAT_RATE);
+      receivables += valueInclVat - receivedForOrder;
     }
 
     return [round2(receivables), round2(totalCashReceived)];
   }
 
   /**
-   * Net tax liability in USD: unpaid tax-ledger balances (amountDue - amountPaid),
-   * other outstanding tax debt principal, and open ZIMRA assessed amounts. Negative
-   * per-line balances (over-paid tax) are floored at 0 so a credit on one line does
-   * not offset a genuine obligation elsewhere.
+   * Net tax liability in USD, mirroring the operational cashflow workbook's
+   * TOTAL TAX LIABILITY:
+   *  - consolidated tax-ledger balances (amountDue − amountPaid) — this is where
+   *    the import lands NET VAT PAYABLE and NET PAYE PAYABLE;
+   *  - each brought-forward tax debt's outstanding balance (principal + accrued
+   *    overdue interest − paid) PLUS its accrued interest again (the workbook
+   *    surfaces overdue interest as its own line on top of the balance);
+   *  - open ZIMRA assessed amounts.
+   *
+   * Negative per-line tax-ledger balances (over-paid tax) are floored at 0 so a
+   * credit on one head does not offset a genuine obligation elsewhere. Overdue
+   * interest accrues at the debt's own rate up to `asOf`.
    */
-  private async taxLiability(fxRate: number): Promise<number> {
+  private async taxLiability(asOf: Date, fxRate: number): Promise<number> {
     const [ledger, otherDebts, assessments] = await Promise.all([
       this.prisma.taxLedger.findMany({
         select: { amountDue: true, amountPaid: true, currency: true },
       }),
-      this.prisma.otherTaxDebt.findMany({ select: { principal: true, currency: true } }),
+      this.prisma.otherTaxDebt.findMany({
+        select: { principal: true, paidToDate: true, ratePct: true, dueDate: true, currency: true },
+      }),
       this.prisma.zimraAssessment.findMany({
         select: { assessedAmount: true, currency: true },
       }),
@@ -199,9 +221,21 @@ export class HealthVerdictPanelService {
     }
     for (const debt of otherDebts) {
       const principal = num(debt.principal);
-      if (principal > 0) {
-        liability += this.toUsd(principal, debt.currency, fxRate);
+      if (principal <= 0) {
+        continue;
       }
+      const daysOverdue = this.daysOverdue(debt.dueDate, asOf);
+      const { interest } = this.taxConsolidation.interestForDebt({
+        id: 'other-tax-debt',
+        principal,
+        zimraRatePct: num(debt.ratePct),
+        daysOverdue,
+      });
+      // Balance outstanding = principal + interest − paid; the overdue interest is
+      // then surfaced again as its own liability line (matching the workbook).
+      const balance = principal + interest - num(debt.paidToDate);
+      const contribution = Math.max(0, balance) + interest;
+      liability += this.toUsd(contribution, debt.currency, fxRate);
     }
     for (const a of assessments) {
       const assessed = num(a.assessedAmount);
@@ -211,6 +245,15 @@ export class HealthVerdictPanelService {
     }
 
     return round2(liability);
+  }
+
+  /** Whole days a debt is overdue at `asOf` (0 before/on the due date). */
+  private daysOverdue(dueDate: Date, asOf: Date): number {
+    const ms = asOf.getTime() - dueDate.getTime();
+    if (ms <= 0) {
+      return 0;
+    }
+    return Math.floor(ms / (24 * 60 * 60 * 1000));
   }
 
   /**

@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>AES Platform — Handover &amp; Testing Guide</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         color: #1f2933; font-size: 11px; line-height: 1.5; margin: 0; }
+  h1 { font-size: 26px; margin: 0 0 4px; color: #0B6E4F; }
+  h2 { font-size: 16px; margin: 22px 0 6px; color: #0B6E4F; border-bottom: 2px solid #e3e8ee; padding-bottom: 3px; page-break-after: avoid; }
+  h3 { font-size: 12.5px; margin: 14px 0 4px; color: #14342a; page-break-after: avoid; }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0 6px 18px; padding: 0; }
+  li { margin: 3px 0; }
+  code, .mono { font-family: "SF Mono", Menlo, Consolas, monospace; background: #f1f5f2; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
+  pre { background: #0f241d; color: #d7f5e8; padding: 10px 12px; border-radius: 6px; font-size: 9.5px;
+        line-height: 1.45; overflow-x: auto; white-space: pre-wrap; }
+  pre .c { color: #7fb89f; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 10px; }
+  th, td { border: 1px solid #d7dee6; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #eef4f1; color: #14342a; }
+  .lead { font-size: 12px; color: #52606d; }
+  .tag { display: inline-block; background: #0B6E4F; color: #fff; border-radius: 4px; padding: 1px 7px; font-size: 9px; margin-right:4px; }
+  .box { background: #f6faf8; border: 1px solid #cfe4d9; border-left: 4px solid #0B6E4F; padding: 8px 12px; border-radius: 5px; margin: 10px 0; }
+  .warn { background: #fff8ec; border: 1px solid #f0dcae; border-left: 4px solid #d29a1a; padding: 8px 12px; border-radius: 5px; margin: 10px 0; }
+  .muted { color: #7b8794; }
+  .cover { padding: 30px 0 10px; border-bottom: 3px solid #0B6E4F; margin-bottom: 6px; }
+  .kv td:first-child { width: 34%; font-weight: 600; background:#f6faf8; }
+  .pagebreak { page-break-before: always; }
+  a { color: #0B6E4F; text-decoration: none; }
+  .small { font-size: 9.5px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="tag">Handover &amp; Testing Guide</div>
+  <h1>AES Operations &amp; Finance Management System</h1>
+  <p class="lead">A plain-English guide to what the system does, how to start it, and how to move
+  around it &mdash; written so the next person can pick it up, test it, and use it.</p>
+  <p class="small muted">Prepared 20 July 2026 &middot; Airflow Environmental Solutions (AES) &middot; Repository: github.com/Vulture-Nest/aes-platform</p>
+</div>
+
+<h2>1. What is this system, in plain terms?</h2>
+<p>This is the internal software for <strong>Airflow Environmental Solutions (AES)</strong>, a
+Zimbabwean mining-services contractor. It replaces the spreadsheets the business used to run on.
+In one place it handles <strong>who can do what</strong>, <strong>money (in USD and Zimbabwe
+Gold)</strong>, <strong>approvals for spending</strong>, the <strong>financial records</strong>,
+<strong>payroll</strong>, a <strong>business-health dashboard with early-warning alerts</strong>,
+and a <strong>sales pipeline (CRM)</strong>.</p>
+
+<p>Three ideas run through the whole system:</p>
+<ul>
+  <li><strong>Approve first, fund second.</strong> A spending request is approved on its merits;
+  whether there's cash to pay it is a separate step that only changes its status
+  (&ldquo;Ready&nbsp;to&nbsp;Pay&rdquo; vs &ldquo;Pending&nbsp;Funds&rdquo;). Money is never a reason an approval is blocked.</li>
+  <li><strong>A person always moves the money.</strong> The system prepares, approves and records;
+  a human does the actual bank/wallet transfer and types in the reference.</li>
+  <li><strong>Everything is recorded.</strong> Every login, approval and change is written to an
+  audit trail that can't be edited.</li>
+</ul>
+
+<h2>2. What can it actually do?</h2>
+<table>
+  <tr><th>Area</th><th>What it does (in plain terms)</th></tr>
+  <tr><td><strong>Users &amp; access</strong></td><td>Log in securely; each person has one or more roles, per site (e.g. &ldquo;Finance Officer at Mimosa&rdquo;). The system only lets you see and do what your role allows.</td></tr>
+  <tr><td><strong>Reference data</strong></td><td>Exchange rates (official &amp; street), tax/statutory rates, spending thresholds, and stand-in (delegation) rules for approvers who are away.</td></tr>
+  <tr><td><strong>Approvals engine</strong></td><td>One engine drives all approvals (requisitions, travel, petty cash, budgets, director withdrawals). You configure <em>who</em> approves <em>what</em> and in what order &mdash; no programming needed. Nobody can approve their own request.</td></tr>
+  <tr><td><strong>Financial core</strong></td><td>Clients, contracts, orders, receipts, expenses, loans, a double-entry accounts ledger, and tax records. All money is stored with its currency and exchange rate, never as a bare number.</td></tr>
+  <tr><td><strong>Spending workflows</strong></td><td>Cash requisitions, travel allowances, petty cash, budgets, and director withdrawals &mdash; each with its own approval path and a funds check.</td></tr>
+  <tr><td><strong>Command Centre</strong></td><td>A live business-health dashboard (cash position, money in vs out, debt, receivables, tax exposure, coverage ratio, a HEALTHY/WATCH/ACT verdict) plus an automatic <em>danger engine</em> that raises alerts and notifies directors when something crosses a limit.</td></tr>
+  <tr><td><strong>Payroll</strong></td><td>Timesheets &rarr; pay runs &rarr; statutory deductions (PAYE, NSSA, ZIMDEF, NEC/MIPF&hellip;) &rarr; payslips, bank schedules and a Sage journal. Bank account numbers are masked; payroll is restricted to finance roles.</td></tr>
+  <tr><td><strong>CRM</strong></td><td>Business-development contacts, a sales pipeline (Contact &rarr; Qualified &rarr; Proposal &rarr; Negotiation &rarr; Won/Lost), and one-click conversion of a won deal into a real order.</td></tr>
+  <tr><td><strong>Settings</strong></td><td>An admin area to manage the lists the system uses (currencies, roles, site types, statutory keys, etc.) without needing a developer.</td></tr>
+</table>
+
+<h2>3. The parts of the system</h2>
+<table>
+  <tr><th>Part</th><th>Who it's for</th><th>Where it runs (locally)</th></tr>
+  <tr><td><strong>API (the engine / server)</strong></td><td>Not used directly by people; the two apps talk to it.</td><td><span class="mono">http://localhost:3000</span> &middot; interactive API docs at <span class="mono">/docs</span></td></tr>
+  <tr><td><strong>Admin Console</strong></td><td>Administrators &amp; finance &mdash; to set everything up and configure it.</td><td><span class="mono">http://localhost:5174</span></td></tr>
+  <tr><td><strong>Web App</strong></td><td>Everyday users &mdash; raise requests, approve, view dashboards.</td><td><span class="mono">http://localhost:5173</span></td></tr>
+  <tr><td><strong>Mobile app</strong></td><td>Site staff (planned).</td><td><span class="muted">Not built yet</span></td></tr>
+</table>
+
+<div class="pagebreak"></div>
+<h2>4. Getting it running (for the person setting up the test)</h2>
+<p>There isn't a hosted website yet, so a technically-comfortable person starts it on a laptop.
+You'll need <strong>Docker</strong> and <strong>Node.js 20+</strong> installed. Open a terminal in the
+project folder and run these, one block at a time.</p>
+
+<pre><span class="c"># 1) Start the database &amp; support services (Docker)</span>
+docker compose -f docker-compose.dev.yml up -d
+<span class="c">#    If ports 5432 / 6379 / 9000 are already in use on your machine, remap them:</span>
+<span class="c">#    POSTGRES_PORT=5433 REDIS_PORT=6380 MINIO_API_PORT=9002 MINIO_CONSOLE_PORT=9003 \</span>
+<span class="c">#      docker compose -f docker-compose.dev.yml up -d   (then use port 5433 in DATABASE_URL below)</span>
+
+<span class="c"># 2) The API (backend). In apps/api:</span>
+cp .env.example .env          <span class="c"># then open .env and set JWT_SECRET to any 16+ character phrase</span>
+npm install
+npx prisma migrate deploy     <span class="c"># creates all the database tables</span>
+npx prisma db seed            <span class="c"># creates the sites, ledger accounts and the admin login</span>
+npm run start:dev             <span class="c"># serves http://localhost:3000  (docs at /docs)</span>
+
+<span class="c"># 3) The Admin Console (new terminal). In apps/admin:</span>
+npm install &amp;&amp; npm run dev      <span class="c"># http://localhost:5174</span>
+
+<span class="c"># 4) The Web App (new terminal). In apps/web:</span>
+npm install &amp;&amp; npm run dev      <span class="c"># http://localhost:5173</span></pre>
+
+<div class="box"><strong>Quick health check:</strong> open <span class="mono">http://localhost:3000/health</span> &mdash;
+it should say <span class="mono">"status":"ok"</span>. The full list of every function the system exposes is
+browsable at <span class="mono">http://localhost:3000/docs</span>.</div>
+
+<h2>5. Logging in</h2>
+<p>A fresh set-up (step&nbsp;2 above) creates one master account. Use it first, then create everyone
+else from the Admin Console.</p>
+<table class="kv">
+  <tr><td>Administrator (full access)</td><td><span class="mono">admin@aes.local</span> &nbsp;/&nbsp; <span class="mono">ChangeMe!123</span></td></tr>
+  <tr><td>Finance Director <span class="muted">(demo account on the current test database)</span></td><td><span class="mono">fd@aes.local</span> &nbsp;/&nbsp; <span class="mono">FdPassword!123</span></td></tr>
+</table>
+<div class="warn"><strong>Before real use:</strong> create proper user accounts and change these demo
+passwords. The administrator creates users under <em>Users &amp; Roles</em> and assigns each person a role
+(and a site, where relevant).</div>
+
+<h2>6. Admin Console &mdash; the menu, explained</h2>
+<p>Sign in at <span class="mono">http://localhost:5174</span> as the administrator. The left-hand menu:</p>
+<table>
+  <tr><th>Menu item</th><th>What you do here</th></tr>
+  <tr><td>Dashboard</td><td>A quick overview (how many users, sites, exchange-rate entries).</td></tr>
+  <tr><td>Users &amp; Roles</td><td>Create people, and give them roles (per site). This is where you add a Finance Officer, Site Manager, etc.</td></tr>
+  <tr><td>Sites</td><td>The company's sites (Mimosa, Unki, Zimplats, Head Office). Add or edit them.</td></tr>
+  <tr><td>Exchange Rates</td><td>Record the USD&rarr;ZWG rate for a date (official and street). History is kept &mdash; older rates are never overwritten.</td></tr>
+  <tr><td>Statutory Rates</td><td>Tax and payroll figures (VAT %, PAYE bands, NSSA, etc.), each effective from a date. <span class="muted">Confirm real figures with a tax practitioner.</span></td></tr>
+  <tr><td>Thresholds</td><td>Tunable limits &mdash; e.g. the petty-cash amount above which a Finance Director must approve.</td></tr>
+  <tr><td>Delegation</td><td>Set a stand-in approver for a date range (when someone is on leave).</td></tr>
+  <tr><td>Approval Matrix</td><td>The rules for <em>who approves what</em>: pick a module (e.g. requisition), an amount band, the approver role, the step order, and the mode (one-after-another, all-together, or either).</td></tr>
+  <tr><td>Danger Rules</td><td>The automatic early-warning rules (e.g. cash runway below 4 weeks). Switch each on or off.</td></tr>
+  <tr><td>Ledger Accounts</td><td>The bank / petty-cash / mobile-wallet accounts money is tracked against.</td></tr>
+  <tr><td>Employees</td><td>Staff records used by payroll (bank details are masked).</td></tr>
+  <tr><td>Audit Log</td><td>A searchable record of everything that happened &mdash; who did what, and when.</td></tr>
+  <tr><td>Settings</td><td>The configurable lists: currencies, roles, site types, statutory keys, employment types, etc. Add a value here (e.g. a new currency) and it becomes usable everywhere.</td></tr>
+</table>
+
+<div class="pagebreak"></div>
+<h2>7. Web App &mdash; the menu, explained</h2>
+<p>Sign in at <span class="mono">http://localhost:5173</span>. This is the everyday app. The menu:</p>
+<table>
+  <tr><th>Menu item</th><th>What you do here</th></tr>
+  <tr><td>Home</td><td>Your landing page with quick tiles and an unread-notifications badge.</td></tr>
+  <tr><td>Requests</td><td>Raise a <strong>cash requisition</strong> (purpose, amount, currency, needed-by date) and submit it for approval. See the status of your requests.</td></tr>
+  <tr><td>Approvals</td><td>Your <strong>inbox</strong>: items waiting for your decision, matched to your role. Approve, return for correction, or reject. (You can't approve something you raised.)</td></tr>
+  <tr><td>Orders</td><td>The order book, with each order's servicing status.</td></tr>
+  <tr><td>Command Centre</td><td>The 8-panel business-health dashboard with the overall HEALTHY / WATCH / ACT verdict.</td></tr>
+  <tr><td>Exchange Rates</td><td>View the current and historical rates (read-only here).</td></tr>
+  <tr><td>Notifications</td><td>Your alerts; mark them read.</td></tr>
+  <tr><td>Profile</td><td>Your account details and roles.</td></tr>
+</table>
+
+<h2>8. A five-minute test you can try (the &ldquo;happy path&rdquo;)</h2>
+<ol>
+  <li><strong>As the administrator</strong> (Admin Console): under <em>Users &amp; Roles</em>, confirm there's a
+  Finance Director (or use the demo <span class="mono">fd@aes.local</span>). Under <em>Approval Matrix</em>,
+  confirm there's a rule for <em>requisition &rarr; Finance Director</em> (there is one by default).</li>
+  <li><strong>As a normal user</strong> (Web App): go to <em>Requests</em> &rarr; <em>New requisition</em>,
+  fill it in and <em>Submit</em>. Its status becomes <em>Submitted</em>.</li>
+  <li><strong>As the Finance Director</strong> (Web App): go to <em>Approvals</em>. The requisition is in the
+  inbox. Click <em>Approve</em>.</li>
+  <li>The system runs a funds check: it becomes <em>Approved &ndash; Ready to Pay</em> if there's cash, or
+  <em>Approved &ndash; Pending Funds</em> (with the shortfall) if not.</li>
+  <li>Open the <strong>Command Centre</strong> to see the business-health panels update.</li>
+</ol>
+<div class="box"><strong>What this proves:</strong> the approval engine, the &ldquo;approve-first / fund-second&rdquo;
+rule, the no-self-approval safeguard, and the live dashboard are all working together.</div>
+
+<h2>9. What's built vs. what's still to come</h2>
+<table>
+  <tr><th>Built &amp; working now</th><th>Not yet / needs input</th></tr>
+  <tr><td>
+    <ul>
+      <li>Full backend engine (150+ functions) with an automated test suite</li>
+      <li>Admin Console (all configuration)</li>
+      <li>Web App (requests, approvals, orders, command centre, notifications)</li>
+      <li>Approvals, financial core, workflows, command centre &amp; alerts, payroll, CRM</li>
+      <li>All reference lists configurable from Settings</li>
+    </ul>
+  </td><td>
+    <ul>
+      <li><strong>Mobile app</strong> &mdash; planned, not built</li>
+      <li><strong>Excel import</strong> of the old workbooks &mdash; needs the real Operational Cashflow &amp; payroll files</li>
+      <li><strong>Power BI / Microsoft Fabric</strong> analytics &mdash; needs a Fabric tenant</li>
+      <li><strong>Hosted deployment</strong> (a URL for testers) &mdash; the automated deploy is prepared but not switched on</li>
+      <li>A few outputs are data-only for now (e.g. payslip <em>PDF</em> rendering is a later step)</li>
+    </ul>
+  </td></tr>
+</table>
+
+<h2>10. For the developer taking over</h2>
+<ul>
+  <li><strong>Repository:</strong> <span class="mono">github.com/Vulture-Nest/aes-platform</span> (private). One monorepo:
+  <span class="mono">apps/api</span> (server), <span class="mono">apps/admin</span>, <span class="mono">apps/web</span>,
+  <span class="mono">apps/mobile</span> (placeholder), <span class="mono">deploy/</span> (CI/CD + server config).</li>
+  <li><strong>How it's built:</strong> the work landed as a series of pull requests into <span class="mono">main</span>
+  (foundations &rarr; approvals &rarr; financial core &rarr; workflows &rarr; command centre &rarr; payroll &rarr; CRM &rarr; settings).</li>
+  <li><strong>API reference:</strong> run the API and open <span class="mono">/docs</span> for the live, clickable list of every endpoint.</li>
+  <li><strong>Tests:</strong> <span class="mono">cd apps/api &amp;&amp; npm test</span> (500+ unit tests). Each app also has <span class="mono">npm run build</span> / <span class="mono">lint</span>.</li>
+  <li><strong>Deploy target:</strong> Docker images &rarr; GitHub Actions &rarr; a DigitalOcean droplet with managed
+  PostgreSQL. The workflow files live in <span class="mono">deploy/github-workflows/</span> and need to be moved to
+  <span class="mono">.github/workflows/</span> with a &ldquo;workflow&rdquo;-scoped token to switch CI/CD on (see <span class="mono">deploy/README.md</span>).</li>
+</ul>
+
+<h2>11. Housekeeping before real use</h2>
+<ul>
+  <li>Change the seeded/demo passwords and create real user accounts with the right roles.</li>
+  <li>Enter the <em>real</em> statutory figures (VAT, PAYE bands, NSSA&hellip;) under Statutory Rates &mdash; confirm them with a tax practitioner. Nothing is hard-coded.</li>
+  <li>Rotate any access token that was shared during development.</li>
+  <li>When ready, switch on the automated deployment so testers get a shared web address instead of running it locally.</li>
+</ul>
+
+<p class="small muted" style="margin-top:18px;">AES Operations &amp; Finance Management System &mdash; handover guide. This document describes the state of the system on 20 July 2026.</p>
+
+</body>
+</html>

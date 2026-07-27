@@ -38,6 +38,14 @@ import { AttachmentsModule } from './attachments/attachments.module';
 import { CrmModule } from './crm/crm.module';
 import { ReportsModule } from './reports/reports.module';
 import { JobsModule } from './jobs/jobs.module';
+import { EntitiesModule } from './entities/entities.module';
+import { MarketingModule } from './marketing/marketing.module';
+import { BoardsModule } from './boards/boards.module';
+import { ProjectsModule } from './projects/projects.module';
+import { ReturnsModule } from './returns/returns.module';
+import { PayrollAdjustmentsModule } from './payroll-adjustments/payroll-adjustments.module';
+import { SiteReportsModule } from './site-reports/site-reports.module';
+import { DataMigrationModule } from './data-migration/data-migration.module';
 
 @Module({
   imports: [
@@ -77,6 +85,14 @@ import { JobsModule } from './jobs/jobs.module';
     CrmModule,
     ReportsModule,
     JobsModule,
+    EntitiesModule,
+    MarketingModule,
+    BoardsModule,
+    ProjectsModule,
+    ReturnsModule,
+    PayrollAdjustmentsModule,
+    SiteReportsModule,
+    DataMigrationModule,
     HealthModule,
   ],
   providers: [

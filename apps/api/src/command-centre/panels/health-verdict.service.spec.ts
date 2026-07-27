@@ -1,11 +1,16 @@
 import { Prisma } from '@prisma/client';
 import { HealthVerdict, HealthVerdictService } from '../../financial/domain/health-verdict.service';
 import { LoanInterestService } from '../../financial/domain/loan-interest.service';
+import { TaxLedgerConsolidationService } from '../../financial/domain/tax-ledger-consolidation.service';
 import { HealthVerdictPanelService } from './health-verdict.service';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const dec = (n: number) => new Prisma.Decimal(n);
+
+/** Order value + 15.5% VAT (receivables are the VAT-inclusive balance owed). */
+const inclVat = (exVat: number) => exVat * 1.155;
+const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 function makePanel() {
   const prisma = {
@@ -21,10 +26,12 @@ function makePanel() {
   };
   const healthVerdict = new HealthVerdictService();
   const loanInterest = new LoanInterestService();
+  const taxConsolidation = new TaxLedgerConsolidationService();
   const panel = new HealthVerdictPanelService(
     prisma as any,
     healthVerdict,
     loanInterest,
+    taxConsolidation,
     exchangeRates as any,
   );
   return { panel, prisma, exchangeRates };
@@ -34,7 +41,8 @@ describe('HealthVerdictPanelService.compute', () => {
   it('computes the A.8 verdict and driver figures from current data (USD)', async () => {
     const { panel, prisma } = makePanel();
 
-    // One order worth 10,000 with 2,000 received => 8,000 receivable, 2,000 cash.
+    // One order worth 10,000 ex VAT (11,550 incl VAT) with 2,000 received
+    // => 9,550 receivable, 2,000 cash.
     prisma.order.findMany.mockResolvedValue([
       {
         valueExVat: dec(10000),
@@ -42,11 +50,13 @@ describe('HealthVerdictPanelService.compute', () => {
         receipts: [{ amount: dec(2000), currency: 'USD' }],
       },
     ]);
-    // Tax: 1,000 unpaid VAT ledger + 500 other debt + 300 ZIMRA = 1,800.
+    // Tax: 1,000 unpaid VAT ledger + 500 other debt (not overdue, no interest) + 300 ZIMRA = 1,800.
     prisma.taxLedger.findMany.mockResolvedValue([
       { amountDue: dec(1200), amountPaid: dec(200), currency: 'USD' },
     ]);
-    prisma.otherTaxDebt.findMany.mockResolvedValue([{ principal: dec(500), currency: 'USD' }]);
+    prisma.otherTaxDebt.findMany.mockResolvedValue([
+      { principal: dec(500), paidToDate: dec(0), ratePct: dec(0), dueDate: new Date('2027-01-01'), currency: 'USD' },
+    ]);
     prisma.zimraAssessment.findMany.mockResolvedValue([
       { assessedAmount: dec(300), currency: 'USD' },
     ]);
@@ -65,27 +75,26 @@ describe('HealthVerdictPanelService.compute', () => {
 
     expect(result.panel).toBe('health_verdict');
     expect(result.drivers).toEqual({
-      receivables: 8000,
+      receivables: round2(inclVat(10000) - 2000), // 9,550
       taxLiability: 1800,
       loanBalance: 5000,
       totalCashReceived: 2000,
     });
-    // obligations 14,800 > cash 2,000 => ACT.
-    expect(result.totalObligations).toBe(14800);
+    // obligations 16,350 > cash 2,000 => ACT.
+    expect(result.totalObligations).toBe(round2(9550 + 1800 + 5000));
     expect(result.watchThreshold).toBe(1000);
     expect(result.verdict).toBe(HealthVerdict.ACT);
   });
 
-  it('accrues loan interest and floors negative per-line balances', async () => {
+  it('accrues loan interest and floors negative per-line tax balances', async () => {
     const { panel, prisma } = makePanel();
 
-    // Fully-paid order: no receivable, but 12,000 cash received.
+    // Fully-collected order: 10,000 ex VAT (11,550 incl) fully received => 0 receivable.
     prisma.order.findMany.mockResolvedValue([
       {
         valueExVat: dec(10000),
         currency: 'USD',
-        // Over-received: outstanding is negative and must NOT reduce receivables.
-        receipts: [{ amount: dec(12000), currency: 'USD' }],
+        receipts: [{ amount: dec(11550), currency: 'USD' }],
       },
     ]);
     // Over-paid tax line: net -100, floored to 0 (no negative liability).
@@ -106,10 +115,10 @@ describe('HealthVerdictPanelService.compute', () => {
     const result = await panel.compute({ asOf: new Date('2026-07-19') });
 
     expect(result.drivers.receivables).toBe(0);
-    expect(result.drivers.totalCashReceived).toBe(12000);
+    expect(result.drivers.totalCashReceived).toBe(11550);
     expect(result.drivers.taxLiability).toBe(0);
     expect(result.drivers.loanBalance).toBe(1050);
-    // obligations 1,050 < cash 12,000, receivables 0 <= watch 6,000 => HEALTHY.
+    // obligations 1,050 < cash 11,550, receivables 0 <= watch => HEALTHY.
     expect(result.verdict).toBe(HealthVerdict.HEALTHY);
   });
 
@@ -118,7 +127,7 @@ describe('HealthVerdictPanelService.compute', () => {
     // Rate 30 ZWG per USD.
     exchangeRates.rateAsOf.mockResolvedValue({ rate: '30' });
 
-    // 3,000 ZWG order value => 100 USD receivable; no receipts.
+    // 3,000 ZWG order value => 100 USD ex VAT => 115.50 USD incl VAT receivable; no receipts.
     prisma.order.findMany.mockResolvedValue([
       { valueExVat: dec(3000), currency: 'ZWG', receipts: [] },
     ]);
@@ -126,8 +135,8 @@ describe('HealthVerdictPanelService.compute', () => {
     const result = await panel.compute({ asOf: new Date('2026-07-19') });
 
     expect(result.fxRate).toBe(30);
-    expect(result.drivers.receivables).toBe(100);
-    // obligations 100 > cash 0 => ACT.
+    expect(result.drivers.receivables).toBe(round2(inclVat(100)));
+    // obligations 115.50 > cash 0 => ACT.
     expect(result.verdict).toBe(HealthVerdict.ACT);
   });
 
