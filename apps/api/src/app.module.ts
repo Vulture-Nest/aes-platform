@@ -27,6 +27,7 @@ import { TravelModule } from './workflows/travel/travel.module';
 import { PettyCashModule } from './workflows/petty-cash/petty-cash.module';
 import { BudgetsModule } from './workflows/budgets/budgets.module';
 import { DirectorWithdrawalsModule } from './workflows/director-withdrawals/director-withdrawals.module';
+import { VatFiscalInvoiceModule } from './workflows/vat-fiscal-invoice/vat-fiscal-invoice.module';
 import { DangerModule } from './command-centre/danger/danger.module';
 import { CommandCentreModule } from './command-centre/command-centre.module';
 import { HrModule } from './hr/hr.module';
@@ -45,6 +46,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { ReturnsModule } from './returns/returns.module';
 import { PayrollAdjustmentsModule } from './payroll-adjustments/payroll-adjustments.module';
 import { SiteReportsModule } from './site-reports/site-reports.module';
+import { SheModule } from './she/she.module';
 import { DataMigrationModule } from './data-migration/data-migration.module';
 
 @Module({
@@ -75,6 +77,7 @@ import { DataMigrationModule } from './data-migration/data-migration.module';
     PettyCashModule,
     BudgetsModule,
     DirectorWithdrawalsModule,
+    VatFiscalInvoiceModule,
     DangerModule,
     CommandCentreModule,
     HrModule,
@@ -92,6 +95,7 @@ import { DataMigrationModule } from './data-migration/data-migration.module';
     ReturnsModule,
     PayrollAdjustmentsModule,
     SiteReportsModule,
+    SheModule,
     DataMigrationModule,
     HealthModule,
   ],

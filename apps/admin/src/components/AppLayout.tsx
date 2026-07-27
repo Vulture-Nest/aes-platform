@@ -162,6 +162,12 @@ const NAV: NavNode[] = [
         icon: <ReconciliationOutlined />,
         roles: ['OPS_DIRECTOR', 'SITE_MANAGER', 'SYS_ADMIN'],
       },
+      {
+        key: '/she',
+        label: 'SHE',
+        icon: <AlertOutlined />,
+        roles: ['OPS_DIRECTOR', 'SITE_MANAGER', 'SYS_ADMIN'],
+      },
     ],
   },
   {
@@ -222,6 +228,11 @@ const NAV: NavNode[] = [
         label: 'Exchange Rates',
         icon: <DollarOutlined />,
         roles: ['FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'SYS_ADMIN'],
+      },
+      {
+        key: '/notification-settings',
+        label: 'Notifications',
+        icon: <SlidersOutlined />,
       },
       {
         key: '/statutory-rates',

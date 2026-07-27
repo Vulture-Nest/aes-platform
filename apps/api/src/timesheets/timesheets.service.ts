@@ -9,6 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import {
   ApprovalStatus,
+  PayrollRunStatus,
   Prisma,
   TimesheetEntry,
   TimesheetPeriod,
@@ -21,6 +22,7 @@ import { ApprovalService } from '../approvals/approval.service';
 import { StatusTransitionRegistry } from '../approvals/status-transition.registry';
 import {
   CreateTimesheetPeriodDto,
+  ReopenDto,
   ReopenRequestDto,
   TimesheetEntryRowDto,
   UpsertEntriesDto,
@@ -295,6 +297,69 @@ export class TimesheetsService implements OnModuleInit {
       after: { event: 'reopen_requested', reason: dto.reason },
     });
     return { id: period.id, status: period.status };
+  }
+
+  /**
+   * Actually reopen a LOCKED (or SITE_APPROVED) period back to OPEN so entries can be corrected
+   * and re-submitted (G22). Guarded: if a payroll run for this (site, month) has already consumed
+   * the period (any run beyond DRAFT — CHECKED/APPROVED/PAID/LOCKED), reopening is refused unless
+   * `force` is set (SYS_ADMIN override). Clears lockedAt and audits before/after. Idempotent-ish:
+   * an already-OPEN period is a no-op error (nothing to reopen).
+   */
+  async reopen(id: string, dto: ReopenDto, actorId: string): Promise<TimesheetPeriod> {
+    const period = await this.getOrThrow(id);
+    if (period.status === TimesheetPeriodStatus.OPEN) {
+      throw new BadRequestException('Period is already OPEN');
+    }
+    if (
+      period.status !== TimesheetPeriodStatus.LOCKED &&
+      period.status !== TimesheetPeriodStatus.SITE_APPROVED
+    ) {
+      throw new BadRequestException(
+        `Only a LOCKED or SITE_APPROVED period can be reopened (current: ${period.status})`,
+      );
+    }
+
+    // Payroll consumes the period by (siteId, month). A run past DRAFT means the timesheet has
+    // fed a computed/approved payroll — reopening would desync payroll from its source data.
+    const consumingRun = await this.prisma.payrollRun.findFirst({
+      where: {
+        siteId: period.siteId,
+        month: period.month,
+        status: { not: PayrollRunStatus.DRAFT },
+      },
+      select: { id: true, status: true },
+    });
+    if (consumingRun && !dto.force) {
+      throw new ConflictException(
+        `Payroll run ${consumingRun.id} (${consumingRun.status}) has consumed this period; ` +
+          'reopening requires a SYS_ADMIN force override',
+      );
+    }
+
+    const updated = await this.prisma.timesheetPeriod.update({
+      where: { id },
+      data: {
+        status: TimesheetPeriodStatus.OPEN,
+        lockedAt: null,
+        updatedBy: actorId,
+      },
+    });
+    await this.audit.record({
+      actorUserId: actorId,
+      action: 'STATUS_CHANGE',
+      tableName: SUBJECT_TABLE,
+      recordId: id,
+      before: { status: period.status },
+      after: {
+        status: TimesheetPeriodStatus.OPEN,
+        event: 'reopened',
+        reason: dto.reason,
+        forced: Boolean(dto.force && consumingRun),
+        consumedByRun: consumingRun?.id ?? null,
+      },
+    });
+    return updated;
   }
 
   // -------------------------------------------------------------------------

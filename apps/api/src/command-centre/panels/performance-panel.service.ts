@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { IncomeTaxProvision, IncomeTaxProvisionService } from '../../financial/domain/income-tax-provision.service';
 import { PerformanceService } from '../../financial/domain/performance.service';
 import { ExchangeRatesService } from '../../reference/exchange-rates/exchange-rates.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -39,6 +40,12 @@ export interface PerformancePanelResult {
   margin: number | null;
   orderCount: number;
   servicedOrderCount: number;
+  /**
+   * G19 (spec §16.4): corporate income-tax PROVISION estimate on operating profit.
+   * INFORMATIONAL only — it is NOT subtracted from operatingProfit and NOT part of
+   * the health verdict or the parity'd total tax liability.
+   */
+  incomeTaxProvision: IncomeTaxProvision;
 }
 
 @Injectable()
@@ -47,6 +54,7 @@ export class PerformancePanelService {
     private readonly prisma: PrismaService,
     private readonly exchangeRates: ExchangeRatesService,
     private readonly performance: PerformanceService,
+    private readonly incomeTaxProvision: IncomeTaxProvisionService,
   ) {}
 
   async compute(params?: { currency?: string; asOf?: Date }): Promise<PerformancePanelResult> {
@@ -110,6 +118,13 @@ export class PerformancePanelService {
       expenses: expenseBreakdown,
     });
 
+    // G19: income-tax provision estimate on operating profit (info line only).
+    const incomeTaxProvision = await this.incomeTaxProvision.estimate(
+      perf.operatingProfit,
+      asOf,
+      currency,
+    );
+
     return {
       panel: 'performance',
       currency,
@@ -129,6 +144,7 @@ export class PerformancePanelService {
       margin: perf.margin,
       orderCount: orders.length,
       servicedOrderCount,
+      incomeTaxProvision,
     };
   }
 

@@ -17,6 +17,8 @@ import {
   parseOrderRow,
   parseOverheadRow,
   parsePayrollRow,
+  ParsedSettings,
+  parseSettingsSheet,
   parseTaxConsolidationInputs,
   parseTaxDebtRow,
   Row,
@@ -132,6 +134,7 @@ export class ImportService {
   async importCashflow(actorId: string | null, counts: Counts): Promise<void> {
     const file = 'Operational_Cashflow_Report.xlsx';
     const [
+      settings,
       clients,
       contracts,
       orders,
@@ -142,6 +145,7 @@ export class ImportService {
       contractPayments,
       taxDebt,
     ] = await Promise.all([
+      this.readSheet(file, 'Settings').catch(() => [] as Row[]),
       this.readSheet(file, 'Clients'),
       this.readSheet(file, 'Contracts'),
       this.readSheet(file, 'Orders'),
@@ -155,6 +159,7 @@ export class ImportService {
 
     await this.prisma.$transaction(
       async (tx) => {
+        await this.upsertSettings(tx, settings, actorId, counts);
         const clientIds = await this.upsertClients(tx, clients, actorId, counts);
         const contractIds = await this.upsertContracts(tx, contracts, clientIds, actorId, counts);
         const orderIds = await this.upsertOrders(tx, orders, clientIds, actorId, counts);
@@ -174,6 +179,113 @@ export class ImportService {
       },
       { timeout: 120000 },
     );
+  }
+
+  /**
+   * G23: import the workbook `Settings` sheet's named GLOBAL PARAMETERS into the
+   * effective-dated statutory + exchange-rate config, so the live services resolve
+   * the SAME rates the spreadsheet assumed instead of relying only on seed data:
+   *   - VATRate           → statutory_rates key `vat_pct`          (percent, e.g. 15.5)
+   *   - ZimraInt (p.a.)   → statutory_rates key `zimra_interest_pct` (percent, e.g. 10)
+   *   - Official / Street → exchange_rates USD/ZWG (official + parallel legs)
+   *
+   * Effective-dated at the workbook's report date (fallback: the parity snapshot).
+   * Idempotent: each row is keyed by (key/pair + dateEffective) so a re-import
+   * updates in place rather than appending a duplicate effective row.
+   */
+  private async upsertSettings(
+    tx: Tx,
+    rows: Row[],
+    actorId: string | null,
+    counts: Counts,
+  ): Promise<void> {
+    if (rows.length === 0) {
+      return;
+    }
+    // The Settings GLOBAL PARAMETERS block starts above DATA_START, so parse the
+    // whole sheet (the parser scans by label rather than assuming a data-start row).
+    const parsed: ParsedSettings = parseSettingsSheet(rows);
+    const effective = parsed.reportDate ?? new Date('2026-07-24T00:00:00.000Z');
+
+    // VAT rate: sheet stores a fraction (0.155); statutory config convention is a
+    // percentage (15.5), matching the existing vat_pct rows.
+    if (parsed.vatRateFraction && parsed.vatRateFraction > 0) {
+      const vatPct = parsed.vatRateFraction < 1 ? parsed.vatRateFraction * 100 : parsed.vatRateFraction;
+      await this.upsertStatutoryRate(tx, 'vat_pct', vatPct, USD, effective, actorId, counts);
+    }
+
+    // ZIMRA overdue-tax interest: sheet stores a per-annum fraction (0.1); config
+    // convention is a percentage (10).
+    if (parsed.zimraInterestFraction && parsed.zimraInterestFraction > 0) {
+      const zimraPct =
+        parsed.zimraInterestFraction < 1
+          ? parsed.zimraInterestFraction * 100
+          : parsed.zimraInterestFraction;
+      await this.upsertStatutoryRate(tx, 'zimra_interest_pct', zimraPct, null, effective, actorId, counts);
+    }
+
+    // USD/ZWG exchange rate: official + parallel legs on a single effective row.
+    if (parsed.officialRate && parsed.officialRate > 0) {
+      await this.upsertExchangeRate(
+        tx,
+        'USD/ZWG',
+        parsed.officialRate,
+        parsed.streetRate && parsed.streetRate > 0 ? parsed.streetRate : null,
+        effective,
+        actorId,
+        counts,
+      );
+    }
+  }
+
+  /** Upsert a single effective-dated statutory rate (idempotent by key+currency+date). */
+  private async upsertStatutoryRate(
+    tx: Tx,
+    key: string,
+    value: number,
+    currency: string | null,
+    dateEffective: Date,
+    actorId: string | null,
+    counts: Counts,
+  ): Promise<void> {
+    const existing = await tx.statutoryRate.findFirst({
+      where: { key, currency, country: null, dateEffective },
+    });
+    const data = { key, currency, country: null, value: new Prisma.Decimal(value), dateEffective };
+    if (existing) {
+      await tx.statutoryRate.update({ where: { id: existing.id }, data });
+      this.bump(counts, 'statutory_rates', false);
+    } else {
+      await tx.statutoryRate.create({ data: { ...data, createdBy: actorId } });
+      this.bump(counts, 'statutory_rates', true);
+    }
+  }
+
+  /** Upsert a single effective-dated exchange rate (idempotent by pair+date). */
+  private async upsertExchangeRate(
+    tx: Tx,
+    currencyPair: string,
+    officialRate: number,
+    parallelRate: number | null,
+    dateEffective: Date,
+    actorId: string | null,
+    counts: Counts,
+  ): Promise<void> {
+    const existing = await tx.exchangeRate.findFirst({ where: { currencyPair, dateEffective } });
+    const data = {
+      currencyPair,
+      officialRate: new Prisma.Decimal(officialRate),
+      parallelRate: parallelRate == null ? null : new Prisma.Decimal(parallelRate),
+      dateEffective,
+      source: 'workbook:Settings',
+    };
+    if (existing) {
+      await tx.exchangeRate.update({ where: { id: existing.id }, data });
+      this.bump(counts, 'exchange_rates', false);
+    } else {
+      await tx.exchangeRate.create({ data: { ...data, enteredBy: actorId } });
+      this.bump(counts, 'exchange_rates', true);
+    }
   }
 
   /**

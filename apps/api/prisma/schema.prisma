@@ -394,6 +394,12 @@ model Client {
   name         String  @unique
   contactEmail String? @map("contact_email")
   active       Boolean @default(true)
+  /// G17 (spec §6): tax registration number for statutory invoices/returns.
+  vatNumber            String?  @map("vat_number")
+  /// G17 (spec §6): free-text payment terms (e.g. "30 days from invoice").
+  paymentTerms         String?  @map("payment_terms")
+  /// G17 (spec §6): default USD/ZWG currency ratio applied to this client's work.
+  currencyRatioDefault Decimal? @map("currency_ratio_default") @db.Decimal(10, 6)
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -446,6 +452,10 @@ model ContractClaim {
   fxRateId    String?  @map("fx_rate_id") @db.Uuid
   rateType    String?  @map("rate_type")
   claimDate   DateTime @map("claim_date")
+  /// G17 (spec §6): VAT paid to date against this claim.
+  vatPaidToDate Decimal?  @map("vat_paid_to_date") @db.Decimal(20, 2)
+  /// G17 (spec §6): date the claim was received/settled.
+  receivedDate  DateTime? @map("received_date")
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -464,10 +474,16 @@ model Order {
   contractId     String?   @map("contract_id") @db.Uuid
   contract       Contract? @relation("OrderContract", fields: [contractId], references: [id])
   reference      String
+  /// G17 (spec §6): optional human-facing order title/name.
+  title          String?
   valueExVat     Decimal   @map("value_ex_vat") @db.Decimal(20, 2)
   currency       String
   fxRateId       String?   @map("fx_rate_id") @db.Uuid
   rateType       String?   @map("rate_type")
+  /// G17 (spec §6): date the order was issued/raised.
+  issueDate      DateTime? @map("issue_date")
+  /// G17 (spec §6): whether an advance payment applies to this order.
+  advancePayment Boolean   @default(false) @map("advance_payment")
   closingDate    DateTime? @map("closing_date")
   serviced       Boolean   @default(false)
   servicedAt     DateTime? @map("serviced_at")
@@ -486,14 +502,38 @@ model Order {
   updatedBy String?  @map("updated_by") @db.Uuid
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  receipts OrderReceipt[]
-  expenses OrderExpense[]
+  receipts   OrderReceipt[]
+  expenses   OrderExpense[]
+  milestones OrderMilestone[]
 
   @@index([clientId])
   @@index([contractId])
   @@index([assignedUserId])
   @@index([entityId])
   @@map("orders")
+}
+
+/// G18 (Appendix B.2a): a partial-servicing milestone on an order. Records the portion of
+/// the order value delivered (and optionally the % of scope) so a later agent can compute
+/// serviced%/PARTIALLY_SERVICED health. Schema-only here — no health logic wired yet.
+model OrderMilestone {
+  id             String    @id @default(uuid()) @db.Uuid
+  orderId        String    @map("order_id") @db.Uuid
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  description    String
+  /// The order value delivered by this milestone.
+  valuePortion   Decimal   @default(0) @map("value_portion") @db.Decimal(20, 2)
+  /// Optional percentage of overall scope this milestone represents.
+  percentPortion Decimal?  @map("percent_portion") @db.Decimal(5, 2)
+  completedAt    DateTime? @map("completed_at")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([orderId])
+  @@map("order_milestones")
 }
 
 /// A payment received against an order. Amount is money.
@@ -527,6 +567,8 @@ model OrderExpense {
   fxRateId     String? @map("fx_rate_id") @db.Uuid
   rateType     String? @map("rate_type")
   vatClaimable Boolean @default(false) @map("vat_claimable")
+  /// G17 (spec §6): optional expense category (e.g. Fuel, Labour, Materials).
+  category     String?
   description  String?
 
   createdBy String?  @map("created_by") @db.Uuid
@@ -566,6 +608,10 @@ model Overhead {
   rateType    String? @map("rate_type")
   category    String?
   periodMonth String? @map("period_month")
+  /// G17 (spec §6): PAYE due for this overhead period.
+  payeDue     Decimal? @map("paye_due") @db.Decimal(20, 2)
+  /// G17 (spec §6): PAYE paid for this overhead period.
+  payePaid    Decimal? @map("paye_paid") @db.Decimal(20, 2)
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -889,6 +935,7 @@ model PettyCashFloat {
 
   txns PettyCashTxn[]
 
+  @@unique([siteId, currency])
   @@index([siteId, currency])
   @@index([custodianUserId])
   @@map("petty_cash_floats")
@@ -2299,4 +2346,35 @@ model StoresWithdrawal {
   @@index([entityId])
   @@index([siteId])
   @@map("stores_withdrawals")
+}
+
+// ---------------------------------------------------------------------------
+// SHE — Safety, Health & Environment (G21 / spec §16.10, add-feat §8.3)
+// ---------------------------------------------------------------------------
+
+/// A structured SHE record captured at a site (site-scoped → RLS applies). `type` is one of
+/// INCIDENT | NEAR_MISS | TOOLBOX_TALK | MEDICAL | DRILL | HAZARD. Schema-only here — the
+/// SheModule scaffold is empty and a later agent implements capture/reporting logic.
+model SheRecord {
+  id             String   @id @default(uuid()) @db.Uuid
+  entityId       String?  @map("entity_id") @db.Uuid
+  siteId         String   @map("site_id") @db.Uuid
+  type           String // INCIDENT | NEAR_MISS | TOOLBOX_TALK | MEDICAL | DRILL | HAZARD
+  title          String
+  description    String?
+  severity       String?
+  occurredAt     DateTime @map("occurred_at")
+  investigation  String?
+  /// Lost-time injury flag.
+  lti            Boolean  @default(false)
+  status         String   @default("OPEN")
+  reportedByUserId String? @map("reported_by_user_id") @db.Uuid
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([siteId])
+  @@map("she_records")
 }

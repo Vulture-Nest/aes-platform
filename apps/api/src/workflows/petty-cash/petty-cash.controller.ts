@@ -54,6 +54,24 @@ export class PettyCashController {
     return this.pettyCash.listFloats(siteId);
   }
 
+  @Get('conversions-report')
+  @Roles(
+    'SITE_MANAGER',
+    'FINANCE_OFFICER',
+    'FINANCE_DIRECTOR',
+    'OPS_DIRECTOR',
+    'DIRECTOR',
+    'SYS_ADMIN',
+    'AUDITOR',
+  )
+  @ApiOperation({
+    summary: 'Cumulative petty-cash conversion gain/loss per site + period (variance vs official)',
+  })
+  @ApiQuery({ name: 'siteId', required: false })
+  conversionsReport(@Query('siteId') siteId?: string) {
+    return this.pettyCash.conversionsReport(siteId);
+  }
+
   @Get('floats/:id/txns')
   @Roles(
     'SITE_CLERK',

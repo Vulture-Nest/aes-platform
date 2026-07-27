@@ -16,6 +16,7 @@ import { Roles } from '../../rbac/roles.decorator';
 import {
   CreateOrderDto,
   CreateOrderExpenseDto,
+  CreateOrderMilestoneDto,
   CreateOrderReceiptDto,
   UpdateOrderDto,
 } from './dto/order.dto';
@@ -42,9 +43,34 @@ export class OrdersController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get an order (managers or the assignee)' })
+  @ApiOperation({ summary: 'Get an order + its computed financials (managers or the assignee)' })
   findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.orders.findOneForActor(id, user);
+    return this.orders.findOneWithFinancials(id, user);
+  }
+
+  // G16: the computed financial + health summary alone (health, profit ex VAT, margin,
+  // outstanding, spent-to-date, total incl VAT, serviced%).
+  @Get(':id/financials')
+  @ApiOperation({ summary: 'Computed order financials + health (managers or the assignee)' })
+  financials(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.orders.getFinancials(id, user);
+  }
+
+  // G18 (Appendix B.2a): partial-servicing milestones.
+  @Get(':id/milestones')
+  @ApiOperation({ summary: 'List an order’s servicing milestones' })
+  listMilestones(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.orders.listMilestones(id, user);
+  }
+
+  @Post(':id/milestones')
+  @ApiOperation({ summary: 'Add a servicing milestone to an order (managers or the assignee)' })
+  addMilestone(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateOrderMilestoneDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.orders.addMilestone(id, dto, user);
   }
 
   @Post()

@@ -80,6 +80,8 @@ export class ContractsService {
         amountExVat: dto.amountExVat,
         currency: dto.currency,
         claimDate: dto.claimDate,
+        vatPaidToDate: dto.vatPaidToDate ?? null,
+        receivedDate: dto.receivedDate ?? null,
         rateType: dto.rateType ?? null,
         createdBy: actorId,
         updatedBy: actorId,

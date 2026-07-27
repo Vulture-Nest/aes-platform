@@ -26,6 +26,20 @@ export class CreateOverheadDto {
   @IsString()
   periodMonth?: string;
 
+  @ApiPropertyOptional({ example: 1200, description: 'PAYE due for this overhead period' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  payeDue?: number;
+
+  @ApiPropertyOptional({ example: 1200, description: 'PAYE paid for this overhead period' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  payePaid?: number;
+
   @ApiPropertyOptional({ example: 'OFFICIAL' })
   @IsOptional()
   @IsString()

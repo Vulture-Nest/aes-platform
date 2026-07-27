@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AlertSeverity } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { AlertService } from '../command-centre/danger/alert.service';
@@ -30,6 +30,7 @@ export class ComplianceService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly alerts: AlertService,
+    @Inject(forwardRef(() => PayrollService))
     private readonly payroll: PayrollService,
   ) {}
 

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ReferenceModule } from '../reference/reference.module';
 import { ClientsController } from './clients/clients.controller';
 import { ClientsService } from './clients/clients.service';
 import { ContractsController } from './contracts/contracts.controller';
@@ -11,6 +12,8 @@ import { ExpensesService } from './expenses/expenses.service';
 import { GeneralExpensesController } from './expenses/general-expenses.controller';
 import { OverheadsController } from './expenses/overheads.controller';
 import { OrderFinancialsService } from './domain/order-financials.service';
+import { OrderFinancialsFacadeService } from './domain/order-financials-facade.service';
+import { IncomeTaxProvisionService } from './domain/income-tax-provision.service';
 import { OrderHealthService } from './domain/order-health.service';
 import { ContractVarianceService } from './domain/contract-variance.service';
 import { LoanInterestService } from './domain/loan-interest.service';
@@ -24,6 +27,7 @@ import { HealthVerdictService } from './domain/health-verdict.service';
  * plus the Appendix A domain calculation services (pure, reusable).
  */
 @Module({
+  imports: [ReferenceModule],
   controllers: [
     ClientsController,
     ContractsController,
@@ -39,6 +43,8 @@ import { HealthVerdictService } from './domain/health-verdict.service';
     LoansService,
     ExpensesService,
     OrderFinancialsService,
+    OrderFinancialsFacadeService,
+    IncomeTaxProvisionService,
     OrderHealthService,
     ContractVarianceService,
     LoanInterestService,
@@ -53,6 +59,8 @@ import { HealthVerdictService } from './domain/health-verdict.service';
     OrdersService,
     LoansService,
     OrderFinancialsService,
+    OrderFinancialsFacadeService,
+    IncomeTaxProvisionService,
     OrderHealthService,
     ContractVarianceService,
     LoanInterestService,

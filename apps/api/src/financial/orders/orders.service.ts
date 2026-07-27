@@ -6,12 +6,14 @@ import {
 } from '@nestjs/common';
 import { AuditService } from '../../audit/audit.service';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
+import { OrderFinancialsFacadeService } from '../domain/order-financials-facade.service';
 import { LedgerService } from '../../ledger/ledger.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LookupService } from '../../settings/lookup.service';
 import {
   CreateOrderDto,
   CreateOrderExpenseDto,
+  CreateOrderMilestoneDto,
   CreateOrderReceiptDto,
   UpdateOrderDto,
 } from './dto/order.dto';
@@ -26,29 +28,72 @@ export class OrdersService {
     private readonly audit: AuditService,
     private readonly lookups: LookupService,
     private readonly ledger: LedgerService,
+    private readonly financials: OrderFinancialsFacadeService,
   ) {}
 
-  list() {
-    return this.prisma.order.findMany({ orderBy: { createdAt: 'desc' } });
+  /**
+   * G16: list orders, each enriched with a computed financial summary (health,
+   * profit ex VAT, margin, outstanding, spent-to-date, total incl VAT, serviced%).
+   * The raw order fields are kept; `financials` is added alongside. VAT is resolved
+   * once for the whole list.
+   */
+  async list() {
+    const orders = await this.prisma.order.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { receipts: true, expenses: true, milestones: true },
+    });
+    return this.withFinancials(orders);
   }
 
-  /** Orders assigned to a given user (their "My Orders" list). */
-  listAssigned(userId: string) {
-    return this.prisma.order.findMany({
+  /** Orders assigned to a given user (their "My Orders" list), enriched like list(). */
+  async listAssigned(userId: string) {
+    const orders = await this.prisma.order.findMany({
       where: { assignedUserId: userId },
       orderBy: { createdAt: 'desc' },
+      include: { receipts: true, expenses: true, milestones: true },
     });
+    return this.withFinancials(orders);
+  }
+
+  /** Attach a computed financials summary to each order (single VAT resolution). */
+  private async withFinancials(
+    orders: Array<Parameters<OrderFinancialsFacadeService['forOrder']>[0]>,
+  ) {
+    if (orders.length === 0) {
+      return [];
+    }
+    const asOf = new Date();
+    const vatPct = await this.financials.resolveVatPct(asOf);
+    return Promise.all(
+      orders.map(async (order) => ({
+        ...order,
+        financials: await this.financials.forOrder(order, asOf, vatPct),
+      })),
+    );
   }
 
   async findOne(id: string) {
     const order = await this.prisma.order.findUnique({
       where: { id },
-      include: { receipts: true, expenses: true },
+      include: { receipts: true, expenses: true, milestones: true },
     });
     if (!order) {
       throw new NotFoundException('Order not found');
     }
     return order;
+  }
+
+  /** G16: an order with its computed financial + health summary attached. */
+  async findOneWithFinancials(id: string, user: AuthenticatedUser) {
+    const order = await this.findOneForActor(id, user);
+    const financials = await this.financials.forOrder(order);
+    return { ...order, financials };
+  }
+
+  /** G16: just the computed financials for an order (GET /orders/:id/financials). */
+  async getFinancials(id: string, user: AuthenticatedUser) {
+    const order = await this.findOneForActor(id, user);
+    return this.financials.forOrder(order);
   }
 
   /** Load an order, enforcing that the caller may see/act on it. */
@@ -90,10 +135,13 @@ export class OrdersService {
         clientId: dto.clientId,
         contractId: dto.contractId ?? null,
         reference: dto.reference,
+        title: dto.title ?? null,
         valueExVat: dto.valueExVat,
         currency: dto.currency,
         fxRateId: dto.fxRateId ?? null,
         rateType: dto.rateType ?? null,
+        issueDate: dto.issueDate ?? null,
+        advancePayment: dto.advancePayment ?? false,
         closingDate: dto.closingDate ?? null,
         assignedUserId: dto.assignedUserId ?? null,
         createdBy: actorId,
@@ -122,10 +170,13 @@ export class OrdersService {
       where: { id },
       data: {
         reference: dto.reference,
+        title: dto.title,
         valueExVat: dto.valueExVat,
         currency: dto.currency,
         fxRateId: dto.fxRateId,
         rateType: dto.rateType,
+        issueDate: dto.issueDate,
+        advancePayment: dto.advancePayment,
         closingDate: dto.closingDate,
         assignedUserId: dto.assignedUserId,
         updatedBy: actorId,
@@ -191,6 +242,7 @@ export class OrdersService {
         amount: dto.amount,
         currency: dto.currency,
         vatClaimable: dto.vatClaimable ?? false,
+        category: dto.category ?? null,
         description: dto.description ?? null,
         rateType: dto.rateType ?? null,
         createdBy: actorId,
@@ -205,6 +257,48 @@ export class OrdersService {
       after: { orderId, amount: expense.amount.toString(), currency: expense.currency },
     });
     return expense;
+  }
+
+  /**
+   * G18 (Appendix B.2a): add a partial-servicing milestone to an order. Records the
+   * portion of the order value (and/or % of scope) delivered by this milestone.
+   */
+  async addMilestone(orderId: string, dto: CreateOrderMilestoneDto, user: AuthenticatedUser) {
+    const order = await this.findOne(orderId);
+    this.assertAccess(order, user, true);
+    const milestone = await this.prisma.orderMilestone.create({
+      data: {
+        orderId,
+        description: dto.description,
+        valuePortion: dto.valuePortion ?? 0,
+        percentPortion: dto.percentPortion ?? null,
+        completedAt: dto.completedAt ?? null,
+        createdBy: user.id,
+        updatedBy: user.id,
+      },
+    });
+    await this.audit.record({
+      actorUserId: user.id,
+      action: 'CREATE',
+      tableName: 'order_milestones',
+      recordId: milestone.id,
+      after: {
+        orderId,
+        description: milestone.description,
+        valuePortion: milestone.valuePortion.toString(),
+        completedAt: milestone.completedAt,
+      },
+    });
+    return milestone;
+  }
+
+  /** G18: list an order's milestones (oldest first). */
+  async listMilestones(orderId: string, user: AuthenticatedUser) {
+    await this.findOneForActor(orderId, user);
+    return this.prisma.orderMilestone.findMany({
+      where: { orderId },
+      orderBy: { createdAt: 'asc' },
+    });
   }
 
   async markServiced(orderId: string, user: AuthenticatedUser) {

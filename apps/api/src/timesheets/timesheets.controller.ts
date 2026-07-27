@@ -15,6 +15,7 @@ import { Roles } from '../rbac/roles.decorator';
 import {
   CreateTimesheetPeriodDto,
   ListTimesheetPeriodsQueryDto,
+  ReopenDto,
   ReopenRequestDto,
   UpsertEntriesDto,
 } from './dto/timesheet.dto';
@@ -109,6 +110,21 @@ export class TimesheetsController {
     @CurrentUser('id') actorId: string,
   ) {
     return this.timesheets.requestReopen(id, dto, actorId);
+  }
+
+  @Post(':id/reopen')
+  @HttpCode(HttpStatus.OK)
+  @Roles('SITE_MANAGER', 'SYS_ADMIN')
+  @ApiOperation({
+    summary:
+      'Reopen a LOCKED/SITE_APPROVED period back to OPEN (guarded against payroll-consumed; SYS_ADMIN may force)',
+  })
+  reopen(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReopenDto,
+    @CurrentUser('id') actorId: string,
+  ) {
+    return this.timesheets.reopen(id, dto, actorId);
   }
 
   @Get(':id/manhours')

@@ -404,6 +404,51 @@ export function parseTaxConsolidationInputs(
   };
 }
 
+/**
+ * G23: the named global parameters read from the workbook `Settings` sheet.
+ * Every value is optional — a missing/blank cell leaves the field undefined so the
+ * importer can skip it (idempotent, no clobbering config with 0).
+ */
+export interface ParsedSettings {
+  /** VAT rate as a FRACTION as stored in the sheet (e.g. 0.155). */
+  vatRateFraction?: number;
+  /** Official RBZ rate: ZWG per 1 USD (e.g. 26.5). */
+  officialRate?: number;
+  /** Street / parallel rate: ZWG per 1 USD (e.g. 33). */
+  streetRate?: number;
+  /** ZIMRA overdue-tax interest per annum as a FRACTION (e.g. 0.1). */
+  zimraInterestFraction?: number;
+  /** Report / valuation date (drives the effective date of the imported rows). */
+  reportDate?: Date;
+}
+
+/**
+ * Parse the `Settings` sheet's GLOBAL PARAMETERS block by matching each row's
+ * label in column A (case-insensitive substring) and reading its value from
+ * column B. Robust to row-order changes — we scan rather than assume fixed rows.
+ */
+export function parseSettingsSheet(rows: Row[]): ParsedSettings {
+  const out: ParsedSettings = {};
+  for (const row of rows) {
+    const label = (cellStr(row[1]) ?? '').toLowerCase();
+    if (!label) {
+      continue;
+    }
+    if (label.includes('vat rate')) {
+      out.vatRateFraction = cellNum(row[2]);
+    } else if (label.includes('official') && label.includes('rate')) {
+      out.officialRate = cellNum(row[2]);
+    } else if ((label.includes('street') || label.includes('parallel')) && label.includes('rate')) {
+      out.streetRate = cellNum(row[2]);
+    } else if (label.includes('zimra') && label.includes('interest')) {
+      out.zimraInterestFraction = cellNum(row[2]);
+    } else if (label.includes('report') || label.includes('valuation date')) {
+      out.reportDate = cellDate(row[2]);
+    }
+  }
+  return out;
+}
+
 // ── Payroll header detection + row parsing ──
 
 /**

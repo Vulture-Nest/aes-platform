@@ -391,10 +391,13 @@ export class TravelService implements OnModuleInit {
   /**
    * Retire a DISBURSED advance. Reconciliation of `unspent` against the advance:
    *   - unspent > 0  -> refundDue: the traveller returns the unspent cash to the business.
-   *                     We post the returned cash back as a CREDIT to the source account.
-   *   - unspent < 0  -> refundOwed: the traveller overspent; the business owes them the
-   *                     excess (settled by a separate requisition/payment, not posted here).
+   *                     We post the returned cash back as a CREDIT to the source account
+   *                     (reversing the PAYABLE contra leg).
+   *   - unspent < 0  -> refundOwed: the traveller OVERSPENT (spent beyond the advance); the
+   *                     business owes them the excess. We pay it out as an additional DEBIT to
+   *                     the source account (cash out) against the PAYABLE contra (CREDIT).
    *   - unspent = 0  -> fully reconciled, nothing to settle.
+   * `unspent` may be negative to represent overspend (the clamp/upper-bound check was removed).
    * The request moves RETIRED then CLOSED (recorded in the trail).
    */
   async retire(id: string, actorId: string, dto: RetireTravelDto): Promise<TravelRequest> {
@@ -412,16 +415,16 @@ export class TravelService implements OnModuleInit {
       );
     }
 
-    // Positive unspent = cash owed BACK to the business (refundDue). No overspend can be
-    // represented by `unspent` (it is clamped >= 0 by the DTO), so refundOwed stays 0 here;
-    // it exists on the model for future overspend-settlement flows.
-    const refundDue = new Prisma.Decimal(dto.unspent);
-    const refundOwed = new Prisma.Decimal(0);
+    // Reconcile both ways from a single signed `unspent`:
+    //   unspent > 0 -> refundDue  (traveller returns cash to the business)
+    //   unspent < 0 -> refundOwed (business owes the traveller the overspend)
+    const refundDue = new Prisma.Decimal(dto.unspent > 0 ? dto.unspent : 0);
+    const refundOwed = new Prisma.Decimal(dto.unspent < 0 ? -dto.unspent : 0);
     const retiredAt = new Date();
 
-    // Record returned cash as a balanced double-entry journal: the unspent advance flows back
-    // INTO the source (cash) account (CREDIT), reversing the PAYABLE contra leg (DEBIT).
     if (dto.unspent > 0 && travel.disbursementAccountId) {
+      // Refund: returned cash flows back INTO the source (cash) account (CREDIT), reversing the
+      // PAYABLE contra leg (DEBIT).
       const payable = await this.ledger.ensureSystemAccount('PAYABLE', travel.currency as string);
       await this.ledger.postJournal(
         [
@@ -436,6 +439,33 @@ export class TravelService implements OnModuleInit {
             debit: dto.unspent,
             currency: travel.currency as string,
             description: `Travel retirement payable reversal: ${travel.destination}`,
+          },
+        ],
+        {
+          sourceTable: SUBJECT_TABLE,
+          sourceId: id,
+          entryDate: retiredAt,
+          createdBy: actorId,
+        },
+      );
+    } else if (dto.unspent < 0 && travel.disbursementAccountId) {
+      // Overspend: the business pays the traveller the excess — additional cash OUT of the source
+      // account (DEBIT) against the PAYABLE contra (CREDIT), mirroring the disbursement direction.
+      const overspend = -dto.unspent;
+      const payable = await this.ledger.ensureSystemAccount('PAYABLE', travel.currency as string);
+      await this.ledger.postJournal(
+        [
+          {
+            accountId: travel.disbursementAccountId,
+            debit: overspend,
+            currency: travel.currency as string,
+            description: `Travel retirement overspend settlement: ${travel.destination}`,
+          },
+          {
+            accountId: payable.id,
+            credit: overspend,
+            currency: travel.currency as string,
+            description: `Travel retirement overspend payable: ${travel.destination}`,
           },
         ],
         {
