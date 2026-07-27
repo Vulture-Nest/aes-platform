@@ -6,6 +6,10 @@ import { AlertService } from '../command-centre/danger/alert.service';
 import { DangerEngineService } from '../command-centre/danger/danger-engine.service';
 import { ComplianceService } from '../compliance/compliance.service';
 import { AppConfig } from '../config/configuration';
+import { LoanInterestAccrualService } from '../financial/domain/loan-interest-accrual.service';
+import { OrderHealthRecalcService } from '../financial/domain/order-health-recalc.service';
+import { ZimraInterestAccrualService } from '../financial/domain/zimra-interest-accrual.service';
+import { DirectorWithdrawalsService } from '../workflows/director-withdrawals/director-withdrawals.service';
 import { RequisitionsService } from '../workflows/requisitions/requisitions.service';
 import { TravelService } from '../workflows/travel/travel.service';
 
@@ -29,6 +33,10 @@ export class ScheduledJobsService {
     private readonly travel: TravelService,
     private readonly approvals: ApprovalService,
     private readonly compliance: ComplianceService,
+    private readonly loanInterestAccrual: LoanInterestAccrualService,
+    private readonly zimraInterestAccrual: ZimraInterestAccrualService,
+    private readonly orderHealthRecalc: OrderHealthRecalcService,
+    private readonly directorWithdrawals: DirectorWithdrawalsService,
   ) {}
 
   private get enabled(): boolean {
@@ -98,6 +106,50 @@ export class ScheduledJobsService {
   complianceDueCheck(): Promise<void> {
     return this.run('compliance.checkDueAndOverdue', () =>
       this.compliance.checkDueAndOverdue(new Date()),
+    );
+  }
+
+  /**
+   * G9a — nightly loan interest accrual. Writes one idempotent per-day LoanInterest row
+   * per active loan up to yesterday; re-runs never double-accrue (unique loan+date +
+   * skipDuplicates). Balance/total-due stay derived on read.
+   */
+  @Cron('0 1 * * *', { name: 'loan-interest-accrual', timeZone: TZ })
+  runLoanInterestAccrual(): Promise<void> {
+    return this.run('loanInterest.accrueAll', () => this.loanInterestAccrual.accrueAll(new Date()));
+  }
+
+  /**
+   * G9b — nightly ZIMRA/other-tax overdue-interest accrual. Refreshes the persisted
+   * accruedInterest snapshot on each debt (A.5/A.6) so it isn't only computed on-read;
+   * the refresh is idempotent (each run overwrites with the value for today).
+   */
+  @Cron('0 1 * * *', { name: 'zimra-interest-accrual', timeZone: TZ })
+  runZimraInterestAccrual(): Promise<void> {
+    return this.run('zimraInterest.accrueAll', () =>
+      this.zimraInterestAccrual.accrueAll(new Date()),
+    );
+  }
+
+  /**
+   * G9c — nightly order-health recalc. Recomputes each open order's health, persists it,
+   * and raises a WATCH alert the first time an order transitions from a non-red state into
+   * a red one (OVERDUE_PAYMENT / OVERDUE_SERVICE). No duplicate alert if already red.
+   */
+  @Cron('0 2 * * *', { name: 'order-health-recalc', timeZone: TZ })
+  runOrderHealthRecalc(): Promise<void> {
+    return this.run('orderHealth.recalcAll', () => this.orderHealthRecalc.recalcAll(new Date()));
+  }
+
+  /**
+   * G10 — daily director-withdrawal stale-posted nudge. Reminds directors of every
+   * POSTED_AWAITING_TRANSFER withdrawal whose human transfer is still unrecorded past
+   * the stale window. Mirrors the travel-unretired wiring.
+   */
+  @Cron('0 7 * * *', { name: 'director-withdrawal-nudge', timeZone: TZ })
+  directorWithdrawalNudge(): Promise<void> {
+    return this.run('directorWithdrawals.nudgeStalePosted', () =>
+      this.directorWithdrawals.nudgeStalePosted(new Date()),
     );
   }
 }

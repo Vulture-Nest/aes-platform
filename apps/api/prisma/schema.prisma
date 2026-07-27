@@ -471,6 +471,10 @@ model Order {
   closingDate    DateTime? @map("closing_date")
   serviced       Boolean   @default(false)
   servicedAt     DateTime? @map("serviced_at")
+  /// Last OrderHealth state persisted by the nightly recalc job (null until first run).
+  /// Used to detect transitions INTO a red state so alerts fire once, not every night.
+  lastHealth        String?   @map("last_health")
+  healthEvaluatedAt DateTime? @map("health_evaluated_at")
   /// The user responsible for servicing this order (sees it in their "My Orders").
   assignedUserId String?   @map("assigned_user_id") @db.Uuid
   /// Multinational/entity dimension (nullable; backfilled to the default entity).
@@ -703,6 +707,11 @@ model OtherTaxDebt {
   currency   String
   dueDate    DateTime @map("due_date")
   ratePct    Decimal  @map("rate_pct") @db.Decimal(20, 6)
+  /// Accrued statutory interest persisted by the nightly ZIMRA-interest job (A.6):
+  /// principal_outstanding * ratePct/100 * daysOverdue/365. Null until first accrual;
+  /// balance/total-due stay derived on read. accruedInterestAt records the "as of" date.
+  accruedInterest   Decimal?  @map("accrued_interest") @db.Decimal(20, 2)
+  accruedInterestAt DateTime? @map("accrued_interest_at")
   /// Multinational/entity dimension (nullable; backfilled to the default entity).
   entityId  String?  @map("entity_id") @db.Uuid
   entity    Entity?  @relation(fields: [entityId], references: [id])
@@ -723,6 +732,11 @@ model ZimraAssessment {
   assessedAmount Decimal  @map("assessed_amount") @db.Decimal(20, 2)
   currency       String
   dueDate        DateTime @map("due_date")
+  /// Accrued statutory interest persisted by the nightly ZIMRA-interest job (A.6),
+  /// using the statutory `zimra_interest_pct` rate: assessedAmount * rate/100 * daysOverdue/365.
+  /// Null until first accrual; total-due stays derived on read.
+  accruedInterest   Decimal?  @map("accrued_interest") @db.Decimal(20, 2)
+  accruedInterestAt DateTime? @map("accrued_interest_at")
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")

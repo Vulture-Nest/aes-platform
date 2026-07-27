@@ -106,6 +106,51 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   PAYROLL_ENCRYPTION_KEY?: string;
+
+  // --- Notification delivery transports (G7) ---
+  // All OPTIONAL: with none set the app boots and every external transport no-ops.
+  // Email (SMTP via nodemailer). Provide either MAIL_SMTP_URL or MAIL_HOST[/PORT].
+  @IsString()
+  @IsOptional()
+  MAIL_SMTP_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  MAIL_HOST?: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(65535)
+  @IsOptional()
+  MAIL_PORT?: number;
+
+  @IsBoolean()
+  @Transform(toBool)
+  @IsOptional()
+  MAIL_SECURE?: boolean;
+
+  @IsString()
+  @IsOptional()
+  MAIL_USER?: string;
+
+  @IsString()
+  @IsOptional()
+  MAIL_PASS?: string;
+
+  @IsString()
+  @IsOptional()
+  MAIL_FROM?: string;
+
+  // Microsoft Teams Incoming Webhook URL.
+  @IsString()
+  @IsOptional()
+  TEAMS_WEBHOOK_URL?: string;
+
+  // Firebase service-account JSON: a file path or an inline JSON string.
+  @IsString()
+  @IsOptional()
+  FCM_SERVICE_ACCOUNT_JSON?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

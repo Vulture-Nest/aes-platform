@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AlertSeverity, DangerRule, Prisma } from '@prisma/client';
+import { AlertSeverity, DangerRule, PayrollRunStatus, Prisma } from '@prisma/client';
 import { LoanInterestService } from '../../financial/domain/loan-interest.service';
 import { LedgerService } from '../../ledger/ledger.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -32,6 +32,17 @@ function numParam(params: Prisma.JsonValue, key: string, fallback: number): numb
     const v = (params as Record<string, unknown>)[key];
     if (typeof v === 'number' && Number.isFinite(v)) {
       return v;
+    }
+  }
+  return fallback;
+}
+
+/** Read a string[] param with a fallback (params is loose JSON). */
+function strArrayParam(params: Prisma.JsonValue, key: string, fallback: string[]): string[] {
+  if (params && typeof params === 'object' && !Array.isArray(params)) {
+    const v = (params as Record<string, unknown>)[key];
+    if (Array.isArray(v) && v.every((x) => typeof x === 'string') && v.length > 0) {
+      return v as string[];
     }
   }
   return fallback;
@@ -108,9 +119,16 @@ export class DangerEngineService {
         return this.evalLoanInterestBurn(rule, now);
       case 'cash_runway':
         return this.evalCashRunway(rule, now);
+      case 'payroll_coverage':
+        return this.evalPayrollCoverage(rule, now);
+      case 'petty_cash_variance':
+        return this.evalPettyCashVariance(rule, now);
+      case 'concentration_risk':
+        return this.evalConcentrationRisk(rule, now);
+      case 'conversion_loss':
+        return this.evalConversionLoss(rule, now);
       default:
-        // petty_cash_variance / concentration_risk / conversion_loss / payroll_coverage
-        // are not computable here yet — skip gracefully.
+        // Unknown rule key — skip gracefully rather than raising a false alert.
         return Promise.resolve({
           ruleKey: rule.ruleKey,
           outcome: 'skipped',
@@ -380,6 +398,248 @@ export class DangerEngineService {
       ruleKey: rule.ruleKey,
       outcome: 'alerted',
       detail: `runway=${runwayWeeks.toFixed(1)}w`,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // payroll_coverage: the next payroll's total company cost vs liquid cash.
+  //   Company cost per line = gross + employer statutory contributions
+  //   (nssaEr + zimdef + nec + mipf) — the same "salaries + employer" basis the
+  //   payroll ledger posting uses. "Next payroll" = runs not yet paid/locked
+  //   (DRAFT/CHECKED/APPROVED). Liquid cash = command-centre cash position (USD).
+  //   DANGER when payrollTotal > liquidCash. Params: `statuses` (string[] of run
+  //   statuses to include, default the unpaid set).
+  // ---------------------------------------------------------------------------
+  private async evalPayrollCoverage(rule: DangerRule, _now: Date): Promise<RuleEvaluation> {
+    const statuses = strArrayParam(rule.params, 'statuses', ['DRAFT', 'CHECKED', 'APPROVED']);
+
+    const runs = await this.prisma.payrollRun.findMany({
+      where: { status: { in: statuses as PayrollRunStatus[] } },
+      include: {
+        lines: {
+          select: {
+            gross: true,
+            nssaEr: true,
+            zimdef: true,
+            nec: true,
+            mipf: true,
+          },
+        },
+      },
+    });
+
+    let payrollTotal = 0;
+    for (const run of runs) {
+      for (const line of run.lines) {
+        payrollTotal +=
+          num(line.gross) + num(line.nssaEr) + num(line.zimdef) + num(line.nec) + num(line.mipf);
+      }
+    }
+
+    if (payrollTotal <= 0) {
+      await this.alerts.resolve(rule.ruleKey);
+      return { ruleKey: rule.ruleKey, outcome: 'clear', detail: 'no upcoming payroll cost' };
+    }
+
+    const cash = await this.ledger.cashPosition();
+    const liquidCash = cash.totals.USD ?? 0;
+
+    if (payrollTotal <= liquidCash) {
+      await this.alerts.resolve(rule.ruleKey);
+      return {
+        ruleKey: rule.ruleKey,
+        outcome: 'clear',
+        detail: `payroll ${payrollTotal.toFixed(2)} <= cash ${liquidCash.toFixed(2)}`,
+      };
+    }
+
+    await this.alerts.raiseOrRefresh({
+      ruleKey: rule.ruleKey,
+      severity: rule.severity,
+      message: `Next payroll of ${payrollTotal.toFixed(2)} USD exceeds liquid cash of ${liquidCash.toFixed(2)} USD (shortfall ${(payrollTotal - liquidCash).toFixed(2)} USD).`,
+      payload: {
+        payrollTotal,
+        liquidCash,
+        shortfall: payrollTotal - liquidCash,
+        runs: runs.length,
+        statuses,
+      },
+    });
+    return {
+      ruleKey: rule.ruleKey,
+      outcome: 'alerted',
+      detail: `payroll ${payrollTotal.toFixed(2)} > cash ${liquidCash.toFixed(2)}`,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // petty_cash_variance: any petty-cash float with an unresolved reconciliation
+  //   variance beyond tolerance. Reconciliation locks a float when a counted
+  //   variance exceeds tolerance (schema: PettyCashFloat.locked), so a locked
+  //   float is an unresolved out-of-tolerance variance. WATCH, one alert per
+  //   locked float (deduped by subjectId).
+  // ---------------------------------------------------------------------------
+  private async evalPettyCashVariance(rule: DangerRule, _now: Date): Promise<RuleEvaluation> {
+    const locked = await this.prisma.pettyCashFloat.findMany({ where: { locked: true } });
+    if (locked.length === 0) {
+      await this.alerts.resolve(rule.ruleKey);
+      return { ruleKey: rule.ruleKey, outcome: 'clear', detail: 'no locked floats' };
+    }
+    for (const float of locked) {
+      await this.alerts.raiseOrRefresh({
+        ruleKey: rule.ruleKey,
+        severity: rule.severity,
+        subjectTable: 'petty_cash_floats',
+        subjectId: float.id,
+        message: `Petty-cash float (${num(float.floatAmount).toFixed(2)} ${float.currency}) is locked by an unresolved reconciliation variance beyond tolerance.`,
+        payload: {
+          floatAmount: num(float.floatAmount),
+          currency: float.currency,
+          siteId: float.siteId,
+          custodianUserId: float.custodianUserId,
+        },
+      });
+    }
+    return {
+      ruleKey: rule.ruleKey,
+      outcome: 'alerted',
+      detail: `${locked.length} locked float(s)`,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // concentration_risk: one client's open order value as a share of total open
+  //   order value. Open value per order = valueExVat - receipts (outstanding).
+  //   WATCH when the top client's share > watchPct (params, default 0.4).
+  //   Drill-down subject = the concentrated client.
+  // ---------------------------------------------------------------------------
+  private async evalConcentrationRisk(rule: DangerRule, _now: Date): Promise<RuleEvaluation> {
+    const watchPct = numParam(rule.params, 'watchPct', 0.4);
+
+    const orders = await this.prisma.order.findMany({
+      include: {
+        receipts: { select: { amount: true } },
+        client: { select: { id: true, name: true } },
+      },
+    });
+
+    const byClient = new Map<string, { name: string; open: number }>();
+    let totalOpen = 0;
+    for (const o of orders) {
+      const received = o.receipts.reduce((s, r) => s + num(r.amount), 0);
+      const open = num(o.valueExVat) - received;
+      if (open <= 0) {
+        continue;
+      }
+      totalOpen += open;
+      const prev = byClient.get(o.clientId) ?? { name: o.client.name, open: 0 };
+      prev.open += open;
+      byClient.set(o.clientId, prev);
+    }
+
+    if (totalOpen <= 0) {
+      await this.alerts.resolve(rule.ruleKey);
+      return { ruleKey: rule.ruleKey, outcome: 'clear', detail: 'no open order value' };
+    }
+
+    let topClientId: string | null = null;
+    let top = { name: '', open: 0 };
+    for (const [clientId, agg] of byClient) {
+      if (agg.open > top.open) {
+        top = agg;
+        topClientId = clientId;
+      }
+    }
+
+    const pct = top.open / totalOpen;
+    if (pct <= watchPct) {
+      await this.alerts.resolve(rule.ruleKey);
+      return { ruleKey: rule.ruleKey, outcome: 'clear', detail: `top share=${pct.toFixed(2)}` };
+    }
+
+    await this.alerts.raiseOrRefresh({
+      ruleKey: rule.ruleKey,
+      severity: rule.severity,
+      subjectTable: 'clients',
+      subjectId: topClientId ?? undefined,
+      message: `Client "${top.name}" holds ${(pct * 100).toFixed(0)}% of open order value (${top.open.toFixed(2)} of ${totalOpen.toFixed(2)}), above the ${(watchPct * 100).toFixed(0)}% concentration limit.`,
+      payload: {
+        clientId: topClientId,
+        clientName: top.name,
+        clientOpen: top.open,
+        totalOpen,
+        pct,
+        watchPct,
+      },
+    });
+    return { ruleKey: rule.ruleKey, outcome: 'alerted', detail: `top share=${pct.toFixed(2)}` };
+  }
+
+  // ---------------------------------------------------------------------------
+  // conversion_loss: cumulative petty-cash conversion loss vs the official rate
+  //   within the period. Sums PettyCashTxn.varianceVsOfficial for CONVERSION legs
+  //   (achievedRate - officialRate; a negative variance is a loss). WATCH when the
+  //   cumulative loss magnitude exceeds `minLossUsd` (absolute, params) OR — when a
+  //   converted volume is available — the loss share exceeds `watchPct` of the
+  //   converted amount. Params: `periodDays` (lookback, default 30),
+  //   `watchPct` (default 0.1), `minLossUsd` (default 0 = share-only).
+  // ---------------------------------------------------------------------------
+  private async evalConversionLoss(rule: DangerRule, now: Date): Promise<RuleEvaluation> {
+    const periodDays = numParam(rule.params, 'periodDays', 30);
+    const watchPct = numParam(rule.params, 'watchPct', 0.1);
+    const minLossUsd = numParam(rule.params, 'minLossUsd', 0);
+    const since = new Date(now.getTime() - periodDays * MS_PER_DAY);
+
+    const legs = await this.prisma.pettyCashTxn.findMany({
+      where: {
+        type: { in: ['CONVERSION_OUT', 'CONVERSION_IN'] },
+        createdAt: { gte: since },
+      },
+      select: { amount: true, varianceVsOfficial: true },
+    });
+
+    let cumulativeVariance = 0;
+    let convertedVolume = 0;
+    for (const leg of legs) {
+      cumulativeVariance += num(leg.varianceVsOfficial);
+      convertedVolume += num(leg.amount);
+    }
+    // A negative variance vs official = a loss on the swap.
+    const cumulativeLoss = Math.max(0, -cumulativeVariance);
+
+    if (cumulativeLoss <= 0) {
+      await this.alerts.resolve(rule.ruleKey);
+      return { ruleKey: rule.ruleKey, outcome: 'clear', detail: 'no conversion loss in period' };
+    }
+
+    const lossPct = convertedVolume > 0 ? cumulativeLoss / convertedVolume : 0;
+    const breaches = cumulativeLoss > minLossUsd && (minLossUsd > 0 || lossPct > watchPct);
+    if (!breaches) {
+      await this.alerts.resolve(rule.ruleKey);
+      return {
+        ruleKey: rule.ruleKey,
+        outcome: 'clear',
+        detail: `loss ${cumulativeLoss.toFixed(2)} (${(lossPct * 100).toFixed(1)}%)`,
+      };
+    }
+
+    await this.alerts.raiseOrRefresh({
+      ruleKey: rule.ruleKey,
+      severity: rule.severity,
+      message: `Petty-cash conversion loss vs official rate is ${cumulativeLoss.toFixed(2)} over the last ${periodDays} day(s) (${(lossPct * 100).toFixed(1)}% of ${convertedVolume.toFixed(2)} converted).`,
+      payload: {
+        cumulativeLoss,
+        convertedVolume,
+        lossPct,
+        periodDays,
+        watchPct,
+        minLossUsd,
+      },
+    });
+    return {
+      ruleKey: rule.ruleKey,
+      outcome: 'alerted',
+      detail: `loss ${cumulativeLoss.toFixed(2)} (${(lossPct * 100).toFixed(1)}%)`,
     };
   }
 }
