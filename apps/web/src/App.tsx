@@ -16,6 +16,12 @@ import { TimesheetsPage } from './features/timesheets/TimesheetsPage';
 import { ApprovalsPage } from './features/approvals/ApprovalsPage';
 import { MyOrdersPage } from './features/my-orders/MyOrdersPage';
 import { CommandCentrePage } from './features/command-centre/CommandCentrePage';
+import { CrmPage } from './features/crm/CrmPage';
+import { MarketingPage } from './features/marketing/MarketingPage';
+import { BoardsPage } from './features/boards/BoardsPage';
+import { ProjectsPage } from './features/projects/ProjectsPage';
+import { SiteReportsPage } from './features/site-reports/SiteReportsPage';
+import { ReturnsHubPage } from './features/returns-hub/ReturnsHubPage';
 
 function ProtectedLayout() {
   return (
@@ -48,6 +54,12 @@ function Shell() {
         <Route path="/approvals" element={<ApprovalsPage />} />
         <Route path="/my-orders" element={<MyOrdersPage />} />
         <Route path="/command-centre" element={<CommandCentrePage />} />
+        <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/boards" element={<BoardsPage />} />
+        <Route path="/site-reports" element={<SiteReportsPage />} />
+        <Route path="/crm" element={<CrmPage />} />
+        <Route path="/marketing" element={<MarketingPage />} />
+        <Route path="/returns-hub" element={<ReturnsHubPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/rates" element={<RatesPage />} />
         <Route path="/profile" element={<ProfilePage />} />
