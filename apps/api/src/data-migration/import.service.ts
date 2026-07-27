@@ -4,6 +4,7 @@ import ExcelJS from 'exceljs';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import { TaxLedgerConsolidationService } from '../financial/domain/tax-ledger-consolidation.service';
+import { LedgerService } from '../ledger/ledger.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   detectPayrollColumns,
@@ -93,6 +94,7 @@ export class ImportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly taxConsolidation: TaxLedgerConsolidationService,
+    private readonly ledger: LedgerService,
   ) {}
 
   private bump(counts: Counts, table: string, created: boolean): void {
@@ -443,13 +445,21 @@ export class ImportService {
         receivedDate,
         reference: leg.ref,
       };
+      let receiptId: string;
       if (existing) {
         await tx.orderReceipt.update({ where: { id: existing.id }, data: { ...data, updatedBy: actorId } });
+        receiptId = existing.id;
         this.bump(counts, 'order_receipts', false);
       } else {
-        await tx.orderReceipt.create({ data: { ...data, createdBy: actorId, updatedBy: actorId } });
+        const created = await tx.orderReceipt.create({ data: { ...data, createdBy: actorId, updatedBy: actorId } });
+        receiptId = created.id;
         this.bump(counts, 'order_receipts', true);
       }
+      // G14: post the revenue inflow for this receipt (idempotent per receipt id).
+      await this.ledger.postOrderReceipt(
+        { id: receiptId, amount: leg.amount, currency: USD, createdBy: actorId, receivedDate },
+        tx,
+      );
     }
   }
 
@@ -650,13 +660,21 @@ export class ImportService {
         currency: USD,
         claimDate,
       };
+      let claimId: string;
       if (existing) {
         await tx.contractClaim.update({ where: { id: existing.id }, data: { ...data, updatedBy: actorId } });
+        claimId = existing.id;
         this.bump(counts, 'contract_claims', false);
       } else {
-        await tx.contractClaim.create({ data: { ...data, createdBy: actorId, updatedBy: actorId } });
+        const created = await tx.contractClaim.create({ data: { ...data, createdBy: actorId, updatedBy: actorId } });
+        claimId = created.id;
         this.bump(counts, 'contract_claims', true);
       }
+      // G14: recognise revenue for this claim (DEBIT receivable + CREDIT revenue; idempotent).
+      await this.ledger.postContractClaim(
+        { id: claimId, amountExVat: parsed.amountExVat, currency: USD, createdBy: actorId, claimDate },
+        tx,
+      );
     }
   }
 

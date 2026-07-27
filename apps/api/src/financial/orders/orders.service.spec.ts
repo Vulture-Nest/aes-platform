@@ -11,8 +11,9 @@ describe('OrdersService', () => {
   };
   const audit = { record: jest.fn() };
   const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
+  const ledger = { postOrderReceipt: jest.fn().mockResolvedValue(undefined) };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const service = new OrdersService(prisma as any, audit as any, lookups as any);
+  const service = new OrdersService(prisma as any, audit as any, lookups as any, ledger as any);
 
   // A finance manager (may act on any order).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,6 +74,10 @@ describe('OrdersService', () => {
     expect(res.id).toBe('r1');
     expect(audit.record).toHaveBeenCalledWith(
       expect.objectContaining({ tableName: 'order_receipts', recordId: 'r1' }),
+    );
+    // G14: the receipt posts a revenue journal (idempotent per receipt id).
+    expect(ledger.postOrderReceipt).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'r1', amount: 50, currency: 'USD' }),
     );
   });
 

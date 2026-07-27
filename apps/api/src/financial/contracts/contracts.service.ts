@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../../audit/audit.service';
+import { LedgerService } from '../../ledger/ledger.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LookupService } from '../../settings/lookup.service';
 import { CreateContractClaimDto, CreateContractDto, UpdateContractDto } from './dto/contract.dto';
@@ -10,6 +11,7 @@ export class ContractsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly lookups: LookupService,
+    private readonly ledger: LedgerService,
   ) {}
 
   list() {
@@ -89,6 +91,14 @@ export class ContractsService {
       tableName: 'contract_claims',
       recordId: claim.id,
       after: { contractId, amountExVat: claim.amountExVat.toString(), currency: claim.currency },
+    });
+    // G14: recognise revenue on the claim (DEBIT receivable + CREDIT revenue). Idempotent.
+    await this.ledger.postContractClaim({
+      id: claim.id,
+      amountExVat: claim.amountExVat.toNumber(),
+      currency: claim.currency,
+      createdBy: actorId,
+      claimDate: claim.claimDate,
     });
     return claim;
   }

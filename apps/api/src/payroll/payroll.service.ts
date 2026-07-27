@@ -800,18 +800,32 @@ export class PayrollService implements OnModuleInit {
         );
         continue;
       }
-      await this.ledger.post([
+      // Post the employer cost as a balanced double-entry journal: cash out of the best-funded
+      // account is a DEBIT (salaries/overheads outflow); the contra PAYABLE account is CREDITed
+      // for the same amount so Σdebit == Σcredit. The cash effect is unchanged.
+      const payable = await this.ledger.ensureSystemAccount('PAYABLE', currency);
+      await this.ledger.postJournal(
+        [
+          {
+            accountId: source.accountId,
+            debit: amount,
+            currency,
+            description: `Payroll ${run.month} employer cost (${currency})`,
+          },
+          {
+            accountId: payable.id,
+            credit: amount,
+            currency,
+            description: `Payroll ${run.month} payable (${currency})`,
+          },
+        ],
         {
-          accountId: source.accountId,
-          debit: amount,
-          currency,
           sourceTable: SUBJECT_TABLE,
           sourceId: run.id,
           entryDate: now,
-          description: `Payroll ${run.month} employer cost (${currency})`,
           createdBy: run.approvedByUserId ?? run.preparedByUserId ?? undefined,
         },
-      ]);
+      );
     }
   }
 

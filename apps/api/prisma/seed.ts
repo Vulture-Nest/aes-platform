@@ -58,6 +58,18 @@ async function main(): Promise<void> {
       currency: 'USD',
       siteId: s.id,
     })),
+    // G14 double-entry contra/control accounts, one per needed currency. Names match
+    // LedgerService.ensureSystemAccount ("System <TYPE> <CCY>") so seed + runtime converge.
+    // These are NOT cash types → excluded from cashPosition totals.
+    ...(['RECEIVABLE', 'REVENUE', 'PAYABLE', 'DRAWINGS', 'TAX_PAYABLE', 'LOAN_PAYABLE'].flatMap(
+      (type) =>
+        ['USD', 'ZWG'].map((currency) => ({
+          name: `System ${type} ${currency}`,
+          type,
+          currency,
+          siteId: null,
+        })),
+    ) as Array<{ name: string; type: string; currency: string; siteId: string | null }>),
   ];
   for (const acc of defaultAccounts) {
     const existing = await prisma.account.findFirst({

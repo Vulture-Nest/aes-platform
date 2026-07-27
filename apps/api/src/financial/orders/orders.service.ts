@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { AuditService } from '../../audit/audit.service';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
+import { LedgerService } from '../../ledger/ledger.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LookupService } from '../../settings/lookup.service';
 import {
@@ -24,6 +25,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly lookups: LookupService,
+    private readonly ledger: LedgerService,
   ) {}
 
   list() {
@@ -167,6 +169,14 @@ export class OrdersService {
         amount: receipt.amount.toString(),
         currency: receipt.currency,
       },
+    });
+    // G14: post the revenue inflow (CREDIT cash/bank + DEBIT revenue). Idempotent per receipt.
+    await this.ledger.postOrderReceipt({
+      id: receipt.id,
+      amount: receipt.amount.toNumber(),
+      currency: receipt.currency,
+      createdBy: user.id,
+      receivedDate: receipt.receivedDate,
     });
     return receipt;
   }

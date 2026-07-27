@@ -323,19 +323,31 @@ export class TravelService implements OnModuleInit {
 
     const disbursedAt = new Date();
 
-    // Post the cash outflow: money paid out of the source account is a DEBIT.
-    await this.ledger.post([
+    // Post the cash outflow as a balanced double-entry journal: money paid out of the source
+    // (cash) account is a DEBIT; the contra PAYABLE account is CREDITed for the same amount.
+    const payable = await this.ledger.ensureSystemAccount('PAYABLE', travel.currency as string);
+    await this.ledger.postJournal(
+      [
+        {
+          accountId: dto.accountId,
+          debit: travel.advanceAmount.toNumber(),
+          currency: travel.currency as string,
+          description: `Travel advance disbursement: ${travel.destination}`,
+        },
+        {
+          accountId: payable.id,
+          credit: travel.advanceAmount.toNumber(),
+          currency: travel.currency as string,
+          description: `Travel advance payable: ${travel.destination}`,
+        },
+      ],
       {
-        accountId: dto.accountId,
-        debit: travel.advanceAmount.toNumber(),
-        currency: travel.currency as string,
         sourceTable: SUBJECT_TABLE,
         sourceId: id,
         entryDate: disbursedAt,
-        description: `Travel advance disbursement: ${travel.destination}`,
         createdBy: financeUserId,
       },
-    ]);
+    );
 
     // DISBURSED (NOT closed) — travel has a mandatory post-disbursement retirement step.
     const updated = await this.prisma.travelRequest.update({
@@ -407,20 +419,32 @@ export class TravelService implements OnModuleInit {
     const refundOwed = new Prisma.Decimal(0);
     const retiredAt = new Date();
 
-    // Record returned cash: the unspent advance flows back INTO the source account (CREDIT).
+    // Record returned cash as a balanced double-entry journal: the unspent advance flows back
+    // INTO the source (cash) account (CREDIT), reversing the PAYABLE contra leg (DEBIT).
     if (dto.unspent > 0 && travel.disbursementAccountId) {
-      await this.ledger.post([
+      const payable = await this.ledger.ensureSystemAccount('PAYABLE', travel.currency as string);
+      await this.ledger.postJournal(
+        [
+          {
+            accountId: travel.disbursementAccountId,
+            credit: dto.unspent,
+            currency: travel.currency as string,
+            description: `Travel retirement refund: ${travel.destination}`,
+          },
+          {
+            accountId: payable.id,
+            debit: dto.unspent,
+            currency: travel.currency as string,
+            description: `Travel retirement payable reversal: ${travel.destination}`,
+          },
+        ],
         {
-          accountId: travel.disbursementAccountId,
-          credit: dto.unspent,
-          currency: travel.currency as string,
           sourceTable: SUBJECT_TABLE,
           sourceId: id,
           entryDate: retiredAt,
-          description: `Travel retirement refund: ${travel.destination}`,
           createdBy: actorId,
         },
-      ]);
+      );
     }
 
     const updated = await this.prisma.travelRequest.update({

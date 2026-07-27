@@ -607,10 +607,12 @@ export class PettyCashService implements OnModuleInit {
 
   /**
    * Post a txn's money movement to the ledger:
-   *   - TOP_UP: the human transfer moves bank -> petty cash; DEBIT the source (bank) account.
-   *   - WITHDRAWAL / CONVERSION_*: petty cash is not itself a ledger account here, so cash
-   *     leaving/arriving in the float is tracked by the derived float balance, not double-posted.
-   *     Only the TOP_UP has a bank-account leg to post.
+   *   - TOP_UP: the human transfer moves bank -> petty cash. This is a transfer between two
+   *     CASH accounts, so it posts as a balanced journal — DEBIT the source (bank) account and
+   *     CREDIT the site's PETTY_CASH account for the same amount. Net cash is unchanged (correct:
+   *     the money moved location, it did not leave the business).
+   *   - WITHDRAWAL / CONVERSION_*: the float draw-down/arrival is tracked by the derived float
+   *     balance, not double-posted. Only the TOP_UP has ledger legs to post.
    */
   private async postToLedger(
     txn: PettyCashTxn,
@@ -626,18 +628,36 @@ export class PettyCashService implements OnModuleInit {
       this.logger.warn(`Top-up ${txn.id} has no source account; skipping ledger post`);
       return;
     }
-    await this.ledger.post([
+    // Resolve the destination petty-cash ledger account for this site+currency (the imprest
+    // account seeded per mine site). Fall back to a system PETTY_CASH account if none exists so
+    // the journal always balances.
+    const pettyCashAccount =
+      (await this.prisma.account.findFirst({
+        where: { siteId: float.siteId, currency: float.currency, type: 'PETTY_CASH' },
+      })) ?? (await this.ledger.ensureSystemAccount('PETTY_CASH', float.currency as string));
+
+    await this.ledger.postJournal(
+      [
+        {
+          accountId: sourceAccountId,
+          debit: txn.amount.toNumber(),
+          currency: float.currency as string,
+          description: `Petty cash imprest top-up — bank (float ${float.id})`,
+        },
+        {
+          accountId: pettyCashAccount.id,
+          credit: txn.amount.toNumber(),
+          currency: float.currency as string,
+          description: `Petty cash imprest top-up — float (float ${float.id})`,
+        },
+      ],
       {
-        accountId: sourceAccountId,
-        debit: txn.amount.toNumber(),
-        currency: float.currency as string,
         sourceTable: SUBJECT_TABLE,
         sourceId: txn.id,
         entryDate: new Date(),
-        description: `Petty cash imprest top-up (float ${float.id})`,
         createdBy: actorId ?? undefined,
       },
-    ]);
+    );
   }
 
   // -------------------------------------------------------------------------

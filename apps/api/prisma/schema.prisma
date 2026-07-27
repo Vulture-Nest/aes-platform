@@ -656,11 +656,15 @@ model Account {
   @@map("accounts")
 }
 
-/// A double-entry-style ledger line against an account.
+/// A double-entry-style ledger line against an account. Lines that make up one balanced
+/// transaction (a journal) share a `txnId` so the double-entry group can be reconstructed.
 model LedgerEntry {
   id          String   @id @default(uuid()) @db.Uuid
   accountId   String   @map("account_id") @db.Uuid
   account     Account  @relation(fields: [accountId], references: [id])
+  /// Groups all legs of one balanced journal (Σdebit == Σcredit per currency). Nullable so
+  /// pre-journal single-leg entries remain valid; new postings via postJournal always set it.
+  txnId       String?  @map("txn_id") @db.Uuid
   debit       Decimal  @default(0) @db.Decimal(20, 2)
   credit      Decimal  @default(0) @db.Decimal(20, 2)
   currency    String
@@ -673,6 +677,7 @@ model LedgerEntry {
 
   @@index([accountId])
   @@index([sourceTable, sourceId])
+  @@index([txnId])
   @@map("ledger_entries")
 }
 
