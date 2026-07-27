@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsDate,
   IsNumber,
   IsOptional,
@@ -106,4 +107,22 @@ export class ReopenRequestDto {
   @ApiProperty({ example: 'Two night-shift rows were captured on the wrong day' })
   @IsString()
   reason!: string;
+}
+
+/**
+ * Reopen payload: actually reverts a LOCKED/SITE_APPROVED period back to OPEN (G22).
+ * `force` lets a SYS_ADMIN override the payroll-consumed guard.
+ */
+export class ReopenDto {
+  @ApiProperty({ example: 'Two night-shift rows were captured on the wrong day' })
+  @IsString()
+  reason!: string;
+
+  @ApiPropertyOptional({
+    description: 'SYS_ADMIN override: reopen even if a payroll run has consumed this period',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
 }

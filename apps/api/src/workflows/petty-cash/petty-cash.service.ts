@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -100,6 +101,15 @@ export class PettyCashService implements OnModuleInit {
   /** Open a petty-cash float for a site + currency held by a custodian. */
   async createFloat(dto: CreateFloatDto, actorId: string): Promise<PettyCashFloat> {
     await this.lookups.assertValid('currency', dto.currency);
+    // G25: exactly one float per (site, currency) — enforced by a DB unique index too.
+    const existing = await this.prisma.pettyCashFloat.findFirst({
+      where: { siteId: dto.siteId, currency: dto.currency },
+    });
+    if (existing) {
+      throw new ConflictException(
+        `A petty-cash float already exists for this site in ${dto.currency}`,
+      );
+    }
     const float = await this.prisma.pettyCashFloat.create({
       data: {
         siteId: dto.siteId,
@@ -167,6 +177,97 @@ export class PettyCashService implements OnModuleInit {
       }
     }
     return balance;
+  }
+
+  // -------------------------------------------------------------------------
+  // Conversions report (G25): cumulative conversion gain/loss per site + period
+  // -------------------------------------------------------------------------
+
+  /**
+   * Report the cumulative conversion gain/loss per site (optionally filtered to one site),
+   * grouped by period (YYYY-MM of the txn). For each POSTED conversion leg (CONVERSION_OUT /
+   * CONVERSION_IN) we accumulate `varianceVsOfficial` (achievedRate − officialRate, per unit);
+   * a positive variance is a gain on the swap, a negative one a loss. We also surface a monetary
+   * `gainLoss` derived from the OUT-leg legs only (variance × the source-currency amount), so
+   * the two legs of a single conversion are never double-counted in the money figure.
+   *
+   * Returns per (site, period) rows plus a per-site cumulative total.
+   */
+  async conversionsReport(siteId?: string): Promise<{
+    rows: {
+      siteId: string;
+      period: string;
+      conversions: number;
+      varianceSum: number;
+      gainLoss: number;
+    }[];
+    perSite: { siteId: string; varianceSum: number; gainLoss: number; conversions: number }[];
+  }> {
+    // Resolve the float -> site mapping (conversions live on floats, floats belong to a site).
+    const floats = await this.prisma.pettyCashFloat.findMany({
+      where: siteId ? { siteId } : undefined,
+      select: { id: true, siteId: true },
+    });
+    const siteByFloat = new Map(floats.map((f) => [f.id, f.siteId]));
+    const floatIds = [...siteByFloat.keys()];
+    if (floatIds.length === 0) {
+      return { rows: [], perSite: [] };
+    }
+
+    const legs = await this.prisma.pettyCashTxn.findMany({
+      where: {
+        floatId: { in: floatIds },
+        type: { in: [PettyCashTxnType.CONVERSION_OUT, PettyCashTxnType.CONVERSION_IN] },
+        status: PettyCashTxnStatus.POSTED,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Group by (site, period=YYYY-MM). Count a "conversion" once per OUT leg to avoid double-count.
+    const byKey = new Map<
+      string,
+      { siteId: string; period: string; conversions: number; varianceSum: number; gainLoss: number }
+    >();
+    for (const leg of legs) {
+      const site = siteByFloat.get(leg.floatId);
+      if (!site) {
+        continue;
+      }
+      const period = leg.createdAt.toISOString().slice(0, 7);
+      const key = `${site}::${period}`;
+      let row = byKey.get(key);
+      if (!row) {
+        row = { siteId: site, period, conversions: 0, varianceSum: 0, gainLoss: 0 };
+        byKey.set(key, row);
+      }
+      const variance = leg.varianceVsOfficial?.toNumber() ?? 0;
+      row.varianceSum += variance;
+      if (leg.type === PettyCashTxnType.CONVERSION_OUT) {
+        row.conversions += 1;
+        row.gainLoss += variance * leg.amount.toNumber();
+      }
+    }
+
+    const rows = [...byKey.values()].sort(
+      (a, b) => a.siteId.localeCompare(b.siteId) || a.period.localeCompare(b.period),
+    );
+
+    const perSiteMap = new Map<
+      string,
+      { siteId: string; varianceSum: number; gainLoss: number; conversions: number }
+    >();
+    for (const row of rows) {
+      let acc = perSiteMap.get(row.siteId);
+      if (!acc) {
+        acc = { siteId: row.siteId, varianceSum: 0, gainLoss: 0, conversions: 0 };
+        perSiteMap.set(row.siteId, acc);
+      }
+      acc.varianceSum += row.varianceSum;
+      acc.gainLoss += row.gainLoss;
+      acc.conversions += row.conversions;
+    }
+
+    return { rows, perSite: [...perSiteMap.values()] };
   }
 
   // -------------------------------------------------------------------------

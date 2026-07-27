@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
-import { ApprovalStatus, Prisma, TimesheetPeriodStatus } from '@prisma/client';
+import { ApprovalStatus, PayrollRunStatus, Prisma, TimesheetPeriodStatus } from '@prisma/client';
 import { StatusTransitionRegistry } from '../approvals/status-transition.registry';
 import { TimesheetsService } from './timesheets.service';
 
@@ -21,6 +21,7 @@ function makeService(maxHoursPerDay = 24) {
       count: jest.fn(),
       upsert: jest.fn(),
     },
+    payrollRun: { findFirst: jest.fn().mockResolvedValue(null) },
     $transaction: jest.fn().mockResolvedValue([]),
     rlsTx: jest.fn().mockImplementation(async (cb: any) => cb(prisma)),
   };
@@ -327,5 +328,107 @@ describe('TimesheetsService.manhours', () => {
       ugShift: 1,
       totalHours: 19,
     });
+  });
+});
+
+describe('TimesheetsService.reopen (G22)', () => {
+  it('reverts a LOCKED period back to OPEN and clears lockedAt when no run has consumed it', async () => {
+    const { service, prisma } = makeService();
+    prisma.timesheetPeriod.findUnique.mockResolvedValue({
+      id: 'p1',
+      siteId: 's1',
+      month: '2026-07',
+      status: TimesheetPeriodStatus.LOCKED,
+    });
+    prisma.payrollRun.findFirst.mockResolvedValue(null);
+    prisma.timesheetPeriod.update.mockResolvedValue({ id: 'p1', status: 'OPEN' });
+
+    const res = await service.reopen('p1', { reason: 'wrong day' }, 'sm1');
+
+    expect(prisma.payrollRun.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          siteId: 's1',
+          month: '2026-07',
+          status: { not: PayrollRunStatus.DRAFT },
+        }),
+      }),
+    );
+    expect(prisma.timesheetPeriod.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: TimesheetPeriodStatus.OPEN,
+          lockedAt: null,
+        }),
+      }),
+    );
+    expect(res.status).toBe('OPEN');
+  });
+
+  it('reopens a SITE_APPROVED period too', async () => {
+    const { service, prisma } = makeService();
+    prisma.timesheetPeriod.findUnique.mockResolvedValue({
+      id: 'p1',
+      siteId: 's1',
+      month: '2026-07',
+      status: TimesheetPeriodStatus.SITE_APPROVED,
+    });
+    prisma.timesheetPeriod.update.mockResolvedValue({ id: 'p1', status: 'OPEN' });
+    await service.reopen('p1', { reason: 'fix' }, 'sm1');
+    expect(prisma.timesheetPeriod.update).toHaveBeenCalled();
+  });
+
+  it('refuses to reopen an already-OPEN period', async () => {
+    const { service, prisma } = makeService();
+    prisma.timesheetPeriod.findUnique.mockResolvedValue({
+      id: 'p1',
+      siteId: 's1',
+      month: '2026-07',
+      status: TimesheetPeriodStatus.OPEN,
+    });
+    await expect(service.reopen('p1', { reason: 'x' }, 'sm1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('blocks reopening when a non-DRAFT payroll run has consumed the period (no force)', async () => {
+    const { service, prisma } = makeService();
+    prisma.timesheetPeriod.findUnique.mockResolvedValue({
+      id: 'p1',
+      siteId: 's1',
+      month: '2026-07',
+      status: TimesheetPeriodStatus.LOCKED,
+    });
+    prisma.payrollRun.findFirst.mockResolvedValue({
+      id: 'run1',
+      status: PayrollRunStatus.APPROVED,
+    });
+    await expect(service.reopen('p1', { reason: 'x' }, 'sm1')).rejects.toMatchObject({
+      name: 'ConflictException',
+    });
+    expect(prisma.timesheetPeriod.update).not.toHaveBeenCalled();
+  });
+
+  it('allows a SYS_ADMIN to force-reopen past a consuming payroll run', async () => {
+    const { service, prisma } = makeService();
+    prisma.timesheetPeriod.findUnique.mockResolvedValue({
+      id: 'p1',
+      siteId: 's1',
+      month: '2026-07',
+      status: TimesheetPeriodStatus.LOCKED,
+    });
+    prisma.payrollRun.findFirst.mockResolvedValue({
+      id: 'run1',
+      status: PayrollRunStatus.APPROVED,
+    });
+    prisma.timesheetPeriod.update.mockResolvedValue({ id: 'p1', status: 'OPEN' });
+
+    await service.reopen('p1', { reason: 'correction', force: true }, 'admin1');
+
+    expect(prisma.timesheetPeriod.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: TimesheetPeriodStatus.OPEN }),
+      }),
+    );
   });
 });

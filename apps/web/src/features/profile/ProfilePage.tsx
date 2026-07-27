@@ -1,6 +1,7 @@
 import { Descriptions, Tag, Typography } from 'antd';
 import { useAppSelector } from '../../app/hooks';
 import { ROLE_LABELS } from '../../rbac/roles';
+import { NotificationPreferences } from './NotificationPreferences';
 
 export function ProfilePage() {
   const user = useAppSelector((s) => s.auth.user);
@@ -23,6 +24,7 @@ export function ProfilePage() {
           ))}
         </Descriptions.Item>
       </Descriptions>
+      <NotificationPreferences />
     </>
   );
 }

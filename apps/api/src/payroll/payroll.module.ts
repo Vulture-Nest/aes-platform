@@ -1,5 +1,6 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { ApprovalsModule } from '../approvals/approvals.module';
+import { ComplianceModule } from '../compliance/compliance.module';
 import { ReferenceModule } from '../reference/reference.module';
 import { GrossBuildupService } from './calculators/gross-buildup.service';
 import { NssaService } from './calculators/nssa.service';
@@ -18,7 +19,7 @@ import { PayrollService } from './payroll.service';
  * ReferenceModule supplies StatutoryRatesService.
  */
 @Module({
-  imports: [ApprovalsModule, ReferenceModule],
+  imports: [ApprovalsModule, ReferenceModule, forwardRef(() => ComplianceModule)],
   controllers: [PayrollController],
   providers: [
     PayrollService,

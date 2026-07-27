@@ -8,12 +8,28 @@ describe('OrdersService', () => {
     client: { findUnique: jest.fn() },
     contract: { findUnique: jest.fn() },
     orderReceipt: { create: jest.fn() },
+    orderMilestone: { create: jest.fn(), findMany: jest.fn() },
   };
   const audit = { record: jest.fn() };
   const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
   const ledger = { postOrderReceipt: jest.fn().mockResolvedValue(undefined) };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const service = new OrdersService(prisma as any, audit as any, lookups as any, ledger as any);
+  // G16/G18: the financials facade; stubbed so the CRUD service can enrich without a DB.
+  const financials = {
+    resolveVatPct: jest.fn().mockResolvedValue(15),
+    forOrder: jest.fn().mockResolvedValue({ orderId: 'o1', health: 'OPEN' }),
+  };
+  const service = new OrdersService(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    prisma as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    audit as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    lookups as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ledger as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    financials as any,
+  );
 
   // A finance manager (may act on any order).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,6 +94,58 @@ describe('OrdersService', () => {
     // G14: the receipt posts a revenue journal (idempotent per receipt id).
     expect(ledger.postOrderReceipt).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'r1', amount: 50, currency: 'USD' }),
+    );
+  });
+
+  it('enriches list() with a computed financials summary per order (G16)', async () => {
+    prisma.order.findMany.mockResolvedValue([
+      { id: 'o1', receipts: [], expenses: [], milestones: [] },
+    ]);
+    const res = await service.list();
+    expect(financials.resolveVatPct).toHaveBeenCalledTimes(1); // resolved once for the whole list
+    expect(financials.forOrder).toHaveBeenCalledTimes(1);
+    expect(res[0]).toMatchObject({ id: 'o1', financials: { orderId: 'o1', health: 'OPEN' } });
+  });
+
+  it('adds a servicing milestone with an audit record (G18)', async () => {
+    prisma.order.findUnique.mockResolvedValue({
+      id: 'o1',
+      assignedUserId: null,
+      receipts: [],
+      expenses: [],
+      milestones: [],
+    });
+    prisma.orderMilestone.create.mockResolvedValue({
+      id: 'm1',
+      description: 'Phase 1',
+      valuePortion: new Prisma.Decimal('5000'),
+      completedAt: null,
+    });
+    const res = await service.addMilestone(
+      'o1',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { description: 'Phase 1', valuePortion: 5000 } as any,
+      manager,
+    );
+    expect(res.id).toBe('m1');
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'CREATE', tableName: 'order_milestones', recordId: 'm1' }),
+    );
+  });
+
+  it('lists an order’s milestones (G18)', async () => {
+    prisma.order.findUnique.mockResolvedValue({
+      id: 'o1',
+      assignedUserId: null,
+      receipts: [],
+      expenses: [],
+      milestones: [],
+    });
+    prisma.orderMilestone.findMany.mockResolvedValue([{ id: 'm1' }]);
+    const res = await service.listMilestones('o1', manager);
+    expect(res).toEqual([{ id: 'm1' }]);
+    expect(prisma.orderMilestone.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { orderId: 'o1' } }),
     );
   });
 

@@ -322,6 +322,36 @@ describe('TravelService.retire (reconciliation)', () => {
     expect(data.retirementReceiptsKey).toBe('receipts/t1.zip');
   });
 
+  it('records refundOwed and pays the traveller out when they overspent (unspent < 0)', async () => {
+    const { service, prisma, ledger } = makeService();
+    prisma.travelRequest.findUnique.mockResolvedValue({
+      id: 't1',
+      requesterId: 'u1',
+      status: TravelStatus.DISBURSED,
+      advanceAmount: dec(425),
+      currency: 'USD',
+      destination: 'Bulawayo',
+      disbursementAccountId: 'a1',
+    });
+    prisma.travelRequest.update.mockResolvedValue({ id: 't1', status: TravelStatus.CLOSED });
+
+    // unspent = -60 means the traveller spent 60 beyond the advance; the business owes them 60.
+    await service.retire('t1', 'finance-user', { receiptsKey: 'r.zip', unspent: -60 });
+
+    // Overspend is paid as additional cash OUT of the source account (DEBIT) vs the PAYABLE contra.
+    expect(ledger.postJournal).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ accountId: 'a1', debit: 60, currency: 'USD' }),
+        expect.objectContaining({ accountId: 'payable-usd', credit: 60, currency: 'USD' }),
+      ],
+      expect.objectContaining({ sourceTable: 'travel_requests', sourceId: 't1' }),
+    );
+    const data = prisma.travelRequest.update.mock.calls[0][0].data;
+    expect(data.status).toBe(TravelStatus.CLOSED);
+    expect(new Prisma.Decimal(data.refundOwed).toNumber()).toBe(60);
+    expect(new Prisma.Decimal(data.refundDue).toNumber()).toBe(0);
+  });
+
   it('closes with zero refunds and no ledger post when fully reconciled (unspent = 0)', async () => {
     const { service, prisma, ledger } = makeService();
     prisma.travelRequest.findUnique.mockResolvedValue({

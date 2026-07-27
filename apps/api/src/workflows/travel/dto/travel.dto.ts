@@ -82,10 +82,11 @@ export class RetireTravelDto {
 
   @ApiProperty({
     example: 120,
-    description: 'Unspent portion of the advance returned by the traveller (in trip currency)',
+    description:
+      'Net reconciliation of the advance (trip currency): positive = unspent cash the traveller ' +
+      'returns (refundDue); negative = overspend the business owes the traveller (refundOwed).',
   })
   @Type(() => Number)
   @IsNumber()
-  @Min(0)
   unspent!: number;
 }

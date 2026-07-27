@@ -1,4 +1,4 @@
-import { PrismaClient, UserStatus } from '@prisma/client';
+import { ApprovalMode, PrismaClient, UserStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
@@ -102,9 +102,64 @@ async function main(): Promise<void> {
     });
   }
 
+  // G25: baseline approval-matrix so a fresh DB can actually run workflows out of the box.
+  // Minimal + global (siteId null). Idempotent: skip-if-a-matching-rule-exists by natural key
+  // (module, stepOrder, approverRole, band). Amounts are ceilings; null maxAmount = unbounded.
+  const approvalMatrix: Array<{
+    module: string;
+    stepOrder: number;
+    approverRole: string;
+    mode: ApprovalMode;
+    minAmount: number | null;
+    maxAmount: number | null;
+  }> = [
+    // Requisitions: Site Manager for everything; FD adds a second step above the band.
+    { module: 'requisition', stepOrder: 1, approverRole: 'SITE_MANAGER', mode: ApprovalMode.SEQUENTIAL, minAmount: 0, maxAmount: null },
+    { module: 'requisition', stepOrder: 2, approverRole: 'FINANCE_DIRECTOR', mode: ApprovalMode.SEQUENTIAL, minAmount: 5000, maxAmount: null },
+    // Travel allowances: same shape as requisitions.
+    { module: 'travel', stepOrder: 1, approverRole: 'SITE_MANAGER', mode: ApprovalMode.SEQUENTIAL, minAmount: 0, maxAmount: null },
+    { module: 'travel', stepOrder: 2, approverRole: 'FINANCE_DIRECTOR', mode: ApprovalMode.SEQUENTIAL, minAmount: 5000, maxAmount: null },
+    // Budgets: PARALLEL co-approval by Ops Director AND Finance Director (both must approve).
+    { module: 'budget', stepOrder: 1, approverRole: 'OPS_DIRECTOR', mode: ApprovalMode.PARALLEL, minAmount: 0, maxAmount: null },
+    { module: 'budget', stepOrder: 1, approverRole: 'FINANCE_DIRECTOR', mode: ApprovalMode.PARALLEL, minAmount: 0, maxAmount: null },
+    // Director withdrawals: any second Director co-approves (self-approval blocked by the engine).
+    { module: 'director_withdrawal', stepOrder: 1, approverRole: 'DIRECTOR', mode: ApprovalMode.EITHER, minAmount: 0, maxAmount: null },
+    // Petty cash: FD approval only above the configured threshold.
+    { module: 'petty_cash', stepOrder: 1, approverRole: 'FINANCE_DIRECTOR', mode: ApprovalMode.SEQUENTIAL, minAmount: 100, maxAmount: null },
+  ];
+  let approvalRowsCreated = 0;
+  for (const rule of approvalMatrix) {
+    const existing = await prisma.approvalMatrix.findFirst({
+      where: {
+        module: rule.module,
+        stepOrder: rule.stepOrder,
+        approverRole: rule.approverRole,
+        minAmount: rule.minAmount,
+        maxAmount: rule.maxAmount,
+        siteId: null,
+      },
+    });
+    if (!existing) {
+      await prisma.approvalMatrix.create({
+        data: {
+          module: rule.module,
+          stepOrder: rule.stepOrder,
+          approverRole: rule.approverRole,
+          mode: rule.mode,
+          minAmount: rule.minAmount,
+          maxAmount: rule.maxAmount,
+          siteId: null,
+          active: true,
+        },
+      });
+      approvalRowsCreated += 1;
+    }
+  }
+
   // eslint-disable-next-line no-console
   console.log(
-    `Seeded entity <${entity.name}>, ${sites.length} sites, ${defaultAccounts.length} accounts and SysAdmin <${email}>.`,
+    `Seeded entity <${entity.name}>, ${sites.length} sites, ${defaultAccounts.length} accounts, ` +
+      `${approvalRowsCreated} approval-matrix rows and SysAdmin <${email}>.`,
   );
 }
 

@@ -41,6 +41,8 @@ import { ProjectsPage } from './features/projects/ProjectsPage';
 import { ReturnsHubPage } from './features/returns-hub/ReturnsHubPage';
 import { PayrollAdjustmentsPage } from './features/payroll-adjustments/PayrollAdjustmentsPage';
 import { SiteReportsPage } from './features/site-reports/SiteReportsPage';
+import { ShePage } from './features/she/ShePage';
+import { NotificationSettingsPage } from './features/notification-settings/NotificationSettingsPage';
 
 function ProtectedLayout() {
   return (
@@ -402,6 +404,15 @@ function Shell() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/she"
+          element={
+            <ProtectedRoute roles={['OPS_DIRECTOR', 'SITE_MANAGER', 'SYS_ADMIN']}>
+              <ShePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/notification-settings" element={<NotificationSettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

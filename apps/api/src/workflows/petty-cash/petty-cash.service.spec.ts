@@ -456,3 +456,68 @@ describe('PettyCashService.createTopUp (approvable; posts bank->petty cash on ap
     );
   });
 });
+
+describe('PettyCashService.conversionsReport (G25)', () => {
+  it('sums conversion variance per site + period and derives monetary gain/loss', async () => {
+    const { service, prisma } = makeService();
+    // Two floats across two sites.
+    prisma.pettyCashFloat.findMany.mockResolvedValue([
+      { id: 'f1', siteId: 's1' },
+      { id: 'f2', siteId: 's2' },
+    ]);
+    prisma.pettyCashTxn.findMany.mockResolvedValue([
+      // s1, 2026-07: an OUT leg (variance +0.5 on 100 units) and its IN leg (same variance).
+      {
+        floatId: 'f1',
+        type: PettyCashTxnType.CONVERSION_OUT,
+        amount: dec(100),
+        varianceVsOfficial: dec(0.5),
+        createdAt: new Date('2026-07-10T00:00:00Z'),
+      },
+      {
+        floatId: 'f1',
+        type: PettyCashTxnType.CONVERSION_IN,
+        amount: dec(250),
+        varianceVsOfficial: dec(0.5),
+        createdAt: new Date('2026-07-10T00:00:00Z'),
+      },
+      // s2, 2026-08: a loss (variance -0.2 on 50 units).
+      {
+        floatId: 'f2',
+        type: PettyCashTxnType.CONVERSION_OUT,
+        amount: dec(50),
+        varianceVsOfficial: dec(-0.2),
+        createdAt: new Date('2026-08-02T00:00:00Z'),
+      },
+    ]);
+
+    const report = await service.conversionsReport();
+
+    // Only POSTED conversion legs are queried.
+    expect(prisma.pettyCashTxn.findMany.mock.calls[0][0].where).toMatchObject({
+      status: PettyCashTxnStatus.POSTED,
+      type: { in: [PettyCashTxnType.CONVERSION_OUT, PettyCashTxnType.CONVERSION_IN] },
+    });
+
+    const s1 = report.rows.find((r) => r.siteId === 's1' && r.period === '2026-07');
+    // varianceSum = 0.5 (out) + 0.5 (in) = 1.0; conversions counted once (per OUT leg).
+    expect(s1?.varianceSum).toBeCloseTo(1.0);
+    expect(s1?.conversions).toBe(1);
+    // gainLoss from OUT leg only = 0.5 * 100 = 50.
+    expect(s1?.gainLoss).toBeCloseTo(50);
+
+    const s2 = report.rows.find((r) => r.siteId === 's2' && r.period === '2026-08');
+    expect(s2?.gainLoss).toBeCloseTo(-10); // -0.2 * 50
+
+    const perS1 = report.perSite.find((p) => p.siteId === 's1');
+    expect(perS1?.gainLoss).toBeCloseTo(50);
+  });
+
+  it('returns empty when the site has no floats', async () => {
+    const { service, prisma } = makeService();
+    prisma.pettyCashFloat.findMany.mockResolvedValue([]);
+    const report = await service.conversionsReport('nope');
+    expect(report).toEqual({ rows: [], perSite: [] });
+    expect(prisma.pettyCashTxn.findMany).not.toHaveBeenCalled();
+  });
+});

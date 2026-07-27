@@ -54,6 +54,8 @@ export class ExpensesService {
         currency: dto.currency,
         category: dto.category ?? null,
         periodMonth: dto.periodMonth ?? null,
+        payeDue: dto.payeDue ?? null,
+        payePaid: dto.payePaid ?? null,
         rateType: dto.rateType ?? null,
         createdBy: actorId,
         updatedBy: actorId,

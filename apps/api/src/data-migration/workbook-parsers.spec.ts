@@ -8,6 +8,7 @@ import {
   parseOrderRow,
   parseOverheadRow,
   parsePayrollRow,
+  parseSettingsSheet,
   parseTaxDebtRow,
   periodToMonth,
   Row,
@@ -166,5 +167,30 @@ describe('periodToMonth', () => {
     expect(periodToMonth('3/2025', '2025-03')).toBe('2025-03');
     expect(periodToMonth('5/2023', '2023-06')).toBe('2023-05');
     expect(periodToMonth(undefined, '2025-03')).toBe('2025-03');
+  });
+});
+
+describe('parseSettingsSheet (G23)', () => {
+  it('extracts VAT rate, official/street rates, ZIMRA interest and report date by label', () => {
+    const rows: Row[] = [
+      row({ 1: 'SETTINGS & ASSUMPTIONS' }),
+      row({ 1: 'VAT Rate (Zimbabwe standard)', 2: 0.155 }),
+      row({ 1: 'Official Exchange Rate (ZiG per USD)', 2: 26.5 }),
+      row({ 1: 'Street / Parallel Rate (ZiG per USD)', 2: 33 }),
+      row({ 1: 'ZIMRA Overdue-Tax Interest (per annum)', 2: 0.1 }),
+      row({ 1: 'Report / Valuation Date', 2: { formula: 'TODAY()', result: '2026-07-24T00:00:00.000Z' } }),
+    ];
+    const parsed = parseSettingsSheet(rows);
+    expect(parsed.vatRateFraction).toBe(0.155);
+    expect(parsed.officialRate).toBe(26.5);
+    expect(parsed.streetRate).toBe(33);
+    expect(parsed.zimraInterestFraction).toBe(0.1);
+    expect(parsed.reportDate?.toISOString()).toBe('2026-07-24T00:00:00.000Z');
+  });
+
+  it('leaves fields undefined when their labels are absent', () => {
+    const parsed = parseSettingsSheet([row({ 1: 'Business Name', 2: 'AES' })]);
+    expect(parsed.vatRateFraction).toBeUndefined();
+    expect(parsed.officialRate).toBeUndefined();
   });
 });

@@ -104,6 +104,8 @@ function makeService() {
   };
   const statutoryRates = makeStatutoryRates();
 
+  const compliance = { generateFromPayrollRun: jest.fn().mockResolvedValue({ generated: 1 }) };
+
   const service = new PayrollService(
     prisma as any,
     audit as any,
@@ -117,9 +119,10 @@ function makeService() {
     new NssaService(),
     new EmployerStatutoryService(),
     new CryptoService({ get: () => ({ encryptionKey: null }) } as any),
+    compliance as any,
   );
   service.onModuleInit();
-  return { service, prisma, audit, approvals, transitions, ledger, statutoryRates };
+  return { service, prisma, audit, approvals, transitions, ledger, statutoryRates, compliance };
 }
 
 describe('PayrollService.openRun', () => {
@@ -385,7 +388,7 @@ describe('PayrollService — APPROVED transition posts to the ledger', () => {
   });
 
   it('never re-posts when the run is already APPROVED (idempotent transition)', async () => {
-    const { prisma, transitions, ledger } = makeService();
+    const { prisma, transitions, ledger, compliance } = makeService();
     prisma.payrollRun.findUnique.mockResolvedValue({
       id: 'run1',
       status: PayrollRunStatus.APPROVED,
@@ -393,6 +396,48 @@ describe('PayrollService — APPROVED transition posts to the ledger', () => {
     await transitions.fire('payroll_runs', 'run1', ApprovalStatus.APPROVED);
     expect(prisma.payrollRun.update).not.toHaveBeenCalled();
     expect(ledger.postJournal).not.toHaveBeenCalled();
+    // Already APPROVED short-circuits before the compliance hook, so no re-generation.
+    expect(compliance.generateFromPayrollRun).not.toHaveBeenCalled();
+  });
+
+  it('auto-generates statutory compliance obligations for the approved run (G22)', async () => {
+    const { prisma, transitions, compliance } = makeService();
+    prisma.payrollRun.findUnique.mockResolvedValue({
+      id: 'run1',
+      siteId: 's1',
+      month: '2026-07',
+      status: PayrollRunStatus.CHECKED,
+      preparedByUserId: 'preparer',
+      approvedByUserId: 'approver',
+    });
+    prisma.payrollRun.update.mockResolvedValue({ id: 'run1', status: 'APPROVED' });
+    prisma.payrollLine.findMany.mockResolvedValue([]);
+
+    await transitions.fire('payroll_runs', 'run1', ApprovalStatus.APPROVED);
+
+    expect(compliance.generateFromPayrollRun).toHaveBeenCalledWith('run1', 'approver');
+  });
+
+  it('does not fail the run when compliance generation throws', async () => {
+    const { prisma, transitions, compliance } = makeService();
+    prisma.payrollRun.findUnique.mockResolvedValue({
+      id: 'run1',
+      siteId: 's1',
+      month: '2026-07',
+      status: PayrollRunStatus.CHECKED,
+      preparedByUserId: 'preparer',
+      approvedByUserId: null,
+    });
+    prisma.payrollRun.update.mockResolvedValue({ id: 'run1', status: 'APPROVED' });
+    prisma.payrollLine.findMany.mockResolvedValue([]);
+    compliance.generateFromPayrollRun.mockRejectedValueOnce(new Error('compliance boom'));
+
+    // The approval + ledger post already happened; a compliance hiccup must not throw.
+    await expect(
+      transitions.fire('payroll_runs', 'run1', ApprovalStatus.APPROVED),
+    ).resolves.not.toThrow();
+    // Falls back to preparedByUserId when there is no approver.
+    expect(compliance.generateFromPayrollRun).toHaveBeenCalledWith('run1', 'preparer');
   });
 });
 

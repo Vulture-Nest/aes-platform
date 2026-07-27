@@ -1,9 +1,12 @@
 import {
   BadRequestException,
   ConflictException,
+  forwardRef,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   OnModuleInit,
 } from '@nestjs/common';
 import {
@@ -28,6 +31,21 @@ import { PayeService, PayeBand } from './calculators/paye.service';
 import { CrossCurrencyPayeService } from './calculators/cross-currency-paye.service';
 import { EmployerStatutoryService } from './calculators/statutory-employer.service';
 import { OpenPayrollRunDto, ListPayrollRunsQueryDto } from './dto/payroll.dto';
+
+/**
+ * Minimal structural contract for the compliance auto-generation hook. Typed as an interface
+ * (rather than importing ComplianceService) so payroll does not pull the compliance module into
+ * its own compile unit — the runtime cycle is broken with forwardRef in the module wiring.
+ */
+export interface ComplianceGenerator {
+  generateFromPayrollRun(
+    runId: string,
+    actorId: string,
+  ): Promise<{ generated: number; obligations: unknown[] }>;
+}
+
+/** DI token for the optional compliance generator (see ComplianceModule.provide). */
+export const COMPLIANCE_GENERATOR = 'COMPLIANCE_GENERATOR';
 
 /** Approval-engine module name; matrix rows for it place the Finance-Director approver. */
 const APPROVAL_MODULE = 'payroll_run';
@@ -94,6 +112,11 @@ export class PayrollService implements OnModuleInit {
     private readonly nssa: NssaService,
     private readonly employerStatutory: EmployerStatutoryService,
     private readonly crypto: CryptoService,
+    // Optional so unit tests (and any bootstrap without ComplianceModule) construct fine.
+    // forwardRef breaks the Payroll <-> Compliance module cycle.
+    @Optional()
+    @Inject(forwardRef(() => COMPLIANCE_GENERATOR))
+    private readonly compliance?: ComplianceGenerator,
   ) {}
 
   /**
@@ -774,6 +797,25 @@ export class PayrollService implements OnModuleInit {
       before: { status: run.status },
       after: { status: PayrollRunStatus.APPROVED, event: 'payroll_approved_and_posted' },
     });
+
+    // Auto-generate the statutory remittance obligations for this run (G22). This is idempotent
+    // — generateFromPayrollRun upserts by (head, periodMonth, sourceId=runId), so a re-fire of
+    // the transition never duplicates. Wrapped defensively: a compliance hiccup must not undo an
+    // already-posted, already-approved run.
+    if (this.compliance) {
+      try {
+        await this.compliance.generateFromPayrollRun(
+          runId,
+          run.approvedByUserId ?? run.preparedByUserId ?? 'system',
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Payroll run ${runId} approved but compliance obligation generation failed: ${
+            (err as Error).message
+          }`,
+        );
+      }
+    }
   }
 
   /**
