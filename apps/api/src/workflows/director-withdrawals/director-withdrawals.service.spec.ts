@@ -24,7 +24,12 @@ function makeService() {
   const notifications = { send: jest.fn() };
   const approvals = { submit: jest.fn().mockResolvedValue({ id: 'chain1' }) };
   const transitions = new StatusTransitionRegistry();
-  const ledger = { cashPosition: jest.fn(), post: jest.fn().mockResolvedValue([]) };
+  const ledger = {
+    cashPosition: jest.fn(),
+    post: jest.fn().mockResolvedValue([]),
+    postJournal: jest.fn().mockResolvedValue({ txnId: 'txn1', rows: [] }),
+    ensureSystemAccount: jest.fn().mockResolvedValue({ id: 'drawings-usd' }),
+  };
   const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
 
   const service = new DirectorWithdrawalsService(
@@ -142,16 +147,16 @@ describe('DirectorWithdrawalsService ledger posting (via APPROVED transition)', 
 
     await transitions.fire('director_withdrawals', 'w1', ApprovalStatus.APPROVED);
 
-    // Cash reflected immediately: a DEBIT is posted to the best-funded USD account.
-    expect(ledger.post).toHaveBeenCalledWith([
-      expect.objectContaining({
-        accountId: 'a1',
-        debit: 2500,
-        currency: 'USD',
-        sourceTable: 'director_withdrawals',
-        sourceId: 'w1',
-      }),
-    ]);
+    // Cash reflected immediately: a balanced journal DEBITs the best-funded USD account and
+    // CREDITs the contra DRAWINGS account.
+    expect(ledger.ensureSystemAccount).toHaveBeenCalledWith('DRAWINGS', 'USD');
+    expect(ledger.postJournal).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ accountId: 'a1', debit: 2500, currency: 'USD' }),
+        expect.objectContaining({ accountId: 'drawings-usd', credit: 2500, currency: 'USD' }),
+      ],
+      expect.objectContaining({ sourceTable: 'director_withdrawals', sourceId: 'w1' }),
+    );
     const update = prisma.directorWithdrawal.update.mock.calls[0][0];
     expect(update.data.status).toBe(DirectorWithdrawalStatus.POSTED_AWAITING_TRANSFER);
     expect(update.data.ledgerPostedAt).toBeInstanceOf(Date);
@@ -180,7 +185,7 @@ describe('DirectorWithdrawalsService ledger posting (via APPROVED transition)', 
 
     await transitions.fire('director_withdrawals', 'w1', ApprovalStatus.APPROVED);
 
-    expect(ledger.post).toHaveBeenCalled();
+    expect(ledger.postJournal).toHaveBeenCalled();
     expect(prisma.directorWithdrawal.update.mock.calls[0][0].data.status).toBe(
       DirectorWithdrawalStatus.POSTED_AWAITING_TRANSFER,
     );
@@ -199,7 +204,7 @@ describe('DirectorWithdrawalsService ledger posting (via APPROVED transition)', 
 
     await transitions.fire('director_withdrawals', 'w1', ApprovalStatus.APPROVED);
 
-    expect(ledger.post).not.toHaveBeenCalled();
+    expect(ledger.postJournal).not.toHaveBeenCalled();
     expect(prisma.directorWithdrawal.update).not.toHaveBeenCalled();
   });
 

@@ -90,6 +90,10 @@ function makeService() {
   const transitions = new StatusTransitionRegistry();
   const ledger = {
     post: jest.fn().mockResolvedValue([]),
+    postJournal: jest.fn().mockResolvedValue({ txnId: 'txn1', rows: [] }),
+    ensureSystemAccount: jest.fn().mockImplementation((_type: string, currency: string) =>
+      Promise.resolve({ id: `payable-${currency.toLowerCase()}` }),
+    ),
     cashPosition: jest.fn().mockResolvedValue({
       accounts: [
         { accountId: 'acc-usd', currency: 'USD', balance: 100000 },
@@ -370,9 +374,14 @@ describe('PayrollService — APPROVED transition posts to the ledger', () => {
       }),
     );
     // Employer cost (USD leg) = gross 1600 + nssaEr 72 + zimdef 16 + nec 8 = 1696.
-    expect(ledger.post).toHaveBeenCalledWith([
-      expect.objectContaining({ accountId: 'acc-usd', debit: 1696, currency: 'USD' }),
-    ]);
+    // Now posted as a BALANCED journal: DEBIT cash + CREDIT the contra PAYABLE account.
+    expect(ledger.postJournal).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ accountId: 'acc-usd', debit: 1696, currency: 'USD' }),
+        expect.objectContaining({ accountId: 'payable-usd', credit: 1696, currency: 'USD' }),
+      ],
+      expect.objectContaining({ sourceTable: 'payroll_runs', sourceId: 'run1' }),
+    );
   });
 
   it('never re-posts when the run is already APPROVED (idempotent transition)', async () => {
@@ -383,7 +392,7 @@ describe('PayrollService — APPROVED transition posts to the ledger', () => {
     });
     await transitions.fire('payroll_runs', 'run1', ApprovalStatus.APPROVED);
     expect(prisma.payrollRun.update).not.toHaveBeenCalled();
-    expect(ledger.post).not.toHaveBeenCalled();
+    expect(ledger.postJournal).not.toHaveBeenCalled();
   });
 });
 

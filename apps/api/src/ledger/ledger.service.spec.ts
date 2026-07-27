@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { LedgerService } from './ledger.service';
 
@@ -12,9 +13,12 @@ function makeService() {
       findMany: jest.fn(),
       aggregate: jest.fn(),
       groupBy: jest.fn(),
+      count: jest.fn(),
     },
     account: {
       findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
     },
   };
   const service = new LedgerService(prisma as any);
@@ -109,6 +113,158 @@ describe('LedgerService.cashPosition', () => {
       },
     ]);
     expect(result.totals).toEqual({ USD: 800, ZWG: 4000 });
+  });
+});
+
+describe('LedgerService.cashPosition contra exclusion', () => {
+  it('EXCLUDES a contra account that has entries from both the rows and the totals', async () => {
+    const { service, prisma } = makeService();
+    prisma.account.findMany.mockResolvedValue([
+      { id: 'a1', name: 'Bank USD', type: 'BANK', currency: 'USD' },
+      { id: 'rev', name: 'System REVENUE USD', type: 'REVENUE', currency: 'USD' },
+      { id: 'rec', name: 'System RECEIVABLE USD', type: 'RECEIVABLE', currency: 'USD' },
+    ]);
+    prisma.ledgerEntry.groupBy.mockResolvedValue([
+      { accountId: 'a1', _sum: { credit: dec(1000), debit: dec(0) } },
+      // Contra accounts carry entries but must NOT count toward cash.
+      { accountId: 'rev', _sum: { credit: dec(0), debit: dec(1000) } },
+      { accountId: 'rec', _sum: { credit: dec(0), debit: dec(500) } },
+    ]);
+
+    const result = await service.cashPosition();
+
+    // Only the BANK account appears; contra accounts are dropped.
+    expect(result.accounts).toEqual([
+      { accountId: 'a1', name: 'Bank USD', type: 'BANK', currency: 'USD', balance: 1000 },
+    ]);
+    // The contra legs (-1000, -500) do NOT drag the total down: it stays the cash balance.
+    expect(result.totals).toEqual({ USD: 1000, ZWG: 0 });
+  });
+});
+
+describe('LedgerService.postJournal', () => {
+  it('REJECTS an unbalanced set (Σdebit != Σcredit) with BadRequestException', async () => {
+    const { service, prisma } = makeService();
+    await expect(
+      service.postJournal([
+        { accountId: 'a1', debit: 100, currency: 'USD' },
+        { accountId: 'a2', credit: 90, currency: 'USD' },
+      ]),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.ledgerEntry.createMany).not.toHaveBeenCalled();
+  });
+
+  it('accepts a balanced set, assigns ONE shared txnId to every leg, and persists it', async () => {
+    const { service, prisma } = makeService();
+    prisma.ledgerEntry.createMany.mockResolvedValue({ count: 2 });
+    prisma.ledgerEntry.findMany.mockResolvedValue([{ id: 'e1' }, { id: 'e2' }]);
+
+    const { txnId } = await service.postJournal(
+      [
+        { accountId: 'a1', debit: 250, currency: 'USD' },
+        { accountId: 'a2', credit: 250, currency: 'USD' },
+      ],
+      { sourceTable: 'requisitions', sourceId: 'r1' },
+    );
+
+    const data = prisma.ledgerEntry.createMany.mock.calls[0][0].data;
+    expect(data).toHaveLength(2);
+    expect(txnId).toEqual(expect.any(String));
+    // Every leg shares the same txnId and carries the journal-level source ref.
+    expect(data[0].txnId).toBe(txnId);
+    expect(data[1].txnId).toBe(txnId);
+    expect(data[0].sourceTable).toBe('requisitions');
+    expect(data[1].sourceId).toBe('r1');
+  });
+
+  it('balances independently per currency', async () => {
+    const { service } = makeService();
+    // USD balances (100/100) but ZWG does not (50 debit vs 0 credit) → reject.
+    await expect(
+      service.postJournal([
+        { accountId: 'a1', debit: 100, currency: 'USD' },
+        { accountId: 'a2', credit: 100, currency: 'USD' },
+        { accountId: 'a3', debit: 50, currency: 'ZWG' },
+      ]),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+describe('LedgerService.ensureSystemAccount', () => {
+  it('creates the named system account when absent', async () => {
+    const { service, prisma } = makeService();
+    prisma.account.findFirst.mockResolvedValue(null);
+    prisma.account.create.mockResolvedValue({ id: 'rev-usd', name: 'System REVENUE USD' });
+    const acc = await service.ensureSystemAccount('REVENUE', 'USD');
+    expect(acc.id).toBe('rev-usd');
+    expect(prisma.account.create).toHaveBeenCalledWith({
+      data: { name: 'System REVENUE USD', type: 'REVENUE', currency: 'USD' },
+    });
+  });
+
+  it('returns the existing account without creating when present', async () => {
+    const { service, prisma } = makeService();
+    prisma.account.findFirst.mockResolvedValue({ id: 'rev-usd' });
+    const acc = await service.ensureSystemAccount('REVENUE', 'USD');
+    expect(acc.id).toBe('rev-usd');
+    expect(prisma.account.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('LedgerService.postOrderReceipt (revenue inflow)', () => {
+  it('posts a BALANCED revenue journal: CREDIT bank + DEBIT revenue', async () => {
+    const { service, prisma } = makeService();
+    prisma.ledgerEntry.count.mockResolvedValue(0); // not yet posted
+    prisma.account.findFirst
+      .mockResolvedValueOnce({ id: 'bank-usd', type: 'BANK' }) // BANK
+      .mockResolvedValueOnce({ id: 'rev-usd', type: 'REVENUE' }); // REVENUE
+    prisma.ledgerEntry.createMany.mockResolvedValue({ count: 2 });
+
+    await service.postOrderReceipt({ id: 'r1', amount: 500, currency: 'USD', createdBy: 'u1' });
+
+    const data = prisma.ledgerEntry.createMany.mock.calls[0][0].data;
+    expect(data).toHaveLength(2);
+    const bankLeg = data.find((d: any) => d.accountId === 'bank-usd');
+    const revLeg = data.find((d: any) => d.accountId === 'rev-usd');
+    expect(bankLeg.credit).toStrictEqual(dec(500));
+    expect(bankLeg.debit).toStrictEqual(dec(0));
+    expect(revLeg.debit).toStrictEqual(dec(500));
+    expect(revLeg.credit).toStrictEqual(dec(0));
+    // Both legs share the journal txnId and the receipt source ref.
+    expect(bankLeg.txnId).toBe(revLeg.txnId);
+    expect(bankLeg.sourceTable).toBe('order_receipts');
+    expect(bankLeg.sourceId).toBe('r1');
+  });
+
+  it('is IDEMPOTENT — re-posting the same receipt does nothing', async () => {
+    const { service, prisma } = makeService();
+    prisma.ledgerEntry.count.mockResolvedValue(2); // already posted for this receipt
+
+    await service.postOrderReceipt({ id: 'r1', amount: 500, currency: 'USD' });
+
+    expect(prisma.ledgerEntry.createMany).not.toHaveBeenCalled();
+    expect(prisma.account.findFirst).not.toHaveBeenCalled();
+  });
+});
+
+describe('LedgerService.postContractClaim (revenue accrual)', () => {
+  it('posts a BALANCED journal: DEBIT receivable + CREDIT revenue (no cash leg)', async () => {
+    const { service, prisma } = makeService();
+    prisma.ledgerEntry.count.mockResolvedValue(0);
+    prisma.account.findFirst
+      .mockResolvedValueOnce({ id: 'rec-usd', type: 'RECEIVABLE' })
+      .mockResolvedValueOnce({ id: 'rev-usd', type: 'REVENUE' });
+    prisma.ledgerEntry.createMany.mockResolvedValue({ count: 2 });
+
+    await service.postContractClaim({ id: 'c1', amountExVat: 800, currency: 'USD' });
+
+    const data = prisma.ledgerEntry.createMany.mock.calls[0][0].data;
+    const recLeg = data.find((d: any) => d.accountId === 'rec-usd');
+    const revLeg = data.find((d: any) => d.accountId === 'rev-usd');
+    expect(recLeg.debit).toStrictEqual(dec(800));
+    expect(revLeg.credit).toStrictEqual(dec(800));
+    expect(recLeg.sourceTable).toBe('contract_claims');
+    expect(recLeg.sourceId).toBe('c1');
   });
 });
 

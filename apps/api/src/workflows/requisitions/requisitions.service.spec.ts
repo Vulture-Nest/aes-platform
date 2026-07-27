@@ -23,7 +23,12 @@ function makeService() {
   const notifications = { send: jest.fn() };
   const approvals = { submit: jest.fn().mockResolvedValue({ id: 'chain1' }) };
   const transitions = new StatusTransitionRegistry();
-  const ledger = { cashPosition: jest.fn(), post: jest.fn().mockResolvedValue([]) };
+  const ledger = {
+    cashPosition: jest.fn(),
+    post: jest.fn().mockResolvedValue([]),
+    postJournal: jest.fn().mockResolvedValue({ txnId: 'txn1', rows: [] }),
+    ensureSystemAccount: jest.fn().mockResolvedValue({ id: 'payable-usd' }),
+  };
   const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
 
   const service = new RequisitionsService(
@@ -181,15 +186,15 @@ describe('RequisitionsService.disburse', () => {
       reference: 'EFT-1',
     });
 
-    expect(ledger.post).toHaveBeenCalledWith([
-      expect.objectContaining({
-        accountId: 'a1',
-        debit: 1000,
-        currency: 'USD',
-        sourceTable: 'requisitions',
-        sourceId: 'r1',
-      }),
-    ]);
+    // Now posts a BALANCED journal: DEBIT the cash account + CREDIT the contra PAYABLE account.
+    expect(ledger.ensureSystemAccount).toHaveBeenCalledWith('PAYABLE', 'USD');
+    expect(ledger.postJournal).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ accountId: 'a1', debit: 1000, currency: 'USD' }),
+        expect.objectContaining({ accountId: 'payable-usd', credit: 1000, currency: 'USD' }),
+      ],
+      expect.objectContaining({ sourceTable: 'requisitions', sourceId: 'r1' }),
+    );
     expect(prisma.requisition.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

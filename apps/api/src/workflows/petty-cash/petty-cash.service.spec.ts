@@ -22,14 +22,18 @@ function makeService() {
       update: jest.fn(),
       updateMany: jest.fn(),
     },
-    account: { findUnique: jest.fn() },
+    account: { findUnique: jest.fn(), findFirst: jest.fn() },
     userSiteRole: { findMany: jest.fn().mockResolvedValue([]) },
   };
   const audit = { record: jest.fn() };
   const notifications = { send: jest.fn() };
   const approvals = { submit: jest.fn().mockResolvedValue({ id: 'chain1' }) };
   const transitions = new StatusTransitionRegistry();
-  const ledger = { post: jest.fn().mockResolvedValue([]) };
+  const ledger = {
+    post: jest.fn().mockResolvedValue([]),
+    postJournal: jest.fn().mockResolvedValue({ txnId: 'txn1', rows: [] }),
+    ensureSystemAccount: jest.fn().mockResolvedValue({ id: 'system-petty-usd' }),
+  };
   const thresholds = { current: jest.fn() };
   const exchangeRates = { rateAsOf: jest.fn() };
   const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
@@ -423,7 +427,7 @@ describe('PettyCashService.createTopUp (approvable; posts bank->petty cash on ap
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('posts bank->petty cash (DEBIT bank) when the top-up chain resolves APPROVED', async () => {
+  it('posts a balanced bank->petty-cash journal (DEBIT bank + CREDIT petty cash) on APPROVED', async () => {
     const { prisma, transitions, ledger } = makeService();
     prisma.pettyCashTxn.findUnique.mockResolvedValue({
       id: 'top1',
@@ -436,18 +440,19 @@ describe('PettyCashService.createTopUp (approvable; posts bank->petty cash on ap
       linkedTxnId: 'bank1', // funding account carried here
     });
     prisma.pettyCashFloat.findUnique.mockResolvedValue(floatUSD());
+    // The site's petty-cash ledger account is the CREDIT destination.
+    prisma.account.findFirst.mockResolvedValue({ id: 'petty-s1-usd', type: 'PETTY_CASH' });
     prisma.pettyCashTxn.update.mockResolvedValue({ id: 'top1', status: PettyCashTxnStatus.POSTED });
 
     await transitions.fire('petty_cash_txns', 'top1', ApprovalStatus.APPROVED);
 
-    expect(ledger.post).toHaveBeenCalledWith([
-      expect.objectContaining({
-        accountId: 'bank1',
-        debit: 320,
-        currency: 'USD',
-        sourceTable: 'petty_cash_txns',
-        sourceId: 'top1',
-      }),
-    ]);
+    // Transfer between two cash accounts — balances, net cash unchanged.
+    expect(ledger.postJournal).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ accountId: 'bank1', debit: 320, currency: 'USD' }),
+        expect.objectContaining({ accountId: 'petty-s1-usd', credit: 320, currency: 'USD' }),
+      ],
+      expect.objectContaining({ sourceTable: 'petty_cash_txns', sourceId: 'top1' }),
+    );
   });
 });

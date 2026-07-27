@@ -228,19 +228,34 @@ export class DirectorWithdrawalsService implements OnModuleInit {
 
     const postedAt = new Date();
     // Cash paid out of the company account is a DEBIT — posted immediately on approval so the
-    // cash position reflects the committed withdrawal even before the human transfer runs.
-    await this.ledger.post([
+    // cash position reflects the committed withdrawal even before the human transfer runs. The
+    // balancing leg CREDITs the contra DRAWINGS account (director's equity draw).
+    const drawings = await this.ledger.ensureSystemAccount(
+      'DRAWINGS',
+      withdrawal.currency as string,
+    );
+    await this.ledger.postJournal(
+      [
+        {
+          accountId: source.accountId,
+          debit: amount,
+          currency: withdrawal.currency as string,
+          description: `Director withdrawal (Posted — Awaiting Transfer): ${withdrawal.reason}`,
+        },
+        {
+          accountId: drawings.id,
+          credit: amount,
+          currency: withdrawal.currency as string,
+          description: `Director withdrawal drawings: ${withdrawal.reason}`,
+        },
+      ],
       {
-        accountId: source.accountId,
-        debit: amount,
-        currency: withdrawal.currency as string,
         sourceTable: SUBJECT_TABLE,
         sourceId: id,
         entryDate: postedAt,
-        description: `Director withdrawal (Posted — Awaiting Transfer): ${withdrawal.reason}`,
         createdBy: withdrawal.directorUserId,
       },
-    ]);
+    );
 
     await this.prisma.directorWithdrawal.update({
       where: { id },

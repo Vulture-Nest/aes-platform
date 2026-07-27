@@ -304,19 +304,31 @@ export class RequisitionsService implements OnModuleInit {
 
     const disbursedAt = new Date();
 
-    // Post the cash outflow: money paid out of the source account is a DEBIT.
-    await this.ledger.post([
+    // Post the cash outflow as a balanced double-entry journal: money paid out of the source
+    // (cash) account is a DEBIT; the contra PAYABLE account is CREDITed for the same amount.
+    const payable = await this.ledger.ensureSystemAccount('PAYABLE', requisition.currency as string);
+    await this.ledger.postJournal(
+      [
+        {
+          accountId: dto.accountId,
+          debit: requisition.amount.toNumber(),
+          currency: requisition.currency as string,
+          description: `Requisition disbursement: ${requisition.purpose}`,
+        },
+        {
+          accountId: payable.id,
+          credit: requisition.amount.toNumber(),
+          currency: requisition.currency as string,
+          description: `Requisition disbursement payable: ${requisition.purpose}`,
+        },
+      ],
       {
-        accountId: dto.accountId,
-        debit: requisition.amount.toNumber(),
-        currency: requisition.currency as string,
         sourceTable: SUBJECT_TABLE,
         sourceId: id,
         entryDate: disbursedAt,
-        description: `Requisition disbursement: ${requisition.purpose}`,
         createdBy: financeUserId,
       },
-    ]);
+    );
 
     // DISBURSED then immediately CLOSED — the requisition has no post-disbursement retirement
     // step (that is travel-only). We record both statuses via audit for the trail.

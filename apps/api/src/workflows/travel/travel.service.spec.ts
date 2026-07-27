@@ -22,7 +22,12 @@ function makeService() {
   const notifications = { send: jest.fn() };
   const approvals = { submit: jest.fn().mockResolvedValue({ id: 'chain1' }) };
   const transitions = new StatusTransitionRegistry();
-  const ledger = { cashPosition: jest.fn(), post: jest.fn().mockResolvedValue([]) };
+  const ledger = {
+    cashPosition: jest.fn(),
+    post: jest.fn().mockResolvedValue([]),
+    postJournal: jest.fn().mockResolvedValue({ txnId: 'txn1', rows: [] }),
+    ensureSystemAccount: jest.fn().mockResolvedValue({ id: 'payable-usd' }),
+  };
   const rates = { rateFor: jest.fn(), create: jest.fn(), list: jest.fn() };
   const lookups = { assertValid: jest.fn().mockResolvedValue(undefined) };
 
@@ -253,15 +258,15 @@ describe('TravelService.disburse', () => {
       reference: 'EFT-1',
     });
 
-    expect(ledger.post).toHaveBeenCalledWith([
-      expect.objectContaining({
-        accountId: 'a1',
-        debit: 425,
-        currency: 'USD',
-        sourceTable: 'travel_requests',
-        sourceId: 't1',
-      }),
-    ]);
+    // Now posts a BALANCED journal: DEBIT the cash account + CREDIT the contra PAYABLE account.
+    expect(ledger.ensureSystemAccount).toHaveBeenCalledWith('PAYABLE', 'USD');
+    expect(ledger.postJournal).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ accountId: 'a1', debit: 425, currency: 'USD' }),
+        expect.objectContaining({ accountId: 'payable-usd', credit: 425, currency: 'USD' }),
+      ],
+      expect.objectContaining({ sourceTable: 'travel_requests', sourceId: 't1' }),
+    );
     expect(prisma.travelRequest.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ status: TravelStatus.DISBURSED }),
@@ -301,16 +306,15 @@ describe('TravelService.retire (reconciliation)', () => {
 
     await service.retire('t1', 'finance-user', { receiptsKey: 'receipts/t1.zip', unspent: 120 });
 
-    // Refund cash flows back INTO the source account as a CREDIT.
-    expect(ledger.post).toHaveBeenCalledWith([
-      expect.objectContaining({
-        accountId: 'a1',
-        credit: 120,
-        currency: 'USD',
-        sourceTable: 'travel_requests',
-        sourceId: 't1',
-      }),
-    ]);
+    // Refund cash flows back INTO the source account as a CREDIT, reversing the PAYABLE contra
+    // leg (DEBIT) — a BALANCED journal.
+    expect(ledger.postJournal).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({ accountId: 'a1', credit: 120, currency: 'USD' }),
+        expect.objectContaining({ accountId: 'payable-usd', debit: 120, currency: 'USD' }),
+      ],
+      expect.objectContaining({ sourceTable: 'travel_requests', sourceId: 't1' }),
+    );
     const data = prisma.travelRequest.update.mock.calls[0][0].data;
     expect(data.status).toBe(TravelStatus.CLOSED);
     expect(new Prisma.Decimal(data.refundDue).toNumber()).toBe(120);
@@ -333,7 +337,7 @@ describe('TravelService.retire (reconciliation)', () => {
 
     await service.retire('t1', 'finance-user', { receiptsKey: 'r.zip', unspent: 0 });
 
-    expect(ledger.post).not.toHaveBeenCalled();
+    expect(ledger.postJournal).not.toHaveBeenCalled();
     const data = prisma.travelRequest.update.mock.calls[0][0].data;
     expect(new Prisma.Decimal(data.refundDue).toNumber()).toBe(0);
   });

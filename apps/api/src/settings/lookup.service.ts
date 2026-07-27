@@ -43,6 +43,14 @@ const DEFAULTS: Record<string, SeedRow[]> = {
     { code: 'BANK', label: 'Bank' },
     { code: 'PETTY_CASH', label: 'Petty cash' },
     { code: 'MOBILE_WALLET', label: 'Mobile wallet' },
+    // Contra / control accounts (G14 double-entry). These are NOT cash types: they are
+    // excluded from cashPosition totals so posting a balancing leg never moves the cash figure.
+    { code: 'RECEIVABLE', label: 'Accounts receivable (contra)' },
+    { code: 'REVENUE', label: 'Revenue (contra)' },
+    { code: 'PAYABLE', label: 'Accounts payable (contra)' },
+    { code: 'DRAWINGS', label: 'Director drawings (contra)' },
+    { code: 'TAX_PAYABLE', label: 'Tax payable (contra)' },
+    { code: 'LOAN_PAYABLE', label: 'Loan payable (contra)' },
   ],
   contract_status: [
     { code: 'UPCOMING', label: 'Upcoming' },
