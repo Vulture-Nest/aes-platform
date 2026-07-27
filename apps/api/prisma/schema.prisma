@@ -1085,6 +1085,31 @@ model Employee {
   /// Only meaningful when payMode = FIXED_SPLIT: the fixed USD percentage (0..100).
   fixedUsdPct     Decimal?  @map("fixed_usd_pct") @db.Decimal(5, 2)
   hourlyRate      Decimal?  @map("hourly_rate") @db.Decimal(20, 4)
+  /// Per-employee USD/ZWG split ratio (0..100) applied to the USD-native gross; overrides the
+  /// client/fixed split for both legs when set. The paysheets carry a distinct ratio per person.
+  usdSplitPct        Decimal? @map("usd_split_pct") @db.Decimal(5, 2)
+  /// Allowance paid per underground shift (USD). Feeds the UG shift allowance earning.
+  ugAllowanceRate    Decimal? @map("ug_allowance_rate") @db.Decimal(20, 4)
+  /// Allowance paid per night-shift hour (USD). Feeds the night allowance earning.
+  nightAllowanceRate Decimal? @map("night_allowance_rate") @db.Decimal(20, 4)
+  /// Flat cost-of-living allowance, ZWG-native (goes entirely to the ZWG leg).
+  colaZwg            Decimal? @map("cola_zwg") @db.Decimal(20, 2)
+  /// Flat other allowances, USD-native (the paysheet "Allowances USD" column).
+  otherAllowancesUsd Decimal? @map("other_allowances_usd") @db.Decimal(20, 2)
+  /// Flat monthly gratuity, USD-native.
+  gratuityUsd        Decimal? @map("gratuity_usd") @db.Decimal(20, 2)
+  /// Voluntary Nyaradzo policy deduction taken off net each run.
+  nyaradzoAmount     Decimal? @map("nyaradzo_amount") @db.Decimal(20, 2)
+  /// Currency of the Nyaradzo deduction (USD or ZWG); defaults to ZWG at compute time.
+  nyaradzoCurrency   String?  @map("nyaradzo_currency")
+  /// Flat recurring other deduction on the USD leg (e.g. May Day levy).
+  otherDeductionUsd  Decimal? @map("other_deduction_usd") @db.Decimal(20, 2)
+  /// Flat recurring other deduction on the ZWG leg.
+  otherDeductionZwg  Decimal? @map("other_deduction_zwg") @db.Decimal(20, 2)
+  /// Whether the employee is enrolled in MIPF (Mining Industry Pension Fund).
+  mipfMember         Boolean  @default(false) @map("mipf_member")
+  /// Whether the employee falls under a NEC (National Employment Council) that levies dues.
+  necMember          Boolean  @default(false) @map("nec_member")
   bankName        String?   @map("bank_name")
   bankBranch      String?   @map("bank_branch")
   accountNo       String?   @map("account_no")
@@ -1188,6 +1213,12 @@ model PayrollRun {
   fxRateId            String?          @map("fx_rate_id") @db.Uuid
   /// Snapshot of the client USD/ZWG split ratio governing the run at open time.
   clientRatioSnapshot Json?            @map("client_ratio_snapshot")
+  /// Optional per-employee USD split ratios for this run: `{ "<employeeId>": <usdPct 0..100> }`.
+  /// Overrides the employee/client/fixed split so a run can match the paysheet's per-person ratio.
+  perEmployeeRatios   Json?            @map("per_employee_ratios")
+  /// The USD/ZWG FX rate snapshotted for this run (ZWG per 1 USD). PAYE is computed on the
+  /// combined USD-equivalent taxable income using this rate, then split back per currency.
+  fxRate              Decimal?         @map("fx_rate") @db.Decimal(20, 6)
   preparedByUserId    String?          @map("prepared_by_user_id") @db.Uuid
   approvedByUserId    String?          @map("approved_by_user_id") @db.Uuid
   /// Multinational/entity dimension (nullable; backfilled to the default entity).
@@ -1227,9 +1258,17 @@ model PayrollLine {
   nssaEe          Decimal    @default(0) @map("nssa_ee") @db.Decimal(20, 2)
   nssaEr          Decimal    @default(0) @map("nssa_er") @db.Decimal(20, 2)
   zimdef          Decimal    @default(0) @db.Decimal(20, 2)
+  /// NEC employer contribution (company cost).
   nec             Decimal    @default(0) @db.Decimal(20, 2)
+  /// NEC employee contribution (deducted from net).
+  necEe           Decimal    @default(0) @map("nec_ee") @db.Decimal(20, 2)
+  /// MIPF employer contribution (company cost).
   mipf            Decimal    @default(0) @db.Decimal(20, 2)
+  /// MIPF employee contribution (deducted from net).
+  mipfEe          Decimal    @default(0) @map("mipf_ee") @db.Decimal(20, 2)
   nyaradzo        Decimal    @default(0) @db.Decimal(20, 2)
+  /// Approved back-pay / acting extra earnings folded into this line (from PayrollExtraEarning).
+  extraEarnings   Decimal    @default(0) @map("extra_earnings") @db.Decimal(20, 2)
   otherDeductions Decimal    @default(0) @map("other_deductions") @db.Decimal(20, 2)
   netUsd          Decimal    @default(0) @map("net_usd") @db.Decimal(20, 2)
   netZwg          Decimal    @default(0) @map("net_zwg") @db.Decimal(20, 2)

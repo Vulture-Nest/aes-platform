@@ -25,11 +25,12 @@ export class ApprovalsController {
   decide(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: DecideDto,
-    @CurrentUser('id') approverUserId: string,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.approvals.decide({
       approvalId: id,
-      approverUserId,
+      approverUserId: user.id,
+      approverRoles: user.roles.map((r) => ({ siteId: r.siteId, role: r.role })),
       decision: dto.decision,
       comment: dto.comment,
     });

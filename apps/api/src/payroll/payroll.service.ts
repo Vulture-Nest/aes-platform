@@ -25,6 +25,7 @@ import { CryptoService } from '../crypto/crypto.service';
 import { GrossBuildupService, SplitMode } from './calculators/gross-buildup.service';
 import { NssaService } from './calculators/nssa.service';
 import { PayeService, PayeBand } from './calculators/paye.service';
+import { CrossCurrencyPayeService } from './calculators/cross-currency-paye.service';
 import { EmployerStatutoryService } from './calculators/statutory-employer.service';
 import { OpenPayrollRunDto, ListPayrollRunsQueryDto } from './dto/payroll.dto';
 
@@ -39,9 +40,17 @@ const KEY_AIDS_LEVY_PCT = 'aids_levy_pct';
 const KEY_NSSA_EE_PCT = 'nssa_ee_pct';
 const KEY_NSSA_ER_PCT = 'nssa_er_pct';
 const KEY_NSSA_CEILING = 'nssa_ceiling';
+/** NSSA's own USD->ZWG insurable-earnings conversion (distinct from payroll FX). ZWG only. */
+const KEY_NSSA_ZWG_CONV = 'nssa_zwg_conv';
 const KEY_ZIMDEF_PCT = 'zimdef_pct';
+/** NEC employer + employee contribution rates (both levied on the ZWG basic). */
 const KEY_NEC_PCT = 'nec_pct';
+const KEY_NEC_EE_PCT = 'nec_ee_pct';
+/** MIPF employer + employee contribution rates (both levied on the ZWG basic). */
 const KEY_MIPF_PCT = 'mipf_pct';
+const KEY_MIPF_EE_PCT = 'mipf_ee_pct';
+/** Fallback USD/ZWG FX rate (ZWG per 1 USD) when the run has no snapshotted rate. */
+const KEY_FX_RATE = 'fx_rate';
 
 /** A run with its computed lines eagerly loaded. */
 export type RunWithLines = PayrollRun & { lines: PayrollLine[] };
@@ -81,6 +90,7 @@ export class PayrollService implements OnModuleInit {
     private readonly statutoryRates: StatutoryRatesService,
     private readonly grossBuildup: GrossBuildupService,
     private readonly paye: PayeService,
+    private readonly crossCurrencyPaye: CrossCurrencyPayeService,
     private readonly nssa: NssaService,
     private readonly employerStatutory: EmployerStatutoryService,
     private readonly crypto: CryptoService,
@@ -212,6 +222,24 @@ export class PayrollService implements OnModuleInit {
     };
 
     const clientUsdPct = this.clientUsdPct(run.clientRatioSnapshot);
+    const fxRate = await this.resolveFxRate(run, effectiveDate);
+    const perEmployeeRatios = this.perEmployeeRatios(run.perEmployeeRatios);
+
+    // Approved back-pay / acting extra earnings not yet consumed by a run, for this site's
+    // employees and (when tagged) this run's month. Folded into the pay line and marked consumed.
+    const extraEarnings = await this.prisma.payrollExtraEarning.findMany({
+      where: {
+        employeeId: { in: employees.map((e) => e.id) },
+        runId: null,
+        OR: [{ periodMonth: run.month }, { periodMonth: null }],
+      },
+    });
+    const extraByEmployee = new Map<string, typeof extraEarnings>();
+    for (const earning of extraEarnings) {
+      const list = extraByEmployee.get(earning.employeeId) ?? [];
+      list.push(earning);
+      extraByEmployee.set(earning.employeeId, list);
+    }
 
     // Sum hours per employee across all their timesheet entries in the period.
     const hoursByEmployee = new Map<
@@ -245,14 +273,31 @@ export class PayrollService implements OnModuleInit {
         ugShift: 0,
         nightHours: 0,
       };
-      return this.buildLine(runId, employee, hours, clientUsdPct, config, actorId);
+      return this.buildLine(runId, employee, hours, {
+        clientUsdPct,
+        perEmployeeRatios,
+        config,
+        fxRate,
+        extras: extraByEmployee.get(employee.id) ?? [],
+        actorId,
+      });
     });
 
-    // Idempotent replace: wipe prior lines then re-create, and set CHECKED, atomically.
+    // Extra-earning rows folded into this run, marked consumed so they never double-count.
+    const consumedExtraIds = extraEarnings.map((e) => e.id);
+
+    // Idempotent replace: wipe prior lines then re-create, and set CHECKED, atomically. Extra
+    // earnings are stamped with this run so they are not re-applied by a later run.
     const updated = await this.prisma.rlsTx(async (tx) => {
       await tx.payrollLine.deleteMany({ where: { runId } });
       if (lineData.length > 0) {
         await tx.payrollLine.createMany({ data: lineData });
+      }
+      if (consumedExtraIds.length > 0) {
+        await tx.payrollExtraEarning.updateMany({
+          where: { id: { in: consumedExtraIds } },
+          data: { runId, updatedBy: actorId },
+        });
       }
       await tx.payrollRun.update({
         where: { id: runId },
@@ -466,12 +511,15 @@ export class PayrollService implements OnModuleInit {
           ugAllowance: line.ugAllowance.toNumber(),
           nightAllowance: line.nightAllowance.toNumber(),
           otherAllowances: line.otherAllowances.toNumber(),
+          extraEarnings: line.extraEarnings.toNumber(),
           gross: line.gross.toNumber(),
         },
         deductions: {
           paye: line.paye.toNumber(),
           aidsLevy: line.aidsLevy.toNumber(),
           nssaEe: line.nssaEe.toNumber(),
+          necEe: line.necEe.toNumber(),
+          mipfEe: line.mipfEe.toNumber(),
           nyaradzo: line.nyaradzo.toNumber(),
           otherDeductions: line.otherDeductions.toNumber(),
         },
@@ -523,12 +571,13 @@ export class PayrollService implements OnModuleInit {
     push('SALARIES_EXPENSE', 'Gross salaries & wages', totals.gross, 0);
     push('STATUTORY_EXPENSE', 'Employer statutory contributions', employerContrib, 0);
 
-    // Statutory liability credits (what the company owes third parties).
+    // Statutory liability credits (what the company owes third parties). NEC/MIPF carry both the
+    // employer contribution (a company cost) and the employee contribution (a net deduction).
     push('PAYE_PAYABLE', 'PAYE & AIDS levy payable', 0, totals.paye + totals.aidsLevy);
     push('NSSA_PAYABLE', 'NSSA payable (ee + er)', 0, totals.nssaEe + totals.nssaEr);
     push('ZIMDEF_PAYABLE', 'ZIMDEF payable', 0, totals.zimdef);
-    push('NEC_PAYABLE', 'NEC payable', 0, totals.nec);
-    push('MIPF_PAYABLE', 'MIPF payable', 0, totals.mipf);
+    push('NEC_PAYABLE', 'NEC payable (ee + er)', 0, totals.nec + totals.necEe);
+    push('MIPF_PAYABLE', 'MIPF payable (ee + er)', 0, totals.mipf + totals.mipfEe);
     push(
       'OTHER_DEDUCTIONS_PAYABLE',
       'Other deductions payable',
@@ -570,8 +619,12 @@ export class PayrollService implements OnModuleInit {
       { head: 'NSSA_EE', label: 'NSSA employee contribution', amount: totals.nssaEe },
       { head: 'NSSA_ER', label: 'NSSA employer contribution', amount: totals.nssaEr },
       { head: 'ZIMDEF', label: 'ZIMDEF levy', amount: totals.zimdef },
-      { head: 'NEC', label: 'NEC dues', amount: totals.nec },
-      { head: 'MIPF', label: 'MIPF contribution', amount: totals.mipf },
+      { head: 'NEC', label: 'NEC dues (ee + er)', amount: this.round2(totals.nec + totals.necEe) },
+      {
+        head: 'MIPF',
+        label: 'MIPF contribution (ee + er)',
+        amount: this.round2(totals.mipf + totals.mipfEe),
+      },
     ];
 
     const grandTotal = this.round2(heads.reduce((s, h) => s + h.amount, 0));
@@ -629,8 +682,11 @@ export class PayrollService implements OnModuleInit {
       nssaEr: 0,
       zimdef: 0,
       nec: 0,
+      necEe: 0,
       mipf: 0,
+      mipfEe: 0,
       nyaradzo: 0,
+      extraEarnings: 0,
       otherDeductions: 0,
       netUsd: 0,
       netZwg: 0,
@@ -643,8 +699,11 @@ export class PayrollService implements OnModuleInit {
       totals.nssaEr += line.nssaEr.toNumber();
       totals.zimdef += line.zimdef.toNumber();
       totals.nec += line.nec.toNumber();
+      totals.necEe += line.necEe.toNumber();
       totals.mipf += line.mipf.toNumber();
+      totals.mipfEe += line.mipfEe.toNumber();
       totals.nyaradzo += line.nyaradzo.toNumber();
+      totals.extraEarnings += line.extraEarnings.toNumber();
       totals.otherDeductions += line.otherDeductions.toNumber();
       totals.netUsd += line.netUsd.toNumber();
       totals.netZwg += line.netZwg.toNumber();
@@ -750,7 +809,22 @@ export class PayrollService implements OnModuleInit {
   // Internals — line building
   // -------------------------------------------------------------------------
 
-  /** Build a single pay line's persisted values from hours, split and statutory config. */
+  /**
+   * Build a single pay line's persisted values from hours, split and statutory config,
+   * reproducing the AES paysheet computation:
+   *
+   * 1. Gross is built per leg — the split-native earnings (basic/OT/UG/night/USD allowances/
+   *    gratuity + approved back-pay/acting extras) are split USD/ZWG by the employee ratio,
+   *    then a ZWG-native COLA is added wholly to the ZWG leg.
+   * 2. NSSA (ee/er) is computed on the BASIC of each leg against a per-currency ceiling; MIPF
+   *    (7.5% ee + 7.5% er) and NEC (ee + er) are levied on the ZWG basic. All are effective-
+   *    dated config.
+   * 3. Taxable income per leg = leg gross − leg allowable deductions (NSSA + MIPF-ee + NEC-ee).
+   *    PAYE is charged ONCE on the combined USD-equivalent taxable (USD bands), less tax
+   *    credits, then split back per leg with a 3% AIDS levy each.
+   * 4. Net per leg = leg gross − leg NSSA-ee − leg MIPF-ee/NEC-ee − leg PAYE − leg AIDS levy −
+   *    voluntary deductions (Nyaradzo) on that leg.
+   */
   private buildLine(
     runId: string,
     employee: Employee,
@@ -761,12 +835,29 @@ export class PayrollService implements OnModuleInit {
       ugShift: number;
       nightHours: number;
     },
-    clientUsdPct: number,
-    config: Record<string, StatutoryConfig>,
-    actorId: string,
+    ctx: {
+      clientUsdPct: number;
+      perEmployeeRatios: Record<string, number>;
+      config: Record<string, StatutoryConfig>;
+      fxRate: number;
+      extras: Pick<
+        Prisma.PayrollExtraEarningGetPayload<true>,
+        'amount' | 'taxable' | 'pensionable' | 'nssaAble' | 'currency'
+      >[];
+      actorId: string;
+    },
   ): Prisma.PayrollLineCreateManyInput {
-    const usdPct = this.splitUsdPct(employee, clientUsdPct);
+    const { clientUsdPct, perEmployeeRatios, config, fxRate, extras, actorId } = ctx;
+    const usdPct = this.splitUsdPct(employee, clientUsdPct, perEmployeeRatios);
     const hourlyRate = employee.hourlyRate ? employee.hourlyRate.toNumber() : 0;
+    const usd = config['USD'];
+    const zwg = config['ZWG'];
+
+    const extraTotal = this.round2(extras.reduce((s, e) => s + e.amount.toNumber(), 0));
+    // Non-taxable extras still add to gross/net but must NOT increase the PAYE base.
+    const nonTaxableExtra = this.round2(
+      extras.filter((e) => !e.taxable).reduce((s, e) => s + e.amount.toNumber(), 0),
+    );
 
     const buildup = this.grossBuildup.compute({
       hoursNormal: hours.hoursNormal,
@@ -775,59 +866,143 @@ export class PayrollService implements OnModuleInit {
       ugShift: hours.ugShift,
       nightHours: hours.nightHours,
       hourlyRate,
+      ugAllowanceRate: this.num(employee.ugAllowanceRate),
+      nightAllowanceRate: this.num(employee.nightAllowanceRate),
+      cola: this.num(employee.colaZwg),
+      colaIsZwgNative: true,
+      otherAllowances: this.num(employee.otherAllowancesUsd),
+      gratuity: this.num(employee.gratuityUsd),
+      extraEarnings: extraTotal,
       split: {
         mode: employee.payMode === 'FIXED_SPLIT' ? SplitMode.FIXED_SPLIT : SplitMode.CLIENT_RATIO,
         usdPct,
       },
     });
 
-    const gross = buildup.gross;
+    // Split-native (USD-denominated) earnings — everything except the ZWG-native COLA.
+    const colaZwgNative = this.num(employee.colaZwg);
+    const splitNativeUsd = this.round2(buildup.gross - colaZwgNative);
+    // The USD leg is paid in USD; the ZWG leg is converted to ZWG at the run FX, then the
+    // ZWG-native COLA is added on top of it (matching the paysheet's gross ZWL column).
+    const grossUsd = this.round2((splitNativeUsd * usdPct) / 100);
+    const splitZwgLegUsd = this.round2(splitNativeUsd - grossUsd);
+    const grossZwg = this.round2(splitZwgLegUsd * fxRate + colaZwgNative);
+    const gross = this.round2(grossUsd + grossZwg);
 
-    // Statutory is computed against the whole gross using the split-dominant currency's config.
-    // A predominantly-USD split uses USD bands/rates; otherwise ZWG. Employer contributions
-    // (zimdef/nec/mipf) always use the same currency config.
-    const cur: string = usdPct >= 50 ? 'USD' : 'ZWG';
-    const cfg = config[cur];
+    // Basic split across the two legs (basic is split-native, so it follows the ratio). The USD
+    // leg carries `basicUsd`; the ZWG leg carries `basicZwgLegUsd` (USD terms) → `basicZwg` (ZWG).
+    const basicUsd = this.round2((buildup.basic * usdPct) / 100);
+    const basicZwgLegUsd = this.round2(buildup.basic - basicUsd);
+    const basicZwg = this.round2(basicZwgLegUsd * fxRate);
+    // Full ZWG-denominated basic — the base MIPF/NEC are levied on (basic converted at FX).
+    const basicZwgFull = this.round2(buildup.basic * fxRate);
 
-    const paye = this.paye.compute({ taxableIncome: gross, bands: cfg.payeBands });
-    const aidsLevy = this.paye.aidsLevy({ paye, aidsLevyPct: cfg.aidsLevyPct });
-    const nssa = this.nssa.compute({
-      insurableEarnings: gross,
-      ceiling: cfg.nssaCeiling,
-      eePct: cfg.nssaEePct,
-      erPct: cfg.nssaErPct,
+    // NSSA on the BASIC of each leg, each capped by its own currency ceiling. The ZWG leg base
+    // uses NSSA's own USD->ZWG conversion (config), distinct from the payroll FX; it defaults to
+    // the payroll FX when unset.
+    const nssaZwgConv = zwg.nssaZwgConv > 0 ? zwg.nssaZwgConv : fxRate;
+    const nssaUsd = this.nssa.compute({
+      insurableEarnings: basicUsd,
+      ceiling: usd.nssaCeiling,
+      eePct: usd.nssaEePct,
+      erPct: usd.nssaErPct,
     });
-    const zimdef = this.employerStatutory.zimdef({ gross, pct: cfg.zimdefPct });
-    const nec = this.employerStatutory.nec({ gross, pct: cfg.necPct });
-    const mipf = this.employerStatutory.mipf({ gross, pct: cfg.mipfPct });
+    const nssaZwg = this.nssa.compute({
+      insurableEarnings: this.round2(basicZwgLegUsd * nssaZwgConv),
+      ceiling: zwg.nssaCeiling,
+      eePct: zwg.nssaEePct,
+      erPct: zwg.nssaErPct,
+    });
+    const nssaEe = this.round2(nssaUsd.employee + nssaZwg.employee);
+    const nssaEr = this.round2(nssaUsd.employer + nssaZwg.employer);
 
-    // Net = gross - paye - aidsLevy - nssaEe - otherDeductions (no other deductions modelled
-    // yet: employer contributions are a company cost, not employee deductions).
-    const otherDeductions = 0;
-    const net = this.round2(gross - paye - aidsLevy - nssa.employee - otherDeductions);
+    // MIPF (mine-scheme members only) + NEC, both levied on the ZWG basic, ee + er.
+    const mipf = employee.mipfMember
+      ? this.employerStatutory.mipf({ gross: basicZwgFull, pct: zwg.mipfPct })
+      : 0;
+    const mipfEe = employee.mipfMember
+      ? this.round2((basicZwgFull * zwg.mipfEePct) / 100)
+      : 0;
+    const nec = employee.necMember
+      ? this.employerStatutory.nec({ gross: basicZwgFull, pct: zwg.necPct })
+      : 0;
+    const necEe = employee.necMember ? this.round2((basicZwgFull * zwg.necEePct) / 100) : 0;
+    const zimdef = this.employerStatutory.zimdef({ gross, pct: zwg.zimdefPct });
 
-    // Split net into the same USD/ZWG proportion as the gross build-up.
-    const netUsd = this.round2((net * usdPct) / 100);
-    const netZwg = this.round2(net - netUsd);
+    // Taxable income per leg: leg gross less the leg's allowable deductions. The USD leg carries
+    // its NSSA; the ZWG leg carries its NSSA + the (ZWG-based) MIPF-ee + NEC-ee. Any non-taxable
+    // extra earning (per its `taxable` flag) is stripped from the taxable base, apportioned to
+    // each leg by the pay split, while still counting towards gross and net.
+    const nonTaxableExtraUsd = this.round2((nonTaxableExtra * usdPct) / 100);
+    const nonTaxableExtraZwg = this.round2((nonTaxableExtra - nonTaxableExtraUsd) * fxRate);
+    const taxableUsd = this.round2(grossUsd - nssaUsd.employee - nonTaxableExtraUsd);
+    const taxableZwg = this.round2(
+      grossZwg - nssaZwg.employee - mipfEe - necEe - nonTaxableExtraZwg,
+    );
+
+    const payeSplit = this.crossCurrencyPaye.compute({
+      taxableUsd,
+      taxableZwg,
+      fxRate,
+      usdBands: usd.payeBands,
+      aidsLevyPct: usd.aidsLevyPct,
+    });
+    const paye = this.round2(payeSplit.payeUsd + payeSplit.payeZwg);
+    const aidsLevy = this.round2(payeSplit.aidsLevyUsd + payeSplit.aidsLevyZwg);
+
+    // Voluntary Nyaradzo deduction (defaults to the ZWG leg).
+    const nyaradzoAmount = this.num(employee.nyaradzoAmount);
+    const nyaradzoUsd =
+      nyaradzoAmount > 0 && (employee.nyaradzoCurrency ?? 'ZWG').toUpperCase() === 'USD'
+        ? nyaradzoAmount
+        : 0;
+    const nyaradzoZwg = nyaradzoAmount - nyaradzoUsd;
+    // Flat recurring other deductions per leg (e.g. May Day levy).
+    const otherDeductionUsd = this.num(employee.otherDeductionUsd);
+    const otherDeductionZwg = this.num(employee.otherDeductionZwg);
+    const otherDeductions = this.round2(otherDeductionUsd + otherDeductionZwg);
+
+    // Net per leg (mirrors the paysheet's salary-after-tax then voluntary/other deductions).
+    const netUsd = this.round2(
+      grossUsd -
+        nssaUsd.employee -
+        payeSplit.payeUsd -
+        payeSplit.aidsLevyUsd -
+        nyaradzoUsd -
+        otherDeductionUsd,
+    );
+    const netZwg = this.round2(
+      grossZwg -
+        nssaZwg.employee -
+        mipfEe -
+        necEe -
+        payeSplit.payeZwg -
+        payeSplit.aidsLevyZwg -
+        nyaradzoZwg -
+        otherDeductionZwg,
+    );
 
     return {
       runId,
       employeeId: employee.id,
-      basicUsd: this.round2((buildup.basic * usdPct) / 100),
-      basicZwg: this.round2(buildup.basic - this.round2((buildup.basic * usdPct) / 100)),
-      cola: 0,
+      basicUsd,
+      basicZwg,
+      cola: this.num(employee.colaZwg),
       ugAllowance: buildup.underground,
       nightAllowance: buildup.night,
       otherAllowances: buildup.allowances,
       gross,
       paye,
       aidsLevy,
-      nssaEe: nssa.employee,
-      nssaEr: nssa.employer,
+      nssaEe,
+      nssaEr,
       zimdef,
       nec,
+      necEe,
       mipf,
-      nyaradzo: 0,
+      mipfEe,
+      nyaradzo: this.round2(nyaradzoAmount),
+      extraEarnings: extraTotal,
       otherDeductions,
       netUsd,
       netZwg,
@@ -836,8 +1011,28 @@ export class PayrollService implements OnModuleInit {
     };
   }
 
-  /** The USD split percentage for an employee: fixed (FIXED_SPLIT) or the client ratio. */
-  private splitUsdPct(employee: Employee, clientUsdPct: number): number {
+  /** Coerce a nullable Decimal to a plain number (0 when unset). */
+  private num(value: Prisma.Decimal | null | undefined): number {
+    return value == null ? 0 : value.toNumber();
+  }
+
+  /**
+   * The USD split percentage for an employee. A run-level per-employee ratio wins (it matches
+   * the paysheet's per-person ratio); then a FIXED_SPLIT employee's fixed pct; otherwise the
+   * client ratio.
+   */
+  private splitUsdPct(
+    employee: Employee,
+    clientUsdPct: number,
+    perEmployeeRatios: Record<string, number>,
+  ): number {
+    const override = perEmployeeRatios[employee.id];
+    if (typeof override === 'number' && Number.isFinite(override)) {
+      return override;
+    }
+    if (employee.usdSplitPct != null) {
+      return employee.usdSplitPct.toNumber();
+    }
     if (employee.payMode === 'FIXED_SPLIT' && employee.fixedUsdPct != null) {
       return employee.fixedUsdPct.toNumber();
     }
@@ -859,10 +1054,52 @@ export class PayrollService implements OnModuleInit {
       nssaEePct: await this.pct(KEY_NSSA_EE_PCT, date, currency),
       nssaErPct: await this.pct(KEY_NSSA_ER_PCT, date, currency),
       nssaCeiling: await this.pct(KEY_NSSA_CEILING, date, currency),
+      nssaZwgConv: await this.pct(KEY_NSSA_ZWG_CONV, date, currency),
       zimdefPct: await this.pct(KEY_ZIMDEF_PCT, date, currency),
       necPct: await this.pct(KEY_NEC_PCT, date, currency),
+      necEePct: await this.pct(KEY_NEC_EE_PCT, date, currency),
       mipfPct: await this.pct(KEY_MIPF_PCT, date, currency),
+      mipfEePct: await this.pct(KEY_MIPF_EE_PCT, date, currency),
     };
+  }
+
+  /**
+   * The USD/ZWG FX rate (ZWG per 1 USD) for a run: the snapshotted `fxRate`, else the linked
+   * exchange-rate row's official rate, else the effective `fx_rate` statutory value, else 1
+   * (an all-one-currency run needs no conversion).
+   */
+  private async resolveFxRate(run: PayrollRun, effectiveDate: Date): Promise<number> {
+    if (run.fxRate != null) {
+      return run.fxRate.toNumber();
+    }
+    if (run.fxRateId) {
+      const fx = await this.prisma.exchangeRate.findUnique({ where: { id: run.fxRateId } });
+      if (fx) {
+        return fx.officialRate.toNumber();
+      }
+    }
+    try {
+      const row = await this.statutoryRates.valueAsOf(KEY_FX_RATE, effectiveDate);
+      if (row.value) {
+        return row.value.toNumber();
+      }
+    } catch {
+      // No fx_rate configured — fall through to the identity rate.
+    }
+    return 1;
+  }
+
+  /** Parse the run's per-employee USD ratio snapshot: `{ "<employeeId>": <usdPct> }`. */
+  private perEmployeeRatios(snapshot: Prisma.JsonValue | null): Record<string, number> {
+    const out: Record<string, number> = {};
+    if (snapshot && typeof snapshot === 'object' && !Array.isArray(snapshot)) {
+      for (const [id, val] of Object.entries(snapshot as Record<string, unknown>)) {
+        if (typeof val === 'number' && Number.isFinite(val)) {
+          out[id] = val;
+        }
+      }
+    }
+    return out;
   }
 
   /** Read a scalar statutory value effective on `date`, as a plain number (0 if unset). */
@@ -1012,9 +1249,12 @@ interface StatutoryConfig {
   nssaEePct: number;
   nssaErPct: number;
   nssaCeiling: number;
+  nssaZwgConv: number;
   zimdefPct: number;
   necPct: number;
+  necEePct: number;
   mipfPct: number;
+  mipfEePct: number;
 }
 
 /** Employee fields selected for the output endpoints (bank details for the schedule/payslips). */
@@ -1030,8 +1270,11 @@ interface PayrollTotals {
   nssaEr: number;
   zimdef: number;
   nec: number;
+  necEe: number;
   mipf: number;
+  mipfEe: number;
   nyaradzo: number;
+  extraEarnings: number;
   otherDeductions: number;
   netUsd: number;
   netZwg: number;
@@ -1080,12 +1323,15 @@ export interface Payslip {
     ugAllowance: number;
     nightAllowance: number;
     otherAllowances: number;
+    extraEarnings: number;
     gross: number;
   };
   deductions: {
     paye: number;
     aidsLevy: number;
     nssaEe: number;
+    necEe: number;
+    mipfEe: number;
     nyaradzo: number;
     otherDeductions: number;
   };

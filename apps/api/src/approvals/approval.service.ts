@@ -33,11 +33,40 @@ export interface SubmitParams {
 export interface DecideParams {
   approvalId: string;
   approverUserId: string;
+  /**
+   * The caller's RBAC assignments, used to authorise the decision against the step's role.
+   * `siteId: null` means the role applies across all sites.
+   */
+  approverRoles: { siteId: string | null; role: string }[];
   decision: ApprovalDecision;
   comment?: string;
 }
 
 export type ChainWithSteps = ApprovalChain & { steps: Approval[] };
+
+/** The minimum step shape needed to authorise a decision. */
+export interface DecidableStep {
+  approverRole: string;
+}
+
+/**
+ * Pure eligibility check for a decision. The caller may action a step when EITHER:
+ *  - they personally hold the step's `approverRole`, site-scoped: a role assignment with a
+ *    null site is global, otherwise its site must match the chain's subject site; OR
+ *  - they are an active delegate standing in for a user who holds that role site-scoped
+ *    (the delegator's eligible roles are supplied in `delegatedRoles`).
+ * The requester can never decide their own chain — checked by the caller before this.
+ */
+export function canDecideStep(
+  step: DecidableStep,
+  caller: { roles: { siteId: string | null; role: string }[] },
+  chainSiteId: string | null,
+  delegatedRoles: { siteId: string | null; role: string }[] = [],
+): boolean {
+  const matches = (r: { siteId: string | null; role: string }): boolean =>
+    r.role === step.approverRole && (r.siteId === null || chainSiteId === null || r.siteId === chainSiteId);
+  return caller.roles.some(matches) || delegatedRoles.some(matches);
+}
 
 /**
  * The generic approval engine. Every module (requisitions, payments, …) submits a
@@ -149,6 +178,18 @@ export class ApprovalService {
       throw new BadRequestException('This step is not currently active');
     }
 
+    // AUTHORISATION: the caller must be eligible for this step — either they hold the
+    // step's role (site-scoped) or they are an active delegate of a role-holder.
+    // Check own roles first; only pay for the delegation lookup if that fails.
+    let eligible = canDecideStep(step, { roles: params.approverRoles }, chain.siteId, []);
+    if (!eligible) {
+      const delegatedRoles = await this.delegatedRolesFor(params.approverUserId, chain.siteId);
+      eligible = canDecideStep(step, { roles: params.approverRoles }, chain.siteId, delegatedRoles);
+    }
+    if (!eligible) {
+      throw new ForbiddenException('You are not an eligible approver for this step');
+    }
+
     // Persist the decision on this step.
     const decidedStep = await this.prisma.approval.update({
       where: { id: step.id },
@@ -190,26 +231,64 @@ export class ApprovalService {
   // Inbox
   // -------------------------------------------------------------------------
 
-  /** PENDING steps at the active step_order whose role the user holds and hasn't decided. */
-  async inbox(user: {
-    id: string;
-    roles: string[];
-  }): Promise<(Approval & { chain: ApprovalChain })[]> {
-    if (user.roles.length === 0) {
+  /**
+   * PENDING steps at the active step_order that the user may action and hasn't decided.
+   * Surfaces both the caller's own role matches AND steps whose role is held by a user
+   * who has an ACTIVE delegation to the caller (so a stand-in sees the delegator's items).
+   */
+  async inbox(
+    user: {
+      id: string;
+      roles: string[];
+    },
+    at: Date = new Date(),
+  ): Promise<(Approval & { chain: ApprovalChain })[]> {
+    // Roles the caller can exercise on behalf of active delegators (any site — the
+    // site-scoping is applied per-step below against the chain's subject site).
+    const delegatorIds = await this.delegation.activeDelegatorsFor(user.id, at);
+    const delegatedRoles = await this.rolesForUsers(delegatorIds);
+    const roles = [...new Set([...user.roles, ...delegatedRoles.map((r) => r.role)])];
+    if (roles.length === 0) {
       return [];
     }
     const steps = await this.prisma.approval.findMany({
       where: {
         decision: null,
-        approverRole: { in: user.roles },
+        approverRole: { in: roles },
         chain: { status: ApprovalStatus.PENDING },
       },
       include: { chain: true },
       orderBy: { createdAt: 'asc' },
     });
     // Only surface steps that are actually at the chain's current step_order and where
-    // the caller is not the requester (they could never action it anyway).
-    return steps.filter((s) => s.step === s.chain.currentStep && s.chain.requesterId !== user.id);
+    // the caller is not the requester (they could never action it anyway). Delegated rows
+    // are additionally site-scoped: the delegator must hold the step role for that site.
+    return steps.filter((s) => {
+      if (s.step !== s.chain.currentStep || s.chain.requesterId === user.id) {
+        return false;
+      }
+      if (user.roles.includes(s.approverRole)) {
+        return true;
+      }
+      return delegatedRoles.some(
+        (r) =>
+          r.role === s.approverRole &&
+          (r.siteId === null || s.chain.siteId === null || r.siteId === s.chain.siteId),
+      );
+    });
+  }
+
+  /** All RBAC assignments held by the given users (empty in → empty out). */
+  private async rolesForUsers(
+    userIds: string[],
+  ): Promise<{ siteId: string | null; role: string }[]> {
+    if (userIds.length === 0) {
+      return [];
+    }
+    return this.prisma.userSiteRole.findMany({
+      where: { userId: { in: userIds } },
+      select: { siteId: true, role: true },
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -380,6 +459,29 @@ export class ApprovalService {
     return this.reload(chain.id);
   }
 
+  /**
+   * The RBAC assignments held by every user who currently delegates to `delegateUserId`.
+   * These are the roles the caller may exercise on a delegator's behalf. Site-scoped: only
+   * assignments that are global or match the chain's subject site are returned.
+   */
+  private async delegatedRolesFor(
+    delegateUserId: string,
+    siteId: string | null,
+    at: Date = new Date(),
+  ): Promise<{ siteId: string | null; role: string }[]> {
+    const delegatorIds = await this.delegation.activeDelegatorsFor(delegateUserId, at);
+    if (delegatorIds.length === 0) {
+      return [];
+    }
+    return this.prisma.userSiteRole.findMany({
+      where: {
+        userId: { in: delegatorIds },
+        ...(siteId ? { OR: [{ siteId }, { siteId: null }] } : {}),
+      },
+      select: { siteId: true, role: true },
+    });
+  }
+
   /** Users holding any of the given roles, site-scoped, excluding the requester. */
   private async resolveApproverUserIds(
     roles: string[],
@@ -399,12 +501,19 @@ export class ApprovalService {
     return [...new Set(assignments.map((a) => a.userId))].filter((id) => id !== excludeUserId);
   }
 
-  /** Notify every user holding a role that is an eligible approver at the given step. */
+  /**
+   * Notify every user holding a role that is an eligible approver at the given step, plus
+   * the active delegates standing in for those role-holders (so a stand-in is actually told).
+   */
   private async notifyStep(chain: ChainWithSteps, stepOrder: number): Promise<void> {
     const roles = [
       ...new Set(chain.steps.filter((s) => s.step === stepOrder).map((s) => s.approverRole)),
     ];
-    const userIds = await this.resolveApproverUserIds(roles, chain.siteId, chain.requesterId);
+    const userIds = await this.resolveApproverUserIdsWithDelegates(
+      roles,
+      chain.siteId,
+      chain.requesterId,
+    );
     if (userIds.length === 0) {
       return;
     }
@@ -416,6 +525,21 @@ export class ApprovalService {
       subjectTable: chain.subjectTable,
       subjectId: chain.subjectId,
     });
+  }
+
+  /**
+   * Role-holders for the given roles/site PLUS their active delegates, de-duped and with the
+   * requester removed (a requester is never notified as an approver of their own chain).
+   */
+  private async resolveApproverUserIdsWithDelegates(
+    roles: string[],
+    siteId: string | null,
+    excludeUserId: string,
+    at: Date = new Date(),
+  ): Promise<string[]> {
+    const holders = await this.resolveApproverUserIds(roles, siteId, excludeUserId);
+    const delegates = await this.delegation.activeDelegatesForMany(holders, at);
+    return [...new Set([...holders, ...delegates])].filter((id) => id !== excludeUserId);
   }
 
   // -------------------------------------------------------------------------
@@ -460,7 +584,7 @@ export class ApprovalService {
   }
 
   private async remindStep(step: Approval, chain: ApprovalChain): Promise<void> {
-    const userIds = await this.resolveApproverUserIds(
+    const userIds = await this.resolveApproverUserIdsWithDelegates(
       [step.approverRole],
       chain.siteId,
       chain.requesterId,

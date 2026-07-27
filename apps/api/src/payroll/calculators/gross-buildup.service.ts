@@ -59,10 +59,20 @@ export interface GrossBuildupInput {
   ugAllowanceRate?: number;
   /** Allowance paid per night hour. Defaults to 0. */
   nightAllowanceRate?: number;
-  /** Cost-of-living allowance (flat). Defaults to 0. */
+  /**
+   * Cost-of-living allowance (flat). Defaults to 0. When {@link colaIsZwgNative} is true this
+   * is a ZWG-native amount added entirely to the ZWG leg (the paysheet convention); otherwise
+   * it is part of the split-native gross like every other allowance.
+   */
   cola?: number;
-  /** Any other flat allowances lumped together. Defaults to 0. */
+  /** When true, `cola` is ZWG-native and bypasses the split (goes wholly to the ZWG leg). */
+  colaIsZwgNative?: boolean;
+  /** Any other flat allowances lumped together (split-native, USD). Defaults to 0. */
   otherAllowances?: number;
+  /** Flat gratuity (split-native, USD). Defaults to 0. */
+  gratuity?: number;
+  /** Extra earnings (back-pay / acting) folded into the split-native gross. Defaults to 0. */
+  extraEarnings?: number;
   /** How to split the resulting gross across currencies. */
   split: SplitInput;
 }
@@ -85,11 +95,13 @@ export interface GrossBuildupResult {
   underground: number;
   /** nightHours * nightAllowanceRate. */
   night: number;
-  /** cola + otherAllowances. */
+  /** cola + otherAllowances + gratuity. */
   allowances: number;
-  /** basic + overtime + underground + night + cola + otherAllowances. */
+  /** Extra earnings (back-pay / acting) folded into the split-native gross. */
+  extraEarnings: number;
+  /** basic + overtime + underground + night + cola + otherAllowances + gratuity + extraEarnings. */
   gross: number;
-  /** Gross split into USD/ZWG legs by `split.usdPct`. */
+  /** Gross split into USD/ZWG legs (ZWG-native COLA, if any, is added wholly to the ZWG leg). */
   split: GrossSplit;
 }
 
@@ -129,7 +141,10 @@ export class GrossBuildupService {
       ugAllowanceRate = 0,
       nightAllowanceRate = 0,
       cola = 0,
+      colaIsZwgNative = false,
       otherAllowances = 0,
+      gratuity = 0,
+      extraEarnings = 0,
       split,
     } = input;
 
@@ -139,13 +154,22 @@ export class GrossBuildupService {
     );
     const underground = this.round2(ugShift * ugAllowanceRate);
     const night = this.round2(nightHours * nightAllowanceRate);
-    const allowances = this.round2(cola + otherAllowances);
+    // A ZWG-native COLA is reported in `allowances` but excluded from the split-native gross.
+    const splitCola = colaIsZwgNative ? 0 : cola;
+    const allowances = this.round2(cola + otherAllowances + gratuity);
+    const extra = this.round2(extraEarnings);
 
-    const gross = this.round2(basic + overtime + underground + night + allowances);
+    // Split-native gross (paid in USD/ZWG by the ratio); ZWG-native COLA is added on afterwards.
+    const splitGross = this.round2(
+      basic + overtime + underground + night + splitCola + otherAllowances + gratuity + extra,
+    );
+    const zwgNativeCola = colaIsZwgNative ? this.round2(cola) : 0;
+    const gross = this.round2(splitGross + zwgNativeCola);
 
     const usdPct = this.clampPct(split.usdPct);
-    const usd = this.round2((gross * usdPct) / 100);
-    // ZWG is the remainder so the two legs always sum back to gross exactly.
+    const usd = this.round2((splitGross * usdPct) / 100);
+    // ZWG leg = remainder of the split-native gross plus any ZWG-native COLA, so both legs
+    // always sum back to gross exactly.
     const zwg = this.round2(gross - usd);
 
     return {
@@ -154,6 +178,7 @@ export class GrossBuildupService {
       underground,
       night,
       allowances,
+      extraEarnings: extra,
       gross,
       split: { usd, zwg },
     };

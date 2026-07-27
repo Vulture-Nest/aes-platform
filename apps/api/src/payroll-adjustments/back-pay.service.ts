@@ -114,7 +114,14 @@ export class BackPayService {
       return null;
     }
 
-    const difference = this.round2(newAmount - oldAmount);
+    // Basic difference, then the knock-on components the spec requires: a basic uplift also
+    // uplifts overtime (paid on the basic rate) and any %-of-basic allowances. These ride on the
+    // basic difference so back-pay is never basic-only. Defaults to 0 => pure basic difference.
+    const basicDifference = newAmount - oldAmount;
+    const otPct = rate.otPremiumPctOfBasic ?? 0;
+    const allowancePct = rate.allowancePctOfBasic ?? 0;
+    const knockOn = (basicDifference * (otPct + allowancePct)) / 100;
+    const difference = this.round2(basicDifference + knockOn);
     return {
       employeeId: employee.id,
       periodMonth,
@@ -126,7 +133,7 @@ export class BackPayService {
       newBasic,
       hoursPaid: hoursPaid == null ? null : this.round2(hoursPaid),
       oldAmount: this.round2(oldAmount),
-      newAmount: this.round2(newAmount),
+      newAmount: this.round2(newAmount + knockOn),
       difference,
     };
   }
