@@ -4,6 +4,7 @@ import { ReferenceModule } from '../reference/reference.module';
 import { GrossBuildupService } from './calculators/gross-buildup.service';
 import { NssaService } from './calculators/nssa.service';
 import { PayeService } from './calculators/paye.service';
+import { CrossCurrencyPayeService } from './calculators/cross-currency-paye.service';
 import { EmployerStatutoryService } from './calculators/statutory-employer.service';
 import { PayrollController } from './payroll.controller';
 import { PayrollService } from './payroll.service';
@@ -23,6 +24,7 @@ import { PayrollService } from './payroll.service';
     PayrollService,
     GrossBuildupService,
     PayeService,
+    CrossCurrencyPayeService,
     NssaService,
     EmployerStatutoryService,
   ],

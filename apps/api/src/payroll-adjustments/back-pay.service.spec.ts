@@ -101,6 +101,20 @@ describe('BackPayService', () => {
       expect(working?.difference).toBe(50);
     });
 
+    it('includes knock-on OT + %-of-basic allowances (not basic-only)', () => {
+      // Paid basic 400 at old hourly 2 => 200 hours; new hourly 2.5 => new basic 500, basic diff 100.
+      // Knock-on: OT premium 15% + allowances 10% of the basic diff => 100 * 1.25 = 125.
+      const paidLine = { basicUsd: new Prisma.Decimal(400), basicZwg: new Prisma.Decimal(0) };
+      const working = service.computeLine(
+        hourlyEmployee,
+        '2024-01',
+        [{ grade: 'B3', hourly: 2.5, otPremiumPctOfBasic: 15, allowancePctOfBasic: 10 }],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        paidLine as any,
+      );
+      expect(working?.difference).toBe(125);
+    });
+
     it('returns null when no new rate applies to the employee', () => {
       const paidLine = { basicUsd: new Prisma.Decimal(400), basicZwg: new Prisma.Decimal(0) };
       const working = service.computeLine(

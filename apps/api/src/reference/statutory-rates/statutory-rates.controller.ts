@@ -27,6 +27,6 @@ export class StatutoryRatesController {
   @Get('as-of')
   @ApiOperation({ summary: 'Resolve the statutory value effective on a date' })
   asOf(@Query() q: StatutoryValueQueryDto) {
-    return this.rates.valueAsOf(q.key, q.date ?? new Date(), q.currency);
+    return this.rates.valueAsOf(q.key, q.date ?? new Date(), q.currency, q.country);
   }
 }

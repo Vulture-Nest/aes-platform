@@ -5,16 +5,35 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PostFromPayrollDto, PostVatDto, RemitDto } from './dto/returns.dto';
 import { computeReturnState, defaultFilingDeadline } from './returns.logic';
 
-/** Payroll heads mapped to statutory return tax types (source = PAYROLL). */
-const PAYROLL_HEADS = [
-  'PAYE',
-  'AIDS_LEVY',
-  'NSSA',
-  'ZIMDEF',
-  'NEC',
-  'MIPF',
-  'NYARADZO',
-] as const;
+/**
+ * The statutory heads a payroll run can carry, in canonical filing order, each with the
+ * line components it sums. Heads are NOT posted as a fixed tuple: `postFromPayroll` derives
+ * a run's actual head list from the components that are non-zero on its lines, so an entity in
+ * a different country (with different statutory types) files only the heads it actually levies,
+ * while a ZW run keeps producing its full ZW head set. This keeps the head list data-driven
+ * per country without hardcoding a per-country tuple.
+ */
+const PAYROLL_HEAD_DEFS: { head: string; components: (line: PayrollLineHeads) => number }[] = [
+  { head: 'PAYE', components: (l) => num(l.paye) },
+  { head: 'AIDS_LEVY', components: (l) => num(l.aidsLevy) },
+  { head: 'NSSA', components: (l) => num(l.nssaEe) + num(l.nssaEr) },
+  { head: 'ZIMDEF', components: (l) => num(l.zimdef) },
+  { head: 'NEC', components: (l) => num(l.nec) },
+  { head: 'MIPF', components: (l) => num(l.mipf) },
+  { head: 'NYARADZO', components: (l) => num(l.nyaradzo) },
+];
+
+/** The statutory-line fields on a payroll line consumed when deriving return heads. */
+type PayrollLineHeads = {
+  paye?: Prisma.Decimal | number | null;
+  aidsLevy?: Prisma.Decimal | number | null;
+  nssaEe?: Prisma.Decimal | number | null;
+  nssaEr?: Prisma.Decimal | number | null;
+  zimdef?: Prisma.Decimal | number | null;
+  nec?: Prisma.Decimal | number | null;
+  mipf?: Prisma.Decimal | number | null;
+  nyaradzo?: Prisma.Decimal | number | null;
+};
 
 const num = (v: Prisma.Decimal | number | null | undefined): number => {
   if (v === null || v === undefined) return 0;
@@ -180,7 +199,7 @@ export class ReturnsService {
     });
 
     const totals: Record<string, number> = Object.fromEntries(
-      PAYROLL_HEADS.map((h) => [h, 0]),
+      PAYROLL_HEAD_DEFS.map((d) => [d.head, 0]),
     );
     // Entity dimension: post per entity if runs share one, else null (default entity).
     const entityIds = new Set(runs.map((r) => r.entityId ?? null));
@@ -188,18 +207,19 @@ export class ReturnsService {
 
     for (const run of runs) {
       for (const line of run.lines) {
-        totals.PAYE += num(line.paye);
-        totals.AIDS_LEVY += num(line.aidsLevy);
-        totals.NSSA += num(line.nssaEe) + num(line.nssaEr);
-        totals.ZIMDEF += num(line.zimdef);
-        totals.NEC += num(line.nec);
-        totals.MIPF += num(line.mipf);
-        totals.NYARADZO += num(line.nyaradzo);
+        for (const def of PAYROLL_HEAD_DEFS) {
+          totals[def.head] += def.components(line);
+        }
       }
     }
 
+    // Data-driven per country: only file the heads this run's lines actually levy (non-zero).
+    // A ZW run keeps its full head set; a run in a country without (say) NEC/MIPF/NYARADZO
+    // simply won't produce those returns, without a per-country tuple to maintain.
+    const activeHeads = PAYROLL_HEAD_DEFS.filter((d) => totals[d.head] !== 0);
+
     const results = [];
-    for (const head of PAYROLL_HEADS) {
+    for (const { head } of activeHeads) {
       const amountDue = Math.round(totals[head] * 100) / 100;
       const row = await this.upsertReturn(
         { taxType: head, periodMonth: dto.period, currency: 'USD', entityId },

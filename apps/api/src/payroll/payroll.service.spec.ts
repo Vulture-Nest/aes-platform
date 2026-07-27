@@ -12,6 +12,7 @@ import { CryptoService } from '../crypto/crypto.service';
 import { GrossBuildupService } from './calculators/gross-buildup.service';
 import { NssaService } from './calculators/nssa.service';
 import { PayeService } from './calculators/paye.service';
+import { CrossCurrencyPayeService } from './calculators/cross-currency-paye.service';
 import { EmployerStatutoryService } from './calculators/statutory-employer.service';
 import { PayrollService } from './payroll.service';
 
@@ -36,7 +37,10 @@ const EXAMPLE = {
   nssa_ceiling: 5000,
   zimdef_pct: 1,
   nec_pct: 0.5,
+  nec_ee_pct: 0,
   mipf_pct: 0,
+  mipf_ee_pct: 0,
+  fx_rate: 1, // 1:1 example rate so the single-currency examples need no conversion
 };
 
 /** A statutory-rates stub that returns the EXAMPLE config regardless of currency/date. */
@@ -66,6 +70,10 @@ function makeService() {
       count: jest.fn(),
       deleteMany: jest.fn(),
       createMany: jest.fn(),
+    },
+    payrollExtraEarning: {
+      findMany: jest.fn().mockResolvedValue([]),
+      updateMany: jest.fn(),
     },
     employee: { findMany: jest.fn().mockResolvedValue([]) },
     exchangeRate: { findUnique: jest.fn() },
@@ -101,6 +109,7 @@ function makeService() {
     statutoryRates as any,
     new GrossBuildupService(),
     new PayeService(),
+    new CrossCurrencyPayeService(new PayeService()),
     new NssaService(),
     new EmployerStatutoryService(),
     new CryptoService({ get: () => ({ encryptionKey: null }) } as any),
@@ -200,6 +209,7 @@ describe('PayrollService.computeRun', () => {
         payMode: 'FIXED_SPLIT',
         fixedUsdPct: dec(100),
         hourlyRate: dec(10), // gross = 160 * 10 = 1600 (all USD)
+        necMember: true, // subject to NEC dues in this example
         ...employeeOverrides,
       },
     ]);
@@ -223,22 +233,23 @@ describe('PayrollService.computeRun', () => {
 
     // gross = 1600 (all USD split).
     expect(line.gross).toBe(1600);
-    // PAYE (example bands): 0 on first 1000, 20% of next 600 = 120.
-    expect(line.paye).toBe(120);
-    // AIDS levy = 3% of 120 = 3.6.
-    expect(line.aidsLevy).toBe(3.6);
-    // NSSA ee/er = 4.5% of min(1600, 5000) = 72.
+    // NSSA ee/er = 4.5% of min(basic 1600, 5000) = 72. (PAYE is now charged on taxable income,
+    // i.e. gross less allowable deductions, not on the whole gross.)
     expect(line.nssaEe).toBe(72);
     expect(line.nssaEr).toBe(72);
-    // ZIMDEF = 1% of 1600 = 16; NEC = 0.5% of 1600 = 8; MIPF = 0.
+    // Taxable = 1600 - 72 (NSSA) = 1528. PAYE (example bands): 0 on first 1000, 20% of 528 = 105.6.
+    expect(line.paye).toBe(105.6);
+    // AIDS levy = 3% of 105.6 = 3.17.
+    expect(line.aidsLevy).toBe(3.17);
+    // ZIMDEF = 1% of 1600 = 16; NEC(er) = 0.5% of 1600 = 8; MIPF = 0 (not a member).
     expect(line.zimdef).toBe(16);
     expect(line.nec).toBe(8);
     expect(line.mipf).toBe(0);
-    // net = gross - paye - aidsLevy - nssaEe - other = 1600 - 120 - 3.6 - 72 - 0 = 1404.4.
+    // net = gross - paye - aidsLevy - nssaEe = 1600 - 105.6 - 3.17 - 72 = 1419.23.
     const net = line.netUsd + line.netZwg;
-    expect(net).toBeCloseTo(1404.4, 2);
+    expect(net).toBeCloseTo(1419.23, 2);
     // All-USD split => everything in the USD leg.
-    expect(line.netUsd).toBeCloseTo(1404.4, 2);
+    expect(line.netUsd).toBeCloseTo(1419.23, 2);
     expect(line.netZwg).toBe(0);
 
     // Run flipped to CHECKED.
@@ -410,6 +421,7 @@ describe('Payroll approval — preparer != approver (enforced by the engine)', (
       approvals.decide({
         approvalId: 'step1',
         approverUserId: 'preparer', // same as requester/preparer
+        approverRoles: [],
         decision: ApprovalDecision.APPROVED,
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
@@ -457,6 +469,7 @@ describe('PayrollService — outputs (bank schedule / payslips / Sage journal / 
           ugAllowance: dec(0),
           nightAllowance: dec(0),
           otherAllowances: dec(0),
+          extraEarnings: dec(0),
           gross: dec(1600),
           paye: dec(120),
           aidsLevy: dec(3.6),
@@ -464,7 +477,9 @@ describe('PayrollService — outputs (bank schedule / payslips / Sage journal / 
           nssaEr: dec(72),
           zimdef: dec(16),
           nec: dec(8),
+          necEe: dec(0),
           mipf: dec(0),
+          mipfEe: dec(0),
           nyaradzo: dec(0),
           otherDeductions: dec(0),
           netUsd: dec(1404.4),
@@ -479,6 +494,7 @@ describe('PayrollService — outputs (bank schedule / payslips / Sage journal / 
           ugAllowance: dec(0),
           nightAllowance: dec(0),
           otherAllowances: dec(0),
+          extraEarnings: dec(0),
           gross: dec(1000),
           paye: dec(0),
           aidsLevy: dec(0),
@@ -486,7 +502,9 @@ describe('PayrollService — outputs (bank schedule / payslips / Sage journal / 
           nssaEr: dec(45),
           zimdef: dec(10),
           nec: dec(5),
+          necEe: dec(0),
           mipf: dec(0),
+          mipfEe: dec(0),
           nyaradzo: dec(0),
           otherDeductions: dec(0),
           netUsd: dec(0),

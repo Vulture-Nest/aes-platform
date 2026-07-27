@@ -41,6 +41,7 @@ describe('GrossBuildupService', () => {
         underground: 20, // 4 * 5
         night: 16, // 8 * 2
         allowances: 80, // 50 + 30
+        extraEarnings: 0,
         gross: 1966, // 1600 + 250 + 20 + 16 + 80
         split: { usd: 1179.6, zwg: 786.4 }, // 60% / 40%
       },
@@ -62,6 +63,7 @@ describe('GrossBuildupService', () => {
         underground: 0,
         night: 0,
         allowances: 0,
+        extraEarnings: 0,
         gross: 240,
         split: { usd: 240, zwg: 0 },
       },
@@ -83,6 +85,7 @@ describe('GrossBuildupService', () => {
         underground: 0,
         night: 0,
         allowances: 0,
+        extraEarnings: 0,
         gross: 400,
         split: { usd: 100, zwg: 300 }, // 25% / 75%
       },
@@ -104,6 +107,7 @@ describe('GrossBuildupService', () => {
         underground: 0, // rate defaulted to 0
         night: 0, // rate defaulted to 0
         allowances: 0,
+        extraEarnings: 0,
         gross: 400,
         split: { usd: 200, zwg: 200 },
       },
@@ -126,6 +130,7 @@ describe('GrossBuildupService', () => {
         underground: 0,
         night: 0,
         allowances: 0.01,
+        extraEarnings: 0,
         gross: 32.48, // 24.98 + 7.49 + 0.01
         // 32.48 * 33% = 10.7184 -> 10.72; ZWG = 32.48 - 10.72 = 21.76
         split: { usd: 10.72, zwg: 21.76 },
@@ -148,6 +153,7 @@ describe('GrossBuildupService', () => {
         underground: 0,
         night: 0,
         allowances: 0,
+        extraEarnings: 0,
         gross: 100,
         split: { usd: 100, zwg: 0 },
       },
@@ -169,6 +175,7 @@ describe('GrossBuildupService', () => {
         underground: 0,
         night: 0,
         allowances: 0,
+        extraEarnings: 0,
         gross: 100,
         split: { usd: 0, zwg: 100 },
       },
@@ -190,6 +197,7 @@ describe('GrossBuildupService', () => {
         underground: 0,
         night: 0,
         allowances: 0,
+        extraEarnings: 0,
         gross: 0,
         split: { usd: 0, zwg: 0 },
       },

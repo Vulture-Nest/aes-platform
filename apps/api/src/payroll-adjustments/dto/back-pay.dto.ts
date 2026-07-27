@@ -44,6 +44,30 @@ export class NewRateDto {
   @IsNumber()
   @Min(0)
   basic?: number;
+
+  @ApiPropertyOptional({
+    example: 15,
+    description:
+      'Knock-on overtime premium as a percentage of the basic difference (OT is paid on the ' +
+      'basic rate, so a basic uplift also uplifts OT earnings). Defaults to 0.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  otPremiumPctOfBasic?: number;
+
+  @ApiPropertyOptional({
+    example: 10,
+    description:
+      'Knock-on %-of-basic allowances (e.g. housing/transport expressed as a % of basic) that ' +
+      'move with the basic difference. Defaults to 0.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  allowancePctOfBasic?: number;
 }
 
 export class CreateBackPayBatchDto {

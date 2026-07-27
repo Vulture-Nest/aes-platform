@@ -21,6 +21,7 @@ export class StatutoryRatesService {
       data: {
         key: dto.key,
         currency: dto.currency ?? null,
+        country: dto.country ?? null,
         value: dto.value ?? null,
         params: (dto.params as Prisma.InputJsonValue) ?? Prisma.JsonNull,
         dateEffective: dto.dateEffective,
@@ -32,7 +33,12 @@ export class StatutoryRatesService {
       action: 'CREATE',
       tableName: 'statutory_rates',
       recordId: rate.id,
-      after: { key: dto.key, currency: dto.currency ?? null, value: dto.value ?? null },
+      after: {
+        key: dto.key,
+        currency: dto.currency ?? null,
+        country: dto.country ?? null,
+        value: dto.value ?? null,
+      },
     });
     return rate;
   }
@@ -44,10 +50,32 @@ export class StatutoryRatesService {
     });
   }
 
-  /** The statutory parameter effective on `date` for a key (and optional currency). */
-  async valueAsOf(key: string, date = new Date(), currency?: string): Promise<StatutoryRate> {
+  /**
+   * The statutory parameter effective on `date` for a key (and optional currency + country).
+   *
+   * Country scoping (multinational readiness): when `country` is supplied we prefer the newest
+   * effective row scoped to that country; if none exists we FALL BACK to a country-agnostic
+   * (`country = NULL`) row. All pre-existing rows are country-NULL, so the Zimbabwe path
+   * resolves exactly the same rows whether `country` is omitted or `'ZW'`.
+   */
+  async valueAsOf(
+    key: string,
+    date = new Date(),
+    currency?: string,
+    country?: string,
+  ): Promise<StatutoryRate> {
+    // Prefer a country-scoped row when a country is given; else go straight to the NULL fallback.
+    if (country) {
+      const scoped = await this.prisma.statutoryRate.findFirst({
+        where: { key, currency: currency ?? null, country, dateEffective: { lte: date } },
+        orderBy: { dateEffective: 'desc' },
+      });
+      if (scoped) {
+        return scoped;
+      }
+    }
     const row = await this.prisma.statutoryRate.findFirst({
-      where: { key, currency: currency ?? null, dateEffective: { lte: date } },
+      where: { key, currency: currency ?? null, country: null, dateEffective: { lte: date } },
       orderBy: { dateEffective: 'desc' },
     });
     if (!row) {

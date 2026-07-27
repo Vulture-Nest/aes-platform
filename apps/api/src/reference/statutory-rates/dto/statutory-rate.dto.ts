@@ -12,6 +12,14 @@ export class CreateStatutoryRateDto {
   @IsString()
   currency?: string;
 
+  @ApiPropertyOptional({
+    example: 'ZW',
+    description: 'ISO country this rate applies to. Omit for a country-agnostic (default) row.',
+  })
+  @IsOptional()
+  @IsString()
+  country?: string;
+
   @ApiPropertyOptional({ example: 15.5, description: 'Scalar value (percent or amount)' })
   @IsOptional()
   @IsNumber()
@@ -37,6 +45,14 @@ export class StatutoryValueQueryDto {
   @IsOptional()
   @IsString()
   currency?: string;
+
+  @ApiPropertyOptional({
+    example: 'ZW',
+    description: 'ISO country to scope the lookup to (falls back to a country-agnostic row).',
+  })
+  @IsOptional()
+  @IsString()
+  country?: string;
 
   @ApiPropertyOptional({ description: 'Defaults to now' })
   @IsOptional()

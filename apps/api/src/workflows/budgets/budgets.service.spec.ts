@@ -173,6 +173,7 @@ describe('BudgetsService dual-approval gating (real engine, OD + FD PARALLEL)', 
     await engine.decide({
       approvalId: 'sOD',
       approverUserId: 'od-user',
+      approverRoles: [{ siteId: null, role: 'OPS_DIRECTOR' }],
       decision: ApprovalDecision.APPROVED,
     });
 
@@ -201,6 +202,7 @@ describe('BudgetsService dual-approval gating (real engine, OD + FD PARALLEL)', 
     await engine.decide({
       approvalId: 'sFD',
       approverUserId: 'fd-user',
+      approverRoles: [{ siteId: null, role: 'FINANCE_DIRECTOR' }],
       decision: ApprovalDecision.APPROVED,
     });
 

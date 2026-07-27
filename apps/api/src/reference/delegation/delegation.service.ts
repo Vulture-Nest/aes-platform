@@ -60,4 +60,43 @@ export class DelegationService {
     });
     return rule?.delegateUserId ?? null;
   }
+
+  /**
+   * Reverse of {@link activeDelegateFor}: the users who have an ACTIVE delegation to
+   * `delegateUserId` on `date` (i.e. the delegators this caller is currently standing in
+   * for). Lets the approval engine surface a delegator's pending items to the delegate and
+   * authorise the delegate to decide on the delegator's behalf.
+   */
+  async activeDelegatorsFor(delegateUserId: string, date = new Date()): Promise<string[]> {
+    const rules = await this.prisma.delegationRule.findMany({
+      where: {
+        delegateUserId,
+        active: true,
+        dateFrom: { lte: date },
+        dateTo: { gte: date },
+      },
+      select: { approverUserId: true },
+    });
+    return [...new Set(rules.map((r) => r.approverUserId))];
+  }
+
+  /**
+   * All active delegate userIds for the given set of approvers on `date`. Used when
+   * notifying a step's approvers so their stand-ins are told too.
+   */
+  async activeDelegatesForMany(approverUserIds: string[], date = new Date()): Promise<string[]> {
+    if (approverUserIds.length === 0) {
+      return [];
+    }
+    const rules = await this.prisma.delegationRule.findMany({
+      where: {
+        approverUserId: { in: approverUserIds },
+        active: true,
+        dateFrom: { lte: date },
+        dateTo: { gte: date },
+      },
+      select: { delegateUserId: true },
+    });
+    return [...new Set(rules.map((r) => r.delegateUserId))];
+  }
 }
