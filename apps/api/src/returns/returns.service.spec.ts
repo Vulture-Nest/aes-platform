@@ -47,6 +47,29 @@ describe('ReturnsService', () => {
     expect(prisma.statutoryReturn.findFirst).toHaveBeenCalled();
   });
 
+  it('derives the head list from a run\'s actual non-zero heads (data-driven per country)', async () => {
+    // A run in another country that levies only PAYE + NSSA (no AIDS levy / ZIMDEF / NEC / MIPF /
+    // NYARADZO): those zero heads must NOT be filed, while a ZW-shaped run keeps its full set.
+    prisma.payrollRun.findMany.mockResolvedValue([
+      {
+        entityId: 'entity-xx',
+        lines: [
+          { paye: D(200), aidsLevy: D(0), nssaEe: D(15), nssaEr: D(15), zimdef: D(0), nec: D(0), mipf: D(0), nyaradzo: D(0) },
+        ],
+      },
+    ]);
+    prisma.statutoryReturn.findFirst.mockResolvedValue(null);
+    prisma.statutoryReturn.create.mockImplementation(({ data }: any) =>
+      Promise.resolve({ id: `${data.taxType}-id`, ...data }),
+    );
+
+    const res = await service.postFromPayroll({ period: '2026-07' }, 'actor');
+    const heads = res.returns.map((r: any) => r.taxType).sort();
+    expect(heads).toEqual(['NSSA', 'PAYE']); // only the non-zero heads, nothing else
+    expect(res.returns.find((r: any) => r.taxType === 'PAYE')!.amountDue).toBe(200);
+    expect(res.returns.find((r: any) => r.taxType === 'NSSA')!.amountDue).toBe(30);
+  });
+
   it('remit increments amountPaid and leaves PARTIAL when a balance remains', async () => {
     prisma.statutoryReturn.findUnique.mockResolvedValue({
       id: 'r1',

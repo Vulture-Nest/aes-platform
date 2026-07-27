@@ -162,6 +162,10 @@ export class PayrollService implements OnModuleInit {
         month: dto.month,
         status: PayrollRunStatus.DRAFT,
         fxRateId: dto.fxRateId ?? null,
+        // Multinational dimension: inherit the site's owning entity so the run carries its
+        // country (drives country-scoped statutory-rate resolution at compute time). Null when
+        // the site is unassigned — the compute path then falls back to the ZW default.
+        entityId: site.entityId ?? null,
         clientRatioSnapshot:
           clientRatioSnapshot === null
             ? Prisma.JsonNull
@@ -214,11 +218,17 @@ export class PayrollService implements OnModuleInit {
 
     const employees = await this.prisma.employee.findMany({ where: { siteId: run.siteId } });
 
+    // Resolve the run's entity country so statutory rates resolve country-scoped (multinational
+    // readiness). Defaults to 'ZW' when the run has no entity — and since all existing ZW rows
+    // are country-agnostic (country = NULL), the ZW path resolves exactly the same rows via the
+    // resolver's NULL fallback, i.e. unchanged.
+    const country = await this.resolveRunCountry(run.entityId);
+
     // Resolve statutory config once per currency, effective on the period month.
     const effectiveDate = this.periodDate(run.month);
     const config = {
-      ['USD']: await this.loadStatutoryConfig('USD', effectiveDate),
-      ['ZWG']: await this.loadStatutoryConfig('ZWG', effectiveDate),
+      ['USD']: await this.loadStatutoryConfig('USD', effectiveDate, country),
+      ['ZWG']: await this.loadStatutoryConfig('ZWG', effectiveDate, country),
     };
 
     const clientUsdPct = this.clientUsdPct(run.clientRatioSnapshot);
@@ -1043,23 +1053,46 @@ export class PayrollService implements OnModuleInit {
   // Internals — config + client ratio
   // -------------------------------------------------------------------------
 
-  /** Load every statutory rate needed for a currency, effective on the period date. */
-  private async loadStatutoryConfig(currency: string, date: Date): Promise<StatutoryConfig> {
-    const payeRow = await this.statutoryRates.valueAsOf(KEY_PAYE_BANDS, date, currency);
+  /**
+   * The country a run's statutory rates resolve against. Reads the run's entity country,
+   * defaulting to 'ZW' when the run has no entity (or the entity is missing). The resolver
+   * falls back to country-agnostic (NULL) rows, so ZW resolves unchanged.
+   */
+  private async resolveRunCountry(entityId: string | null | undefined): Promise<string> {
+    if (!entityId) {
+      return 'ZW';
+    }
+    const entity = await this.prisma.entity.findUnique({
+      where: { id: entityId },
+      select: { country: true },
+    });
+    return entity?.country ?? 'ZW';
+  }
+
+  /**
+   * Load every statutory rate needed for a currency, effective on the period date. `country`
+   * scopes resolution to a country's own rates (falling back to country-agnostic rows).
+   */
+  private async loadStatutoryConfig(
+    currency: string,
+    date: Date,
+    country?: string,
+  ): Promise<StatutoryConfig> {
+    const payeRow = await this.statutoryRates.valueAsOf(KEY_PAYE_BANDS, date, currency, country);
     const payeBands = this.parseBands(payeRow.params);
 
     return {
       payeBands,
-      aidsLevyPct: await this.pct(KEY_AIDS_LEVY_PCT, date, currency),
-      nssaEePct: await this.pct(KEY_NSSA_EE_PCT, date, currency),
-      nssaErPct: await this.pct(KEY_NSSA_ER_PCT, date, currency),
-      nssaCeiling: await this.pct(KEY_NSSA_CEILING, date, currency),
-      nssaZwgConv: await this.pct(KEY_NSSA_ZWG_CONV, date, currency),
-      zimdefPct: await this.pct(KEY_ZIMDEF_PCT, date, currency),
-      necPct: await this.pct(KEY_NEC_PCT, date, currency),
-      necEePct: await this.pct(KEY_NEC_EE_PCT, date, currency),
-      mipfPct: await this.pct(KEY_MIPF_PCT, date, currency),
-      mipfEePct: await this.pct(KEY_MIPF_EE_PCT, date, currency),
+      aidsLevyPct: await this.pct(KEY_AIDS_LEVY_PCT, date, currency, country),
+      nssaEePct: await this.pct(KEY_NSSA_EE_PCT, date, currency, country),
+      nssaErPct: await this.pct(KEY_NSSA_ER_PCT, date, currency, country),
+      nssaCeiling: await this.pct(KEY_NSSA_CEILING, date, currency, country),
+      nssaZwgConv: await this.pct(KEY_NSSA_ZWG_CONV, date, currency, country),
+      zimdefPct: await this.pct(KEY_ZIMDEF_PCT, date, currency, country),
+      necPct: await this.pct(KEY_NEC_PCT, date, currency, country),
+      necEePct: await this.pct(KEY_NEC_EE_PCT, date, currency, country),
+      mipfPct: await this.pct(KEY_MIPF_PCT, date, currency, country),
+      mipfEePct: await this.pct(KEY_MIPF_EE_PCT, date, currency, country),
     };
   }
 
@@ -1103,8 +1136,8 @@ export class PayrollService implements OnModuleInit {
   }
 
   /** Read a scalar statutory value effective on `date`, as a plain number (0 if unset). */
-  private async pct(key: string, date: Date, currency: string): Promise<number> {
-    const row = await this.statutoryRates.valueAsOf(key, date, currency);
+  private async pct(key: string, date: Date, currency: string, country?: string): Promise<number> {
+    const row = await this.statutoryRates.valueAsOf(key, date, currency, country);
     return row.value ? row.value.toNumber() : 0;
   }
 

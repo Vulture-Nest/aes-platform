@@ -183,6 +183,10 @@ model StatutoryRate {
   id            String   @id @default(uuid()) @db.Uuid
   key           String // vat_pct, zimra_interest_pct, nssa_*, zimdef_pct, paye_bands, aids_levy_pct
   currency      String?
+  /// ISO-3166 alpha-2 country this rate applies to. NULL = country-agnostic (the
+  /// Zimbabwe default: all pre-existing rows). A country-specific row overrides the
+  /// NULL fallback for that country, giving each entity its own statutory schedule.
+  country       String?
   value         Decimal? @db.Decimal(20, 6)
   params        Json?
   dateEffective DateTime @map("date_effective")
@@ -190,6 +194,7 @@ model StatutoryRate {
   createdAt     DateTime @default(now()) @map("created_at")
 
   @@index([key, currency, dateEffective])
+  @@index([key, country, currency, dateEffective])
   @@map("statutory_rates")
 }
 
