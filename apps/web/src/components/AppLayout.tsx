@@ -1,5 +1,8 @@
 import {
+  ApartmentOutlined,
+  AuditOutlined,
   BellOutlined,
+  BankOutlined,
   CarOutlined,
   CheckSquareOutlined,
   ClockCircleOutlined,
@@ -9,7 +12,10 @@ import {
   HomeOutlined,
   LogoutOutlined,
   MoneyCollectOutlined,
+  NotificationOutlined,
+  ProjectOutlined,
   ShoppingOutlined,
+  TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { Badge, Button, Dropdown, Layout, Menu } from 'antd';
@@ -38,6 +44,15 @@ const SITE_STAFF: Role[] = ['SITE_CLERK', 'SITE_MANAGER', 'OPS_STAFF'];
 // page they can open but can't act on.
 const TIMESHEET_ROLES: Role[] = ['SITE_CLERK', 'SITE_MANAGER', 'OPS_STAFF', 'SYS_ADMIN'];
 
+// Site reports are captured/reviewed by site managers, the ops director and sysadmin.
+const SITE_REPORT_ROLES: Role[] = ['SITE_MANAGER', 'OPS_DIRECTOR', 'SYS_ADMIN'];
+// CRM (business development) is leadership + operations staff.
+const CRM_ROLES: Role[] = ['OPS_STAFF', ...LEADERSHIP];
+// Marketing is a leadership surface.
+const MARKETING_ROLES: Role[] = LEADERSHIP;
+// Statutory returns hub is finance-only.
+const FINANCE_ROLES: Role[] = ['FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'SYS_ADMIN'];
+
 const NAV: { key: string; label: string; icon: ReactNode; roles?: Role[] }[] = [
   { key: '/', label: 'Home', icon: <HomeOutlined /> },
   { key: '/requests', label: 'Requests', icon: <FileTextOutlined /> },
@@ -47,6 +62,12 @@ const NAV: { key: string; label: string; icon: ReactNode; roles?: Role[] }[] = [
   { key: '/approvals', label: 'Approvals', icon: <CheckSquareOutlined /> },
   { key: '/my-orders', label: 'My Orders', icon: <ShoppingOutlined /> },
   { key: '/command-centre', label: 'Command Centre', icon: <DashboardOutlined />, roles: LEADERSHIP },
+  { key: '/projects', label: 'Projects', icon: <ProjectOutlined /> },
+  { key: '/boards', label: 'Boards', icon: <ApartmentOutlined /> },
+  { key: '/site-reports', label: 'Site Reports', icon: <AuditOutlined />, roles: SITE_REPORT_ROLES },
+  { key: '/crm', label: 'CRM', icon: <TeamOutlined />, roles: CRM_ROLES },
+  { key: '/marketing', label: 'Marketing', icon: <NotificationOutlined />, roles: MARKETING_ROLES },
+  { key: '/returns-hub', label: 'Returns Hub', icon: <BankOutlined />, roles: FINANCE_ROLES },
   { key: '/rates', label: 'Exchange Rates', icon: <DollarOutlined /> },
   { key: '/notifications', label: 'Notifications', icon: <BellOutlined /> },
   { key: '/profile', label: 'Profile', icon: <UserOutlined /> },
