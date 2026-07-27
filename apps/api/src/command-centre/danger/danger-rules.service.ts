@@ -15,7 +15,7 @@ interface DefaultRule {
 /**
  * The canonical default danger rules (spec §14.2 / Prompt 7). Seeded idempotently:
  * an existing rule is left untouched (params/severity are operator-tunable afterwards).
- * payroll_coverage is deferred to S8 and seeded disabled.
+ * All ten rules (incl. payroll_coverage, G8) are seeded enabled by default.
  */
 export const DEFAULT_DANGER_RULES: DefaultRule[] = [
   {
@@ -39,12 +39,13 @@ export const DEFAULT_DANGER_RULES: DefaultRule[] = [
   { ruleKey: 'petty_cash_variance', params: {}, severity: AlertSeverity.WATCH },
   { ruleKey: 'concentration_risk', params: { watchPct: 0.4 }, severity: AlertSeverity.WATCH },
   { ruleKey: 'conversion_loss', params: { watchPct: 0.1 }, severity: AlertSeverity.WATCH },
-  // Deferred to S8 (HR/payroll) — seeded disabled so it exists but never fires yet.
+  // payroll_coverage (G8): fire DANGER when the next payroll's company cost exceeds
+  // liquid cash. `statuses` = payroll-run statuses treated as "upcoming/unpaid".
   {
     ruleKey: 'payroll_coverage',
-    params: { watchWeeks: 2 },
+    params: { statuses: ['DRAFT', 'CHECKED', 'APPROVED'] },
     severity: AlertSeverity.DANGER,
-    enabled: false,
+    enabled: true,
   },
 ];
 

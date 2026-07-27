@@ -55,7 +55,7 @@ describe('DangerRulesService.seedDefaults', () => {
     expect(res.created).toEqual(['cash_runway']);
   });
 
-  it('seeds payroll_coverage disabled (deferred to S8)', async () => {
+  it('seeds payroll_coverage enabled (G8 activated)', async () => {
     const { service, prisma } = makeService();
     prisma.dangerRule.findMany.mockResolvedValue([]);
     prisma.dangerRule.create.mockResolvedValue({});
@@ -66,7 +66,7 @@ describe('DangerRulesService.seedDefaults', () => {
       (c: any) => c[0].data.ruleKey === 'payroll_coverage',
     );
     expect(payrollCall).toBeDefined();
-    expect(payrollCall[0].data.enabled).toBe(false);
+    expect(payrollCall[0].data.enabled).toBe(true);
   });
 });
 

@@ -1,6 +1,13 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { NotificationChannel, NotificationSeverity, Prisma, Notification } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailTransport } from './transports/email.transport';
+import { PushTransport } from './transports/push.transport';
+import { TeamsTransport } from './transports/teams.transport';
+import {
+  NotificationRecipient,
+  NotificationTransport,
+} from './transports/notification-transport';
 
 export interface SendNotificationParams {
   userIds: string[];
@@ -25,14 +32,30 @@ function channelsFor(severity: NotificationSeverity): NotificationChannel[] {
 
 /**
  * Notification fan-out with per-user channel preferences. In-app notifications persist
- * to the DB; push/email/Teams are stubbed (logged) until FCM + Microsoft Graph land.
- * Danger repeat-until-acknowledged (BullMQ) is wired with the danger engine (S6).
+ * to the DB; push/email/Teams are delivered through pluggable, config-driven transports
+ * (G7). Each transport no-ops gracefully when its credentials are absent, so dev/CI run
+ * with zero mail/Teams/FCM env. Danger repeat-until-acknowledged (BullMQ) is wired with
+ * the danger engine (S6).
  */
 @Injectable()
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  /** Maps each external NotificationChannel to its delivery transport. */
+  private readonly transports: Partial<Record<NotificationChannel, NotificationTransport>>;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly email: EmailTransport,
+    private readonly push: PushTransport,
+    private readonly teams: TeamsTransport,
+  ) {
+    this.transports = {
+      [NotificationChannel.EMAIL]: this.email,
+      [NotificationChannel.PUSH]: this.push,
+      [NotificationChannel.TEAMS]: this.teams,
+    };
+  }
 
   async send(params: SendNotificationParams): Promise<Notification[]> {
     const severity = params.severity ?? NotificationSeverity.INFO;
@@ -52,16 +75,33 @@ export class NotificationService {
       });
       created.push(notification);
 
-      // External channels honour per-user preferences (default: enabled).
+      // External channels honour per-user preferences (default: enabled) and dispatch
+      // through their transport. Resolve the recipient once and reuse across channels.
       const external = channels.filter((c) => c !== NotificationChannel.IN_APP);
+      let recipient: NotificationRecipient | null = null;
       for (const channel of external) {
-        if (await this.channelEnabled(userId, channel)) {
-          this.logger.log(`[${channel}] → ${userId}: ${params.template} (${severity})`);
-          // TODO(S1+): FCM push / Graph email + Teams dispatch.
+        const transport = this.transports[channel];
+        if (!transport) {
+          continue;
         }
+        if (!(await this.channelEnabled(userId, channel))) {
+          continue;
+        }
+        recipient ??= await this.resolveRecipient(userId);
+        await transport.send(notification, recipient);
       }
     }
     return created;
+  }
+
+  /** Look up the contactable identifiers (email, device tokens) for external delivery. */
+  private async resolveRecipient(userId: string): Promise<NotificationRecipient> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    // TODO(G7): source deviceTokens from a device-registration store once it exists.
+    return { userId, email: user?.email ?? null, deviceTokens: [] };
   }
 
   private async channelEnabled(userId: string, channel: NotificationChannel): Promise<boolean> {
