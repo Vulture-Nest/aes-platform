@@ -33,6 +33,14 @@ import { TravelPage } from './features/workflows/TravelPage';
 import { BusinessDevelopmentPage } from './features/crm/BusinessDevelopmentPage';
 import { DangerRulesPage } from './features/danger-rules/DangerRulesPage';
 import { SettingsPage } from './features/settings/SettingsPage';
+import { DataImportPage } from './features/data-import/DataImportPage';
+import { EntitiesPage } from './features/entities/EntitiesPage';
+import { MarketingPage } from './features/marketing/MarketingPage';
+import { BoardsPage } from './features/boards/BoardsPage';
+import { ProjectsPage } from './features/projects/ProjectsPage';
+import { ReturnsHubPage } from './features/returns-hub/ReturnsHubPage';
+import { PayrollAdjustmentsPage } from './features/payroll-adjustments/PayrollAdjustmentsPage';
+import { SiteReportsPage } from './features/site-reports/SiteReportsPage';
 
 function ProtectedLayout() {
   return (
@@ -334,6 +342,63 @@ function Shell() {
           element={
             <ProtectedRoute roles={['SYS_ADMIN']}>
               <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/data-import"
+          element={
+            <ProtectedRoute roles={['SYS_ADMIN', 'FINANCE_DIRECTOR']}>
+              <DataImportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/entities"
+          element={
+            <ProtectedRoute roles={['SYS_ADMIN']}>
+              <EntitiesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/marketing"
+          element={
+            <ProtectedRoute roles={['SYS_ADMIN', 'FINANCE_DIRECTOR', 'OPS_DIRECTOR']}>
+              <MarketingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/boards" element={<BoardsPage />} />
+        <Route
+          path="/projects"
+          element={
+            <ProtectedRoute roles={['SITE_MANAGER', 'OPS_DIRECTOR', 'FINANCE_DIRECTOR', 'SYS_ADMIN']}>
+              <ProjectsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/returns-hub"
+          element={
+            <ProtectedRoute roles={['FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'SYS_ADMIN']}>
+              <ReturnsHubPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/payroll-adjustments"
+          element={
+            <ProtectedRoute roles={['FINANCE_DIRECTOR', 'SYS_ADMIN']}>
+              <PayrollAdjustmentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/site-reports"
+          element={
+            <ProtectedRoute roles={['OPS_DIRECTOR', 'SITE_MANAGER', 'SYS_ADMIN']}>
+              <SiteReportsPage />
             </ProtectedRoute>
           }
         />

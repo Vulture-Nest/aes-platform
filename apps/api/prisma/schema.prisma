@@ -110,6 +110,9 @@ model Site {
   /// Set when a site maps to a client (mine sites); null for head office.
   clientId String? @map("client_id") @db.Uuid
   active   Boolean @default(true)
+  /// Multinational/entity dimension (nullable; backfilled to the default entity).
+  entityId String? @map("entity_id") @db.Uuid
+  entity   Entity? @relation(fields: [entityId], references: [id])
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -118,6 +121,7 @@ model Site {
 
   userRoles UserSiteRole[]
 
+  @@index([entityId])
   @@map("sites")
 }
 
@@ -364,7 +368,6 @@ model Approval {
 // Appendix A calculations live in separate pure services (not here).
 // ---------------------------------------------------------------------------
 
-
 enum LoanInterestMethod {
   FLAT
   REDUCING
@@ -400,17 +403,20 @@ model Client {
 
 /// A revenue contract with a client. Value is VAT-exclusive money.
 model Contract {
-  id         String         @id @default(uuid()) @db.Uuid
-  clientId   String         @map("client_id") @db.Uuid
-  client     Client         @relation(fields: [clientId], references: [id])
+  id         String   @id @default(uuid()) @db.Uuid
+  clientId   String   @map("client_id") @db.Uuid
+  client     Client   @relation(fields: [clientId], references: [id])
   reference  String
-  valueExVat Decimal        @map("value_ex_vat") @db.Decimal(20, 2)
+  valueExVat Decimal  @map("value_ex_vat") @db.Decimal(20, 2)
   currency   String
-  fxRateId   String?        @map("fx_rate_id") @db.Uuid
-  rateType   String?        @map("rate_type")
-  startDate  DateTime       @map("start_date")
-  endDate    DateTime       @map("end_date")
-  status     String         @default("UPCOMING") // validated against the lookup catalog ('contract_status')
+  fxRateId   String?  @map("fx_rate_id") @db.Uuid
+  rateType   String?  @map("rate_type")
+  startDate  DateTime @map("start_date")
+  endDate    DateTime @map("end_date")
+  status     String   @default("UPCOMING") // validated against the lookup catalog ('contract_status')
+  /// Multinational/entity dimension (nullable; backfilled to the default entity).
+  entityId   String?  @map("entity_id") @db.Uuid
+  entity     Entity?  @relation(fields: [entityId], references: [id])
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -421,6 +427,7 @@ model Contract {
   orders Order[]         @relation("OrderContract")
 
   @@index([clientId])
+  @@index([entityId])
   @@map("contracts")
 }
 
@@ -446,21 +453,24 @@ model ContractClaim {
 
 /// A work order for a client, optionally tied to a contract. Value is VAT-exclusive money.
 model Order {
-  id          String    @id @default(uuid()) @db.Uuid
-  clientId    String    @map("client_id") @db.Uuid
-  client      Client    @relation(fields: [clientId], references: [id])
-  contractId  String?   @map("contract_id") @db.Uuid
-  contract    Contract? @relation("OrderContract", fields: [contractId], references: [id])
-  reference   String
-  valueExVat  Decimal   @map("value_ex_vat") @db.Decimal(20, 2)
-  currency    String
-  fxRateId    String?   @map("fx_rate_id") @db.Uuid
-  rateType    String?   @map("rate_type")
-  closingDate DateTime? @map("closing_date")
-  serviced    Boolean   @default(false)
-  servicedAt  DateTime? @map("serviced_at")
+  id             String    @id @default(uuid()) @db.Uuid
+  clientId       String    @map("client_id") @db.Uuid
+  client         Client    @relation(fields: [clientId], references: [id])
+  contractId     String?   @map("contract_id") @db.Uuid
+  contract       Contract? @relation("OrderContract", fields: [contractId], references: [id])
+  reference      String
+  valueExVat     Decimal   @map("value_ex_vat") @db.Decimal(20, 2)
+  currency       String
+  fxRateId       String?   @map("fx_rate_id") @db.Uuid
+  rateType       String?   @map("rate_type")
+  closingDate    DateTime? @map("closing_date")
+  serviced       Boolean   @default(false)
+  servicedAt     DateTime? @map("serviced_at")
   /// The user responsible for servicing this order (sees it in their "My Orders").
-  assignedUserId String? @map("assigned_user_id") @db.Uuid
+  assignedUserId String?   @map("assigned_user_id") @db.Uuid
+  /// Multinational/entity dimension (nullable; backfilled to the default entity).
+  entityId       String?   @map("entity_id") @db.Uuid
+  entity         Entity?   @relation(fields: [entityId], references: [id])
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -473,6 +483,7 @@ model Order {
   @@index([clientId])
   @@index([contractId])
   @@index([assignedUserId])
+  @@index([entityId])
   @@map("orders")
 }
 
@@ -616,11 +627,14 @@ model LoanInterest {
 
 /// A cash/bank/wallet account, optionally scoped to a site.
 model Account {
-  id       String   @id @default(uuid()) @db.Uuid
+  id       String  @id @default(uuid()) @db.Uuid
   name     String
   type     String // validated against the admin lookup catalog (category 'account_type')
   currency String
-  siteId   String?     @map("site_id") @db.Uuid
+  siteId   String? @map("site_id") @db.Uuid
+  /// Multinational/entity dimension (nullable; backfilled to the default entity).
+  entityId String? @map("entity_id") @db.Uuid
+  entity   Entity? @relation(fields: [entityId], references: [id])
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -629,6 +643,7 @@ model Account {
 
   ledgerEntries LedgerEntry[]
 
+  @@index([entityId])
   @@map("accounts")
 }
 
@@ -660,29 +675,39 @@ model TaxLedger {
   amountDue   Decimal @map("amount_due") @db.Decimal(20, 2)
   amountPaid  Decimal @default(0) @map("amount_paid") @db.Decimal(20, 2)
   currency    String
+  /// Multinational/entity dimension (nullable; backfilled to the default entity).
+  entityId    String? @map("entity_id") @db.Uuid
+  entity      Entity? @relation(fields: [entityId], references: [id])
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
   updatedBy String?  @map("updated_by") @db.Uuid
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([entityId])
   @@map("tax_ledger")
 }
 
 /// Other outstanding tax debt with its own interest rate.
 model OtherTaxDebt {
-  id        String   @id @default(uuid()) @db.Uuid
-  taxType   TaxType  @map("tax_type")
-  principal Decimal  @db.Decimal(20, 2)
-  currency  String
-  dueDate   DateTime @map("due_date")
-  ratePct   Decimal  @map("rate_pct") @db.Decimal(20, 6)
+  id         String   @id @default(uuid()) @db.Uuid
+  taxType    TaxType  @map("tax_type")
+  principal  Decimal  @db.Decimal(20, 2)
+  /// Amount already paid against this brought-forward debt (workbook "Paid to Date").
+  paidToDate Decimal  @default(0) @map("paid_to_date") @db.Decimal(20, 2)
+  currency   String
+  dueDate    DateTime @map("due_date")
+  ratePct    Decimal  @map("rate_pct") @db.Decimal(20, 6)
+  /// Multinational/entity dimension (nullable; backfilled to the default entity).
+  entityId  String?  @map("entity_id") @db.Uuid
+  entity    Entity?  @relation(fields: [entityId], references: [id])
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
   updatedBy String?  @map("updated_by") @db.Uuid
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([entityId])
   @@map("other_tax_debt")
 }
 
@@ -1052,6 +1077,9 @@ model Employee {
   necClass        String?   @map("nec_class")
   occupation      String?
   siteId          String    @map("site_id") @db.Uuid
+  /// Multinational/entity dimension (nullable; backfilled to the default entity).
+  entityId        String?   @map("entity_id") @db.Uuid
+  entity          Entity?   @relation(fields: [entityId], references: [id])
   employmentType  String    @map("employment_type")
   payMode         String    @map("pay_mode")
   /// Only meaningful when payMode = FIXED_SPLIT: the fixed USD percentage (0..100).
@@ -1075,6 +1103,7 @@ model Employee {
   timesheetEntries TimesheetEntry[]
 
   @@index([siteId])
+  @@index([entityId])
   @@map("employees")
 }
 
@@ -1161,6 +1190,9 @@ model PayrollRun {
   clientRatioSnapshot Json?            @map("client_ratio_snapshot")
   preparedByUserId    String?          @map("prepared_by_user_id") @db.Uuid
   approvedByUserId    String?          @map("approved_by_user_id") @db.Uuid
+  /// Multinational/entity dimension (nullable; backfilled to the default entity).
+  entityId            String?          @map("entity_id") @db.Uuid
+  entity              Entity?          @relation(fields: [entityId], references: [id])
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -1171,6 +1203,7 @@ model PayrollRun {
 
   @@unique([siteId, month])
   @@index([siteId])
+  @@index([entityId])
   @@map("payroll_runs")
 }
 
@@ -1217,20 +1250,23 @@ model PayrollLine {
 /// approved payroll run with a statutory due date. Overdue/due-soon obligations feed the
 /// danger engine; remittance capture records the reference + who paid.
 model ComplianceObligation {
-  id                 String    @id @default(uuid()) @db.Uuid
-  head               String // PAYE | NSSA | ZIMDEF | NEC | MIPF | VAT
-  label              String
-  periodMonth        String    @map("period_month") // YYYY-MM
-  siteId             String?   @map("site_id") @db.Uuid
-  amount             Decimal   @db.Decimal(20, 2)
-  currency           String
-  dueDate            DateTime  @map("due_date")
-  status             String    @default("PENDING") // PENDING | REMITTED
-  sourceTable        String?   @map("source_table")
-  sourceId           String?   @map("source_id") @db.Uuid
-  remittanceReference String?  @map("remittance_reference")
-  remittedByUserId   String?   @map("remitted_by_user_id") @db.Uuid
-  remittedAt         DateTime? @map("remitted_at")
+  id                  String    @id @default(uuid()) @db.Uuid
+  head                String // PAYE | NSSA | ZIMDEF | NEC | MIPF | VAT
+  label               String
+  periodMonth         String    @map("period_month") // YYYY-MM
+  siteId              String?   @map("site_id") @db.Uuid
+  amount              Decimal   @db.Decimal(20, 2)
+  currency            String
+  dueDate             DateTime  @map("due_date")
+  status              String    @default("PENDING") // PENDING | REMITTED
+  sourceTable         String?   @map("source_table")
+  sourceId            String?   @map("source_id") @db.Uuid
+  remittanceReference String?   @map("remittance_reference")
+  remittedByUserId    String?   @map("remitted_by_user_id") @db.Uuid
+  remittedAt          DateTime? @map("remitted_at")
+  /// Multinational/entity dimension (nullable; backfilled to the default entity).
+  entityId            String?   @map("entity_id") @db.Uuid
+  entity              Entity?   @relation(fields: [entityId], references: [id])
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -1238,6 +1274,7 @@ model ComplianceObligation {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([status, dueDate])
+  @@index([entityId])
   @@map("compliance_obligations")
 }
 
@@ -1380,6 +1417,12 @@ model CrmOpportunity {
   lostReason          String?          @map("lost_reason")
   convertedOrderId    String?          @map("converted_order_id") @db.Uuid
   convertedContractId String?          @map("converted_contract_id") @db.Uuid
+  /// Multinational/entity dimension (nullable; backfilled to the default entity).
+  entityId            String?          @map("entity_id") @db.Uuid
+  entity              Entity?          @relation(fields: [entityId], references: [id])
+  /// Marketing attribution (soft links, no FK): the campaign + response that sourced this deal.
+  campaignId          String?          @map("campaign_id") @db.Uuid
+  responseId          String?          @map("response_id") @db.Uuid
 
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
@@ -1388,5 +1431,809 @@ model CrmOpportunity {
 
   @@index([stage])
   @@index([ownerUserId])
+  @@index([entityId])
   @@map("crm_opportunities")
+}
+
+// ===========================================================================
+// ENTITY / MULTINATIONAL DIMENSION (Additional Features — Prompt 27)
+// A legal operating entity (per country). Existing financial/HR tables carry an
+// optional entity_id; new feature tables key off it. Not site-scoped (RLS off).
+// ===========================================================================
+
+/// A legal operating entity per country (multinational dimension). Existing rows are
+/// backfilled to a single default entity (AES Zimbabwe) by the migration.
+model Entity {
+  id                 String  @id @default(uuid()) @db.Uuid
+  name               String  @unique
+  /// ISO-3166 alpha-2 country code, e.g. "ZW".
+  country            String
+  baseCurrency       String  @map("base_currency")
+  chartOfAccountsRef String? @map("chart_of_accounts_ref")
+  timezone           String  @default("Africa/Harare")
+  locale             String  @default("en")
+  active             Boolean @default(true)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  sites                 Site[]
+  employees             Employee[]
+  orders                Order[]
+  contracts             Contract[]
+  accounts              Account[]
+  payrollRuns           PayrollRun[]
+  taxLedgers            TaxLedger[]
+  otherTaxDebts         OtherTaxDebt[]
+  complianceObligations ComplianceObligation[]
+  crmOpportunities      CrmOpportunity[]
+  publicHolidays        PublicHoliday[]
+
+  @@map("entities")
+}
+
+/// A public holiday for an entity (localisation hook for working-day calculations).
+model PublicHoliday {
+  id       String   @id @default(uuid()) @db.Uuid
+  entityId String   @map("entity_id") @db.Uuid
+  entity   Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  date     DateTime
+  name     String
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([entityId])
+  @@map("public_holidays")
+}
+
+// ===========================================================================
+// A) BD / MARKETING — campaigns, channels, weekly metrics and inbound responses.
+// Not site-scoped (RLS off; GRANT only).
+// ===========================================================================
+
+/// A marketing / business-development campaign.
+model Campaign {
+  id          String    @id @default(uuid()) @db.Uuid
+  entityId    String?   @map("entity_id") @db.Uuid
+  name        String
+  objective   String?
+  audience    String?
+  budget      Decimal?  @db.Decimal(20, 2)
+  currency    String?
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  status      String    @default("PLANNED")
+  ownerUserId String?   @map("owner_user_id") @db.Uuid
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  channels  CampaignChannel[]
+  responses CampaignResponse[]
+
+  @@index([entityId])
+  @@map("campaigns")
+}
+
+/// A single delivery channel for a campaign (Facebook/LinkedIn/WhatsApp/X/Instagram/Expo/Flier).
+model CampaignChannel {
+  id           String   @id @default(uuid()) @db.Uuid
+  campaignId   String   @map("campaign_id") @db.Uuid
+  campaign     Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  channelType  String   @map("channel_type")
+  cost         Decimal  @default(0) @db.Decimal(20, 2)
+  currency     String?
+  trackingLink String?  @map("tracking_link")
+  flierCode    String?  @map("flier_code")
+  printRunQty  Int?     @map("print_run_qty")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  metrics   ChannelMetric[]
+  responses CampaignResponse[]
+
+  @@index([campaignId])
+  @@map("campaign_channels")
+}
+
+/// A weekly performance snapshot for a campaign channel.
+model ChannelMetric {
+  id          String          @id @default(uuid()) @db.Uuid
+  channelId   String          @map("channel_id") @db.Uuid
+  channel     CampaignChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  weekOf      DateTime        @map("week_of")
+  impressions Int             @default(0)
+  engagements Int             @default(0)
+  clicks      Int             @default(0)
+  spend       Decimal         @default(0) @db.Decimal(20, 2)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([channelId])
+  @@map("channel_metrics")
+}
+
+/// An inbound response/enquiry attributed to a campaign and/or channel. Converts to a
+/// CRM opportunity (opportunityId) once qualified.
+model CampaignResponse {
+  id            String           @id @default(uuid()) @db.Uuid
+  campaignId    String?          @map("campaign_id") @db.Uuid
+  campaign      Campaign?        @relation(fields: [campaignId], references: [id])
+  channelId     String?          @map("channel_id") @db.Uuid
+  channel       CampaignChannel? @relation(fields: [channelId], references: [id])
+  personName    String?          @map("person_name")
+  orgName       String?          @map("org_name")
+  contactEmail  String?          @map("contact_email")
+  contactPhone  String?          @map("contact_phone")
+  receivedAt    DateTime         @map("received_at")
+  status        String           @default("NEW")
+  howHeard      String?          @map("how_heard")
+  ownerUserId   String?          @map("owner_user_id") @db.Uuid
+  opportunityId String?          @map("opportunity_id") @db.Uuid
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([campaignId])
+  @@index([channelId])
+  @@map("campaign_responses")
+}
+
+// ===========================================================================
+// B) CONFIDENTIAL BOARDS ENGINE — Trello-style boards/lists/cards, with a
+// director-confidential visibility mode. Not site-scoped (RLS off; GRANT only).
+// ===========================================================================
+
+/// Board visibility: TEAM (members) vs DIRECTOR_CONFIDENTIAL (directors only).
+enum BoardVisibility {
+  TEAM
+  DIRECTOR_CONFIDENTIAL
+}
+
+/// A kanban board, optionally linked to a project.
+model Board {
+  id          String          @id @default(uuid()) @db.Uuid
+  entityId    String?         @map("entity_id") @db.Uuid
+  name        String
+  description String?
+  visibility  BoardVisibility @default(TEAM)
+  ownerUserId String?         @map("owner_user_id") @db.Uuid
+  projectId   String?         @map("project_id") @db.Uuid
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  members BoardMember[]
+  lists   BoardList[]
+
+  @@index([entityId])
+  @@index([projectId])
+  @@map("boards")
+}
+
+/// A member of a board (with an optional per-board role).
+model BoardMember {
+  id      String  @id @default(uuid()) @db.Uuid
+  boardId String  @map("board_id") @db.Uuid
+  board   Board   @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  userId  String  @map("user_id") @db.Uuid
+  role    String?
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([boardId, userId])
+  @@index([boardId])
+  @@map("board_members")
+}
+
+/// A list (column) within a board.
+model BoardList {
+  id       String @id @default(uuid()) @db.Uuid
+  boardId  String @map("board_id") @db.Uuid
+  board    Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  name     String
+  position Int    @default(0)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cards BoardCard[]
+
+  @@index([boardId])
+  @@map("board_lists")
+}
+
+/// A card within a board list.
+model BoardCard {
+  id          String    @id @default(uuid()) @db.Uuid
+  listId      String    @map("list_id") @db.Uuid
+  list        BoardList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  position    Int       @default(0)
+  assigneeId  String?   @map("assignee_id") @db.Uuid
+  dueDate     DateTime? @map("due_date")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  checklistItems CardChecklistItem[]
+  comments       CardComment[]
+
+  @@index([listId])
+  @@map("board_cards")
+}
+
+/// A checklist item on a card.
+model CardChecklistItem {
+  id       String    @id @default(uuid()) @db.Uuid
+  cardId   String    @map("card_id") @db.Uuid
+  card     BoardCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  text     String
+  done     Boolean   @default(false)
+  position Int       @default(0)
+
+  @@index([cardId])
+  @@map("card_checklist_items")
+}
+
+/// A comment on a card.
+model CardComment {
+  id        String    @id @default(uuid()) @db.Uuid
+  cardId    String    @map("card_id") @db.Uuid
+  card      BoardCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  authorId  String?   @map("author_id") @db.Uuid
+  body      String
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([cardId])
+  @@map("card_comments")
+}
+
+// ===========================================================================
+// C) PROJECT WBS — projects with a work-breakdown-structure tree, dependencies,
+// notes and reusable templates. `projects` is SITE-SCOPED (site_id → RLS on).
+// ===========================================================================
+
+/// The kind of node in a project work-breakdown structure.
+enum ProjectNodeType {
+  PHASE
+  TASK
+  SUBTASK
+}
+
+/// A project (site-scoped). Optionally linked to a contract/order.
+model Project {
+  id              String    @id @default(uuid()) @db.Uuid
+  entityId        String?   @map("entity_id") @db.Uuid
+  name            String
+  description     String?
+  siteId          String?   @map("site_id") @db.Uuid
+  contractId      String?   @map("contract_id") @db.Uuid
+  orderId         String?   @map("order_id") @db.Uuid
+  ownerUserId     String?   @map("owner_user_id") @db.Uuid
+  status          String    @default("ACTIVE")
+  plannedStart    DateTime? @map("planned_start")
+  plannedFinish   DateTime? @map("planned_finish")
+  actualStart     DateTime? @map("actual_start")
+  actualFinish    DateTime? @map("actual_finish")
+  percentComplete Decimal   @default(0) @map("percent_complete") @db.Decimal(5, 2)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  nodes        ProjectNode[]
+  dependencies ProjectDependency[]
+
+  @@index([entityId])
+  @@index([siteId])
+  @@map("projects")
+}
+
+/// A node in a project WBS tree. `parentId` is a nullable self-link (no relation, indexed).
+model ProjectNode {
+  id              String          @id @default(uuid()) @db.Uuid
+  projectId       String          @map("project_id") @db.Uuid
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parentId        String?         @map("parent_id") @db.Uuid
+  type            ProjectNodeType
+  title           String
+  ownerUserId     String?         @map("owner_user_id") @db.Uuid
+  plannedStart    DateTime?       @map("planned_start")
+  plannedFinish   DateTime?       @map("planned_finish")
+  actualStart     DateTime?       @map("actual_start")
+  actualFinish    DateTime?       @map("actual_finish")
+  percentComplete Decimal         @default(0) @map("percent_complete") @db.Decimal(5, 2)
+  weight          Decimal         @default(1) @db.Decimal(20, 4)
+  position        Int             @default(0)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  notes ProjectNodeNote[]
+
+  @@index([projectId])
+  @@index([parentId])
+  @@map("project_nodes")
+}
+
+/// A dependency between two WBS nodes (predecessor → successor). depType e.g. FS/SS/FF/SF.
+model ProjectDependency {
+  id                String  @id @default(uuid()) @db.Uuid
+  projectId         String  @map("project_id") @db.Uuid
+  project           Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  predecessorNodeId String  @map("predecessor_node_id") @db.Uuid
+  successorNodeId   String  @map("successor_node_id") @db.Uuid
+  depType           String  @default("FS") @map("dep_type")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@map("project_dependencies")
+}
+
+/// A note (with optional attachment) against a WBS node.
+model ProjectNodeNote {
+  id            String      @id @default(uuid()) @db.Uuid
+  nodeId        String      @map("node_id") @db.Uuid
+  node          ProjectNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  authorId      String?     @map("author_id") @db.Uuid
+  body          String
+  attachmentKey String?     @map("attachment_key")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  @@index([nodeId])
+  @@map("project_node_notes")
+}
+
+/// A reusable WBS template (JSON structure) for a job type.
+model WbsTemplate {
+  id        String  @id @default(uuid()) @db.Uuid
+  entityId  String? @map("entity_id") @db.Uuid
+  name      String
+  jobType   String? @map("job_type")
+  structure Json
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([entityId])
+  @@map("wbs_templates")
+}
+
+// ===========================================================================
+// D) STATUTORY RETURNS HUB + WHT — a filing calendar of statutory returns with
+// remittances, and withholding-tax transactions/effective-dated rates.
+// Not site-scoped (RLS off; GRANT only).
+// ===========================================================================
+
+/// Direction of a withholding-tax transaction: SUFFERED (we bore it) vs PAYABLE (we owe it).
+enum WhtDirection {
+  SUFFERED
+  PAYABLE
+}
+
+/// A statutory return (filing) for an entity, tax type and period.
+model StatutoryReturn {
+  id             String    @id @default(uuid()) @db.Uuid
+  entityId       String?   @map("entity_id") @db.Uuid
+  taxType        String    @map("tax_type")
+  periodMonth    String    @map("period_month")
+  currency       String
+  amountDue      Decimal   @default(0) @map("amount_due") @db.Decimal(20, 2)
+  amountPaid     Decimal   @default(0) @map("amount_paid") @db.Decimal(20, 2)
+  filingDeadline DateTime? @map("filing_deadline")
+  status         String    @default("DUE")
+  source         String?
+  sourceRef      String?   @map("source_ref")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  remittances ReturnRemittance[]
+
+  @@index([entityId])
+  @@index([periodMonth])
+  @@index([taxType, periodMonth])
+  @@map("statutory_returns")
+}
+
+/// A remittance (payment) against a statutory return.
+model ReturnRemittance {
+  id                 String          @id @default(uuid()) @db.Uuid
+  returnId           String          @map("return_id") @db.Uuid
+  return             StatutoryReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  paidAt             DateTime        @map("paid_at")
+  amount             Decimal         @db.Decimal(20, 2)
+  currency           String
+  reference          String?
+  proofAttachmentKey String?         @map("proof_attachment_key")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([returnId])
+  @@map("return_remittances")
+}
+
+/// A withholding-tax transaction (suffered or payable).
+model WhtTransaction {
+  id                  String       @id @default(uuid()) @db.Uuid
+  entityId            String?      @map("entity_id") @db.Uuid
+  direction           WhtDirection
+  counterparty        String?
+  relatedPaymentRef   String?      @map("related_payment_ref")
+  taxBase             Decimal      @default(0) @map("tax_base") @db.Decimal(20, 2)
+  rate                Decimal      @default(0) @db.Decimal(20, 6)
+  amount              Decimal      @default(0) @db.Decimal(20, 2)
+  currency            String
+  certificateRef      String?      @map("certificate_ref")
+  certificateReceived Boolean      @default(false) @map("certificate_received")
+  taxPeriod           String?      @map("tax_period")
+  status              String       @default("OPEN")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([entityId])
+  @@map("wht_transactions")
+}
+
+/// An effective-dated withholding-tax rate for a country + category.
+model WhtRate {
+  id              String   @id @default(uuid()) @db.Uuid
+  country         String   @default("ZW")
+  category        String
+  rate            Decimal  @db.Decimal(20, 6)
+  thresholdAmount Decimal? @map("threshold_amount") @db.Decimal(20, 2)
+  effectiveFrom   DateTime @map("effective_from")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([country, category, effectiveFrom])
+  @@map("wht_rates")
+}
+
+// ===========================================================================
+// E) BACK-PAY + ACTING ALLOWANCES — back-pay batches/lines from gazetted rate
+// changes, acting assignments, and extra earnings fed into payroll runs.
+// Not site-scoped (RLS off; GRANT only).
+// ===========================================================================
+
+/// A basis for an acting allowance: FIXED amount vs PERCENT of salary.
+enum ActingBasis {
+  FIXED
+  PERCENT
+}
+
+/// A batch of back-pay arising from a gazetted rate change effective from a date.
+model BackPayBatch {
+  id                String    @id @default(uuid()) @db.Uuid
+  entityId          String?   @map("entity_id") @db.Uuid
+  name              String
+  rateEffectiveFrom DateTime  @map("rate_effective_from")
+  gazettedAt        DateTime? @map("gazetted_at")
+  currency          String    @default("USD")
+  status            String    @default("DRAFT")
+  approvalRef       String?   @map("approval_ref")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  lines BackPayLine[]
+
+  @@index([entityId])
+  @@map("back_pay_batches")
+}
+
+/// One employee-period back-pay line within a batch (old vs new, difference).
+model BackPayLine {
+  id          String       @id @default(uuid()) @db.Uuid
+  batchId     String       @map("batch_id") @db.Uuid
+  batch       BackPayBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  employeeId  String       @map("employee_id") @db.Uuid
+  periodMonth String       @map("period_month")
+  oldAmount   Decimal      @default(0) @map("old_amount") @db.Decimal(20, 2)
+  newAmount   Decimal      @default(0) @map("new_amount") @db.Decimal(20, 2)
+  difference  Decimal      @default(0) @db.Decimal(20, 2)
+  taxable     Boolean      @default(true)
+  pensionable Boolean      @default(false)
+  nssaAble    Boolean      @default(false) @map("nssa_able")
+  workings    Json?
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([batchId])
+  @@index([employeeId])
+  @@map("back_pay_lines")
+}
+
+/// An acting assignment (employee acting in a higher position) with an allowance basis.
+model ActingAssignment {
+  id                String      @id @default(uuid()) @db.Uuid
+  entityId          String?     @map("entity_id") @db.Uuid
+  employeeId        String      @map("employee_id") @db.Uuid
+  actingPosition    String      @map("acting_position")
+  actingGrade       String?     @map("acting_grade")
+  dateFrom          DateTime    @map("date_from")
+  dateTo            DateTime    @map("date_to")
+  basis             ActingBasis
+  fixedAmount       Decimal?    @map("fixed_amount") @db.Decimal(20, 2)
+  currency          String?
+  percent           Decimal?    @db.Decimal(5, 2)
+  minQualifyingDays Int?        @map("min_qualifying_days")
+  status            String      @default("DRAFT")
+  approvalRef       String?     @map("approval_ref")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([entityId])
+  @@index([employeeId])
+  @@map("acting_assignments")
+}
+
+/// An extra earning (back-pay / acting allowance) fed into a payroll run for an employee.
+model PayrollExtraEarning {
+  id          String  @id @default(uuid()) @db.Uuid
+  entityId    String? @map("entity_id") @db.Uuid
+  runId       String? @map("run_id") @db.Uuid
+  employeeId  String  @map("employee_id") @db.Uuid
+  kind        String
+  label       String
+  amount      Decimal @default(0) @db.Decimal(20, 2)
+  currency    String  @default("USD")
+  periodMonth String? @map("period_month")
+  taxable     Boolean @default(true)
+  pensionable Boolean @default(false)
+  nssaAble    Boolean @default(false) @map("nssa_able")
+  sourceTable String? @map("source_table")
+  sourceId    String? @map("source_id") @db.Uuid
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([entityId])
+  @@index([runId])
+  @@index([employeeId])
+  @@map("payroll_extra_earnings")
+}
+
+// ===========================================================================
+// F) LONG-CONTRACT MONTHLY SITE REPORTS + PERFORMANCE/RAG — periodic site
+// reports with sections, KPIs (targets/actuals/RAG), PPE and stores withdrawals.
+// `site_report_periods` and `stores_withdrawals` are SITE-SCOPED (site_id → RLS on).
+// ===========================================================================
+
+/// RAG (Red/Amber/Green) performance status for a KPI actual.
+enum RagStatus {
+  GREEN
+  AMBER
+  RED
+}
+
+/// A monthly site report period (site-scoped). One per (site, month).
+model SiteReportPeriod {
+  id                String    @id @default(uuid()) @db.Uuid
+  entityId          String?   @map("entity_id") @db.Uuid
+  siteId            String    @map("site_id") @db.Uuid
+  contractId        String?   @map("contract_id") @db.Uuid
+  periodMonth       String    @map("period_month")
+  status            String    @default("OPEN")
+  deadline          DateTime?
+  submittedAt       DateTime? @map("submitted_at")
+  submittedByUserId String?   @map("submitted_by_user_id") @db.Uuid
+  narrative         String?
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  sections SiteReportSection[]
+
+  @@unique([siteId, periodMonth])
+  @@index([entityId])
+  @@index([siteId])
+  @@map("site_report_periods")
+}
+
+/// A section within a site report period (ADMIN/OPERATIONS/FINANCE/PPE/…).
+model SiteReportSection {
+  id            String           @id @default(uuid()) @db.Uuid
+  reportId      String           @map("report_id") @db.Uuid
+  report        SiteReportPeriod @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  sectionKey    String           @map("section_key")
+  title         String
+  ownerUserId   String?          @map("owner_user_id") @db.Uuid
+  content       Json?
+  autoPopulated Boolean          @default(false) @map("auto_populated")
+  completedAt   DateTime?        @map("completed_at")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([reportId])
+  @@map("site_report_sections")
+}
+
+/// A KPI definition (optionally scoped to a contract/site).
+model SiteKpi {
+  id         String  @id @default(uuid()) @db.Uuid
+  entityId   String? @map("entity_id") @db.Uuid
+  contractId String? @map("contract_id") @db.Uuid
+  siteId     String? @map("site_id") @db.Uuid
+  kpiKey     String  @map("kpi_key")
+  name       String
+  unit       String?
+  weight     Decimal @default(1) @db.Decimal(20, 4)
+  direction  String  @default("HIGHER_BETTER")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  targets SiteKpiTarget[]
+  actuals SiteKpiActual[]
+
+  @@index([entityId])
+  @@index([contractId])
+  @@index([siteId])
+  @@map("site_kpis")
+}
+
+/// An effective-dated / per-period target for a KPI.
+model SiteKpiTarget {
+  id            String    @id @default(uuid()) @db.Uuid
+  kpiId         String    @map("kpi_id") @db.Uuid
+  kpi           SiteKpi   @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+  periodMonth   String?   @map("period_month")
+  effectiveFrom DateTime? @map("effective_from")
+  targetValue   Decimal   @map("target_value") @db.Decimal(20, 4)
+  tolerance     Decimal?  @db.Decimal(20, 4)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([kpiId])
+  @@map("site_kpi_targets")
+}
+
+/// A per-period actual value for a KPI, with a computed RAG status.
+model SiteKpiActual {
+  id          String    @id @default(uuid()) @db.Uuid
+  kpiId       String    @map("kpi_id") @db.Uuid
+  kpi         SiteKpi   @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+  periodMonth String    @map("period_month")
+  actualValue Decimal   @default(0) @map("actual_value") @db.Decimal(20, 4)
+  rag         RagStatus @default(GREEN)
+  computedAt  DateTime  @default(now()) @map("computed_at")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([kpiId])
+  @@map("site_kpi_actuals")
+}
+
+/// A PPE requirement definition (by role and/or employee).
+model PpeRequirement {
+  id             String  @id @default(uuid()) @db.Uuid
+  entityId       String? @map("entity_id") @db.Uuid
+  role           String?
+  employeeId     String? @map("employee_id") @db.Uuid
+  itemType       String  @map("item_type")
+  quantity       Int     @default(1)
+  lifespanMonths Int?    @map("lifespan_months")
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([entityId])
+  @@index([employeeId])
+  @@map("ppe_requirements")
+}
+
+/// A PPE issue event to an employee.
+model PpeIssue {
+  id             String    @id @default(uuid()) @db.Uuid
+  employeeId     String    @map("employee_id") @db.Uuid
+  itemType       String    @map("item_type")
+  issueDate      DateTime  @map("issue_date")
+  size           String?
+  replacementDue DateTime? @map("replacement_due")
+  condition      String?
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([employeeId])
+  @@map("ppe_issues")
+}
+
+/// A stores withdrawal (site-scoped): fuel/oil/material/tool drawn at a site.
+model StoresWithdrawal {
+  id          String   @id @default(uuid()) @db.Uuid
+  entityId    String?  @map("entity_id") @db.Uuid
+  siteId      String   @map("site_id") @db.Uuid
+  itemType    String   @map("item_type")
+  description String?
+  quantity    Decimal  @default(0) @db.Decimal(20, 4)
+  unit        String?
+  value       Decimal  @default(0) @db.Decimal(20, 2)
+  currency    String   @default("USD")
+  vehicleRef  String?  @map("vehicle_ref")
+  drawnAt     DateTime @map("drawn_at")
+  allocation  Decimal? @db.Decimal(20, 4)
+
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([entityId])
+  @@index([siteId])
+  @@map("stores_withdrawals")
 }
