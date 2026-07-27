@@ -70,6 +70,30 @@ const _tiles = <_Tile>[
     accent: AppTheme.watch,
     subtitle: 'Withdrawals & transfers',
   ),
+  _Tile(
+    'Projects',
+    Icons.account_tree_outlined,
+    {Roles.siteManager, Roles.opsStaff, ...Roles.directors, Roles.sysAdmin},
+    route: '/projects',
+    accent: Color(0xFF0E7C66),
+    subtitle: 'Portfolio & progress',
+  ),
+  _Tile(
+    'Boards',
+    Icons.dashboard_customize_outlined,
+    Roles.all,
+    route: '/boards',
+    accent: Color(0xFF546E7A),
+    subtitle: 'Kanban boards',
+  ),
+  _Tile(
+    'Timesheets',
+    Icons.access_time,
+    {Roles.siteClerk, Roles.siteManager},
+    route: '/timesheets',
+    accent: Color(0xFFC97A0A),
+    subtitle: 'Timekeeper capture',
+  ),
 ];
 
 /// Home dashboard: a persistent danger banner over a grid of role-aware tiles.

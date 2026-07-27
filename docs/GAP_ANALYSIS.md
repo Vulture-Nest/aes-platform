@@ -7,7 +7,8 @@
 > **Fix log:**
 > - ✅ **Tier 1 (G1–G6) closed** (PR #56) — payroll reproduces the reference paysheets (golden-tested), back-pay/acting feed the run, `decide` is authorised, delegation works, `audit_log` is append-only at the DB, G4 scoped "NOW" hardening (arbitrary-currency payroll deferred per §7).
 > - ✅ **Tier 2 (G7–G10) closed** on `fix/gap-analysis-tier2` — pluggable Email/Teams/Push delivery (config-optional; push needs a device-token store), 4 dormant danger rules activated, nightly loan/ZIMRA accrual + order-health recalc/red-state alerts, director-withdrawal nudge scheduled.
-> - Full suite: **76 suites / 752 tests green**. Tiers 3–5 below are still open.
+> - ✅ **G11 web half done** (PR #58) — CRM, Marketing, Boards, Projects, Site-Reports, Returns-Hub now on the web app. Mobile half (light Projects/Boards + Timesheets G12) pending.
+> - Full suite: **76 suites / 752 tests green**. Remaining Tier-3–5 open.
 
 ## What is solid (calibration)
 Appendix A finance math (A.1–A.9) implemented as faithful, unit-tested services; all 8 Command Centre panels; RBAC + per-site scoping + Postgres RLS + segregation-of-duties; multi-currency core (effective-dated append-only rates, `(amount,currency,fx_rate_id,rate_type)` storage, first-class conversions); the generic approval engine + 5 workflow modules; CRM backend; payroll bank-account encryption at rest; migration-parity import (verdict **ACT**); and the 7 additional features' **backend + admin UI**.

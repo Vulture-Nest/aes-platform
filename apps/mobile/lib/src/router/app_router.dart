@@ -14,6 +14,14 @@ import '../data/outbox_store.dart';
 import '../data/petty_cash_repository.dart';
 import '../data/requisitions_repository.dart';
 import '../data/travel_repository.dart';
+import '../features/boards/boards_screen.dart';
+import '../features/boards/cubit/boards_list_cubit.dart';
+import '../features/boards/data/boards_repository.dart';
+import '../features/projects/cubit/portfolio_cubit.dart';
+import '../features/projects/data/projects_repository.dart';
+import '../features/projects/projects_screen.dart';
+import '../features/timesheets/data/timesheets_repository.dart';
+import '../features/timesheets/timesheets_route.dart';
 import '../features/approvals/approvals_screen.dart';
 import '../features/approvals/cubit/approvals_cubit.dart';
 import '../features/auth/cubit/auth_cubit.dart';
@@ -154,6 +162,27 @@ GoRouter buildRouter(AuthCubit authCubit) {
           create: (context) => DirectorCubit(context.read<DirectorRepository>()),
           child: const DirectorScreen(),
         ),
+      ),
+      GoRoute(
+        path: '/projects',
+        name: 'projects',
+        builder: (context, __) => BlocProvider(
+          create: (context) => PortfolioCubit(context.read<ProjectsRepository>())..load(),
+          child: const ProjectsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/boards',
+        name: 'boards',
+        builder: (context, __) => BlocProvider(
+          create: (context) => BoardsListCubit(context.read<BoardsRepository>()),
+          child: const BoardsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/timesheets',
+        name: 'timesheets',
+        builder: (context, __) => buildTimesheetsRoute(context.read<TimesheetsRepository>()),
       ),
     ],
   );

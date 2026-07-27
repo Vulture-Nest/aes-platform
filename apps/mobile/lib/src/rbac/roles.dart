@@ -14,6 +14,19 @@ class Roles {
   static const opsStaff = 'OPS_STAFF';
   static const auditor = 'AUDITOR';
 
+  /// Every defined role — use to gate a tile that any authenticated user may open.
+  static const all = {
+    sysAdmin,
+    director,
+    financeDirector,
+    opsDirector,
+    financeOfficer,
+    siteManager,
+    siteClerk,
+    opsStaff,
+    auditor,
+  };
+
   /// Anyone who can raise requisitions / travel / petty-cash requests from the field.
   static const requestCapture = {
     siteClerk,

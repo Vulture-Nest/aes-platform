@@ -16,6 +16,9 @@ import 'data/petty_cash_repository.dart';
 import 'data/requisitions_repository.dart';
 import 'data/token_store.dart';
 import 'data/travel_repository.dart';
+import 'features/boards/data/boards_repository.dart';
+import 'features/projects/data/projects_repository.dart';
+import 'features/timesheets/data/timesheets_repository.dart';
 import 'features/auth/cubit/auth_cubit.dart';
 import 'features/home/cubit/dashboard_cubit.dart';
 import 'router/app_router.dart';
@@ -48,6 +51,9 @@ class _AesAppState extends State<AesApp> {
   late final CommandCentreRepository _commandCentreRepository;
   late final OrdersRepository _ordersRepository;
   late final DirectorRepository _directorRepository;
+  late final ProjectsRepository _projectsRepository;
+  late final BoardsRepository _boardsRepository;
+  late final TimesheetsRepository _timesheetsRepository;
   late final OutboxStore _outboxStore;
   late final SyncService _syncService;
   late final BiometricAuthenticator _biometric;
@@ -75,6 +81,9 @@ class _AesAppState extends State<AesApp> {
     _commandCentreRepository = CommandCentreRepository(dio);
     _ordersRepository = OrdersRepository(dio);
     _directorRepository = DirectorRepository(dio);
+    _projectsRepository = ProjectsRepository(dio);
+    _boardsRepository = BoardsRepository(dio);
+    _timesheetsRepository = TimesheetsRepository(dio);
     _outboxStore = SqfliteOutboxStore();
     _syncService = SyncService(
       store: _outboxStore,
@@ -111,6 +120,9 @@ class _AesAppState extends State<AesApp> {
         RepositoryProvider<CommandCentreRepository>.value(value: _commandCentreRepository),
         RepositoryProvider<OrdersRepository>.value(value: _ordersRepository),
         RepositoryProvider<DirectorRepository>.value(value: _directorRepository),
+        RepositoryProvider<ProjectsRepository>.value(value: _projectsRepository),
+        RepositoryProvider<BoardsRepository>.value(value: _boardsRepository),
+        RepositoryProvider<TimesheetsRepository>.value(value: _timesheetsRepository),
         RepositoryProvider<OutboxStore>.value(value: _outboxStore),
         RepositoryProvider<SyncService>.value(value: _syncService),
         RepositoryProvider<BiometricAuthenticator>.value(value: _biometric),
