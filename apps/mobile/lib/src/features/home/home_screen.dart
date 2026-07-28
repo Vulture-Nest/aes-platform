@@ -218,6 +218,11 @@ class _Header extends StatelessWidget {
               Image.asset(AppTheme.logoWhite, height: 28),
               const Spacer(),
               IconButton(
+                tooltip: 'Profile',
+                icon: const Icon(Icons.account_circle_outlined, color: Colors.white),
+                onPressed: () => context.push('/profile'),
+              ),
+              IconButton(
                 tooltip: 'Sign out',
                 icon: const Icon(Icons.logout, color: Colors.white),
                 onPressed: onSignOut,

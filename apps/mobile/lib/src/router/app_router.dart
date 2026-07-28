@@ -33,6 +33,7 @@ import '../features/director/director_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/orders/cubit/orders_cubit.dart';
 import '../features/orders/orders_screen.dart';
+import '../features/profile/profile_screen.dart';
 import '../theme/app_theme.dart';
 import '../features/requests/cubit/outbox_cubit.dart';
 import '../features/requests/cubit/petty_cash_cubit.dart';
@@ -183,6 +184,11 @@ GoRouter buildRouter(AuthCubit authCubit) {
         path: '/timesheets',
         name: 'timesheets',
         builder: (context, __) => buildTimesheetsRoute(context.read<TimesheetsRepository>()),
+      ),
+      GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (_, __) => const ProfileScreen(),
       ),
     ],
   );
