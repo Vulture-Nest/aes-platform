@@ -110,6 +110,7 @@ class _AesAppState extends State<AesApp> {
   Widget build(BuildContext context) {
     return MultiRepositoryProvider(
       providers: [
+        RepositoryProvider<FlavorConfig>.value(value: widget.config),
         RepositoryProvider<AuthRepository>.value(value: _authRepository),
         RepositoryProvider<AlertsRepository>.value(value: _alertsRepository),
         RepositoryProvider<ApprovalsRepository>.value(value: _approvalsRepository),
