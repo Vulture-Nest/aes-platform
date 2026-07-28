@@ -30,8 +30,15 @@ class TravelCubit extends Cubit<RequestListState<TravelRequest>> {
   Future<SaveResult> create(NewTravel input, {bool submit = false}) async {
     try {
       final created = await _repo.create(input);
-      if (submit) await _repo.submit(created.id);
-      emit(RequestListState(items: [created, ...state.items]));
+      if (submit) {
+        // Submit succeeded server-side; reload so the item reflects its true
+        // SUBMITTED status. Emitting the stale pre-submit `created` (DRAFT)
+        // would leave a Submit action on-screen and make re-taps 400.
+        await _repo.submit(created.id);
+        await load();
+      } else {
+        emit(RequestListState(items: [created, ...state.items]));
+      }
       return SaveResult.created(created.id);
     } on ApiException catch (e) {
       if (e.statusCode == null) {
