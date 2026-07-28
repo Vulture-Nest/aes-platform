@@ -396,6 +396,34 @@ export interface PerformanceResult {
   servicedOrderCount: number;
 }
 
+// --- command centre: cash position + danger alerts ---
+export interface CashAccountBalance {
+  accountId: string;
+  name: string;
+  type: string;
+  currency: string;
+  balance: number;
+}
+export interface CashPositionPanel {
+  panel: string;
+  asOf: string;
+  accounts: CashAccountBalance[];
+  totals: Record<string, number>;
+  usdEquivalent: number;
+}
+export interface AlertRecord {
+  id: string;
+  ruleKey: string;
+  severity: string;
+  subjectTable: string | null;
+  subjectId: string | null;
+  message: string;
+  raisedAt: string;
+  acknowledgedAt: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+}
+
 // --- CRM (Business Development) ---
 export interface CrmOrganisation {
   id: string;
@@ -1021,6 +1049,13 @@ export const api = createApi({
     getPerformance: build.query<PerformanceResult, void>({
       query: () => 'v1/command-centre/performance',
     }),
+    // --- command centre: cash position + active danger alerts (finance roles) ---
+    getCashPosition: build.query<CashPositionPanel, void>({
+      query: () => 'v1/command-centre/cash-position',
+    }),
+    getActiveAlerts: build.query<AlertRecord[], void>({
+      query: () => 'v1/alerts?activeOnly=true',
+    }),
 
     // --- CRM: organisations ---
     getOrganisations: build.query<CrmOrganisation[], void>({
@@ -1239,6 +1274,8 @@ export const {
   useTopUpFloatMutation,
   useUnlockFloatMutation,
   useGetPerformanceQuery,
+  useGetCashPositionQuery,
+  useGetActiveAlertsQuery,
   useGetOrganisationsQuery,
   useCreateOrganisationMutation,
   useUpdateOrganisationMutation,

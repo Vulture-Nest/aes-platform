@@ -10,12 +10,14 @@ import {
   TeamOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
-import { Card, Col, Empty, List, Row, Statistic, Tag, Typography } from 'antd';
+import { Card, Col, Empty, List, Row, Space, Statistic, Tag, Typography } from 'antd';
 import dayjs from 'dayjs';
 import {
   useGetAccountsQuery,
+  useGetActiveAlertsQuery,
   useGetApprovalMatrixQuery,
   useGetAuditQuery,
+  useGetCashPositionQuery,
   useGetContractsQuery,
   useGetDangerRulesQuery,
   useGetEmployeesQuery,
@@ -29,7 +31,7 @@ import {
   useGetUsersQuery,
 } from '../../api/api';
 import { useAppSelector } from '../../app/hooks';
-import { ROLE_LABELS, type Role } from '../../rbac/roles';
+import { hasAnyRole, ROLE_LABELS, type Role } from '../../rbac/roles';
 import { AES } from '../../theme';
 import { PALETTE, type Segment } from './palette';
 import { BarList, Donut, KpiCard, Legend, Sparkline } from './widgets';
@@ -60,6 +62,23 @@ const ACTION_COLORS: Record<string, string> = {
   REJECT: 'red',
 };
 
+const SEVERITY_COLOR: Record<string, string> = { DANGER: 'red', WATCH: 'gold', INFO: 'blue' };
+
+// Roles the command-centre + alerts endpoints allow (see CommandCentreController).
+const FINANCE_PULSE_ROLES: Role[] = [
+  'FINANCE_OFFICER',
+  'FINANCE_DIRECTOR',
+  'OPS_DIRECTOR',
+  'DIRECTOR',
+  'SYS_ADMIN',
+];
+
+const fmtMoney = (n: number, ccy: string) => {
+  const sign = n < 0 ? '-' : '';
+  const symbol = ccy === 'USD' ? '$' : `${ccy} `;
+  return `${sign}${symbol}${Math.abs(Math.round(n)).toLocaleString()}`;
+};
+
 export function DashboardPage() {
   const user = useAppSelector((s) => s.auth.user);
   const users = useGetUsersQuery();
@@ -76,6 +95,11 @@ export function DashboardPage() {
   const orders = useGetOrdersQuery();
   const contracts = useGetContractsQuery();
   const performance = useGetPerformanceQuery();
+
+  // Command-centre pulse (cash + danger alerts) — finance/director/admin only.
+  const canSeeFinancePulse = hasAnyRole(user, FINANCE_PULSE_ROLES);
+  const cashPosition = useGetCashPositionQuery(undefined, { skip: !canSeeFinancePulse });
+  const activeAlerts = useGetActiveAlertsQuery(undefined, { skip: !canSeeFinancePulse });
 
   const userRows = users.data ?? [];
   const siteRows = sites.data ?? [];
@@ -206,6 +230,105 @@ export function DashboardPage() {
           />
         </Col>
       </Row>
+
+      {/* Command-centre pulse: cash position + danger alerts (finance/admin only) */}
+      {canSeeFinancePulse && (
+        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+          <Col xs={24} lg={13}>
+            <Card
+              title={
+                <>
+                  <WalletOutlined /> Cash position
+                </>
+              }
+              loading={cashPosition.isLoading}
+              style={{ height: '100%' }}
+              extra={
+                cashPosition.data?.asOf ? (
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    as of {dayjs(cashPosition.data.asOf).format('DD MMM HH:mm')}
+                  </Typography.Text>
+                ) : null
+              }
+            >
+              <Space size={24} wrap style={{ marginBottom: 12 }}>
+                {Object.entries(cashPosition.data?.totals ?? {}).map(([ccy, total]) => (
+                  <Statistic
+                    key={ccy}
+                    title={`${ccy} cash on hand`}
+                    value={fmtMoney(total, ccy)}
+                    valueStyle={{ fontSize: 22, color: total < 0 ? '#e5636b' : AES.green }}
+                  />
+                ))}
+              </Space>
+              {cashPosition.data?.accounts?.length ? (
+                <List
+                  size="small"
+                  dataSource={cashPosition.data.accounts}
+                  renderItem={(a) => (
+                    <List.Item style={{ paddingInline: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
+                        <span style={{ flex: 1, fontSize: 13 }}>{a.name}</span>
+                        <Tag style={{ marginInlineEnd: 0 }}>{a.type}</Tag>
+                        <span
+                          style={{
+                            width: 120,
+                            textAlign: 'right',
+                            fontWeight: 600,
+                            color: a.balance < 0 ? '#e5636b' : '#1f2937',
+                          }}
+                        >
+                          {fmtMoney(a.balance, a.currency)}
+                        </span>
+                      </div>
+                    </List.Item>
+                  )}
+                />
+              ) : (
+                <Empty description="No cash accounts" />
+              )}
+            </Card>
+          </Col>
+          <Col xs={24} lg={11}>
+            <Card
+              title={
+                <>
+                  <ExclamationCircleFilled style={{ color: '#e9a13b' }} /> Danger alerts
+                </>
+              }
+              loading={activeAlerts.isLoading}
+              style={{ height: '100%' }}
+              extra={
+                <Tag color={(activeAlerts.data?.length ?? 0) > 0 ? 'red' : 'green'}>
+                  {activeAlerts.data?.length ?? 0} active
+                </Tag>
+              }
+            >
+              {activeAlerts.data?.length ? (
+                <List
+                  size="small"
+                  dataSource={[...activeAlerts.data].sort((a, b) => b.raisedAt.localeCompare(a.raisedAt))}
+                  renderItem={(al) => (
+                    <List.Item style={{ paddingInline: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, width: '100%' }}>
+                        <Tag color={SEVERITY_COLOR[al.severity] ?? 'default'} style={{ marginInlineEnd: 0 }}>
+                          {al.severity}
+                        </Tag>
+                        <span style={{ flex: 1, fontSize: 13 }}>{al.message}</span>
+                        <span style={{ fontSize: 12, color: '#9aa4af', whiteSpace: 'nowrap' }}>
+                          {dayjs(al.raisedAt).format('DD MMM HH:mm')}
+                        </span>
+                      </div>
+                    </List.Item>
+                  )}
+                />
+              ) : (
+                <Empty description="No active alerts" />
+              )}
+            </Card>
+          </Col>
+        </Row>
+      )}
 
       {/* Revenue & profit */}
       <Card
