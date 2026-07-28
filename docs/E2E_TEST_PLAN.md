@@ -76,6 +76,132 @@ For each test case tick **PASS** or **FAIL**. On FAIL, note: what you did, what 
 
 ---
 
+## 5. Workflows & responsibilities — who carries out each activity
+
+> **The universal shape.** Every money / approval workflow is: a **raiser** creates and **submits** → one or more **approvers** decide → a **finance** actor **settles** (disburses / posts). Two rules hold everywhere:
+> - **Approvals happen in the `My Approvals` inbox — *not* on the module's own page.** A module page (e.g. *Workflows → Requisitions*) only offers **raise** and, after approval, **settle** (Disburse) — it never shows an Approve button. Every module's approvals (requisitions, travel, budgets, petty cash, director withdrawals, payroll, timesheets) land in the one **My Approvals** queue.
+> - **No self-approval (segregation of duties).** Whoever raises an item cannot approve or settle it.
+
+**Which app each role works in**
+
+| Role | Primary app | Also uses |
+|------|-------------|-----------|
+| SysAdmin, Finance Director, Finance Officer, Ops Director | **Admin** console (`:5175`) | — |
+| Director | **Admin** + **Web** | Mobile |
+| Site Manager, Site Clerk, Ops Staff | **Web** (`:5173`) | **Mobile** (field capture) |
+| Auditor | Admin / Web (**read-only**) | — |
+
+*(`My Approvals` exists in every app a role can log into. The **cash-position + danger-alert** panels appear on the admin **Dashboard** and in the web/mobile **Command Centre**.)*
+
+### 5.0 At-a-glance — who raises, who approves, who settles
+
+| Workflow | Raises | Approves *(in My Approvals)* | Settles / executes |
+|----------|--------|------------------------------|--------------------|
+| Cash requisition | Ops Staff / Clerk / Site Mgr | Site Manager → Finance Director *(only if ≥ $5,000)* | Finance Officer — **Disburse** |
+| Travel & allowances | Ops Staff / Site Mgr | Site Manager → Finance Director *(if over band)* | Finance Officer — **Disburse** then **Retire** |
+| Petty-cash withdrawal | Site Clerk | Site Manager *(below threshold)* **or** Finance Director *(≥ threshold)* | posts on approval |
+| Petty-cash float / conversion / count | Finance Officer | — *(FD unlocks a locked float)* | Finance Officer |
+| Budget | Finance Officer | Ops Director **and** Finance Director *(parallel — both)* | Active once both approve |
+| Director withdrawal | Director | Finance Director / another Director | Finance Officer — **Complete** transfer |
+| Timesheet | Site Clerk / Timekeeper | Site Manager *(approve → lock)* | — |
+| Payroll → returns | Finance Officer *(draft / run)* | Finance Director *(approve)* | Finance Officer *(file returns)* |
+| Back-pay / Acting | Finance Officer | — *(feeds next payroll)* | next payroll run |
+| Order → revenue | Ops Staff / Finance | — *(no approval)* | revenue posts when order **serviced** |
+
+### 5.1 Cash requisition — *raise → approve → disburse*
+
+| # | Who | Where | Activity |
+|---|-----|-------|----------|
+| 1 | **Requester** (Ops Staff / Clerk / Site Mgr) | Web or Mobile → **Requests → Requisition** | Create draft (purpose, amount, currency, required-by, optional receipt) → **Submit for approval** |
+| 2 | **Site Manager** | **My Approvals** | Approve — step 1 (**any** amount) |
+| 3 | **Finance Director** | Admin → **My Approvals** | Approve — step 2, **only if amount ≥ $5,000** |
+| 4 | *system* | — | Funds check → **Approved-Ready-to-Pay** (funded) or **Approved-Pending-Funds** (short) |
+| 5 | **Finance Officer** (or FD) | Admin → **Workflows → Requisitions** | **Disburse**: choose source account + reference → posts a **balanced ledger journal** → **Closed** |
+
+**Lifecycle:** Draft → Submitted → Approved (Ready-to-Pay / Pending-Funds) → Disbursed → Closed.
+**SoD:** the requester cannot disburse their own requisition; the amount decides whether the Finance Director is involved (< $5,000 = site-manager approval only).
+
+### 5.2 Travel & allowances — *raise → approve → disburse → retire*
+
+| # | Who | Where | Activity |
+|---|-----|-------|----------|
+| 1 | **Requester** (Ops Staff / Site Mgr) | Web/Mobile → **Requests → Travel** | Destination + dates → per-diem auto-computed → **Submit** |
+| 2 | **Site Manager** → **Finance Director** *(if over band)* | **My Approvals** | Approve |
+| 3 | **Finance Officer** | Admin → **Workflows → Travel** | **Disburse** the advance |
+| 4 | **Finance Officer** | Admin → **Workflows → Travel** | **Retire**: enter actual spend → reconciles refund-due (underspend) or overspend owed to the traveller |
+
+### 5.3 Petty cash
+
+| # | Who | Where | Activity |
+|---|-----|-------|----------|
+| 1 | **Finance Officer** | Admin → **Workflows → Petty Cash** | Create a **float** (one per site + currency) |
+| 2 | **Site Clerk** | Web/Mobile → **Petty Cash** | Record a **withdrawal** (+ receipt) |
+| 3a | **Site Manager** | **My Approvals** | **Confirm** if **below** the FD threshold → posts immediately |
+| 3b | **Finance Director** | **My Approvals** | Approve if **≥** threshold → then posts |
+| 4 | **Finance Officer** | Admin → **Workflows → Petty Cash** | Record USD↔ZWG **conversions** and **cash counts**; an out-of-tolerance count **locks** the float |
+| 5 | **Finance Director** | Admin → **Workflows → Petty Cash** | **Unlock** a locked float |
+
+### 5.4 Budget — *parallel dual authorisation*
+
+| # | Who | Where | Activity |
+|---|-----|-------|----------|
+| 1 | **Finance Officer** | Admin → **Workflows → Budgets** | Create budget + line items → **Submit** |
+| 2 | **Ops Director** *and* **Finance Director** | **My Approvals** | Approve (parallel — **both** required) |
+| 3 | *system* | — | **Active** only after both approve; a **Return** by either restarts the cycle. Actual spend tracks % consumed per line |
+
+### 5.5 Director withdrawal
+
+| # | Who | Where | Activity |
+|---|-----|-------|----------|
+| 1 | **Director** | Admin/Web → **Workflows → Director Withdrawals** | Raise (amount, destination, reason) → **Submit** |
+| 2 | **Finance Director** or **another Director** | **My Approvals** | **Co-approve** |
+| 3 | *system* | — | Posts to ledger as **"Posted — Awaiting Transfer"** (shows in cash position immediately) |
+| 4 | **Finance Officer** | Admin → **Workflows → Director Withdrawals** | Select transfer method (EFT/RTGS) + reference → **Complete** |
+
+### 5.6 Timesheets
+
+| # | Who | Where | Activity |
+|---|-----|-------|----------|
+| 1 | **Site Clerk / Timekeeper** | Web / **Mobile (offline-capable)** → **Timesheets** | Capture the daily grid → **Submit** |
+| 2 | **Site Manager** | **My Approvals** / Timesheets | **Approve** → the period **Locks** |
+| 3 | **Site Manager / Finance** | Admin → Timesheets | **Reopen** requires an explicit **unlock** before any edit |
+
+### 5.7 Payroll → statutory returns
+
+| # | Who | Where | Activity |
+|---|-----|-------|----------|
+| 1 | **Finance Officer** | Admin → **People & Payroll → Payroll** | Draft / **Run** payroll |
+| 2 | **Finance Director** | Admin → **My Approvals** / Payroll | **Approve** the run |
+| 3 | *system* | — | Payslips + bank schedule produced; **statutory obligations auto-created** |
+| 4 | **Finance Officer / FD** | Admin → **Finance → Returns Hub** | Track & mark statutory returns **filed** |
+
+### 5.8 Back-pay & Acting allowances
+
+| # | Who | Where | Activity |
+|---|-----|-------|----------|
+| 1 | **Finance Officer** | Admin → **Finance → Payroll Adjustments** | Raise a **back-pay batch** or **acting allowance** → Submit |
+| 2 | *system* | — | Feeds the **next payroll run** (recomputes affected earnings) |
+
+### 5.9 Order → revenue *(no approval chain)*
+
+| # | Who | Where | Activity |
+|---|-----|-------|----------|
+| 1 | **Ops Staff / Finance** | Admin → **Sales & CRM → Orders** | Create orders, expenses, contract claims |
+| 2 | **Ops / Finance** | Orders | Mark an order **serviced** → **revenue posts** to the ledger; contract claims post **receivables** |
+
+### 5.10 Collaboration flows *(no approval chain)*
+
+| Workflow | Who | Where | Notes |
+|----------|-----|-------|-------|
+| **Boards** (Kanban) | anyone | Web/Mobile → Boards | **Director-confidential** boards are hidden from non-directors *server-side* |
+| **Projects / WBS** | Site Manager / Ops Staff | Web + **Mobile-light** | Build the tree, update % progress → rolls up |
+| **Site reports / SHE** | Site Manager / Clerk | Web / Admin → Site Reports, SHE | Monthly capture; SHE is structured (incidents, inspections) |
+| **CRM / Marketing** | Ops Staff / Finance | Web / Admin → Business Development, Marketing | Pipeline → convert to client; campaign funnel |
+
+> **Tip for testers:** the step-by-step *test cases* for these flows are in **Part E** (cash workflows), **Part H** (timesheets), **Part I** (payroll/returns), **Part J** (back-pay/acting) and **Parts K–N** (collaboration). This section is the map; those are the drills.
+
+---
+
 # PART A — Authentication & RBAC
 
 ### TC-A.1 — Login (happy path)
