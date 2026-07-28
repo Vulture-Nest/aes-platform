@@ -62,6 +62,22 @@ void main() {
     expect(repo.submitted, [result.createdId]);
   });
 
+  test('create with submit reloads so the item shows its true (SUBMITTED) status', () async {
+    // Regression: previously the pre-submit DRAFT object was left in state, so the
+    // UI kept a Submit action and re-taps hit 400 ("cannot be submitted from
+    // SUBMITTED"). After submit the cubit must reflect the server's reloaded view.
+    final repo = FakeRequisitionsRepository(
+      items: [draftRequisition(id: 'srv-1', status: 'SUBMITTED')],
+    );
+    final cubit = build(repo);
+
+    await cubit.create(input(), submit: true);
+
+    expect(repo.submitted, hasLength(1));
+    expect(cubit.state.items.map((r) => r.status), everyElement(equals('SUBMITTED')));
+    expect(cubit.state.items.any((r) => r.status == 'DRAFT'), isFalse);
+  });
+
   test('offline create queues the draft to the outbox instead of failing', () async {
     final outbox = InMemoryOutboxStore();
     final cubit = build(FakeRequisitionsRepository(offline: true), outbox: outbox);
