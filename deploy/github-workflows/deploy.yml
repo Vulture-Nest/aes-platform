@@ -1,23 +1,22 @@
 name: Deploy
 
-# ⚠️ Move this file to .github/workflows/deploy.yml to activate (needs a workflow-scoped token).
+# ─────────────────────────────────────────────────────────────────────────────
+# DORMANT until the droplet exists. This workflow NEVER runs on push/merge — it
+# is manual-only (workflow_dispatch) AND the `guard` job fails fast unless the
+# repository variable DEPLOY_ENABLED == "true". No secret is read and no host is
+# contacted while dormant. See deploy/README.md for the activation runbook.
 #
-# Builds the API + web images, pushes them to a registry, then rolls them out on the
-# DigitalOcean droplet via docker compose against DO Managed PostgreSQL.
+# ACTIVATION: move this file to .github/workflows/deploy.yml with a workflow-scoped
+# token (the push token used for this repo lacks the `workflow` scope).
 #
-# Required repo secrets (add before enabling — server not provisioned yet):
-#   REGISTRY            e.g. registry.digitalocean.com/aes  or ghcr.io/vulture-nest
-#   REGISTRY_USERNAME   registry login
-#   REGISTRY_TOKEN      registry password / DO API token
-#   DO_HOST             droplet IP / hostname
-#   DO_USER             ssh user (e.g. deploy)
-#   DO_SSH_KEY          private SSH key for the droplet
-#   DATABASE_URL        DO Managed Postgres connection string (sslmode=require)
-#   JWT_SECRET          production JWT signing secret
+# Builds api + admin + web images, pushes them to the registry, then rolls them
+# out on the DigitalOcean droplet via docker compose. Postgres is DO Managed
+# Postgres (a dedicated `aes` database on the shared cluster) — the api container
+# runs `prisma migrate deploy` on start. DB/JWT/storage secrets live in the
+# droplet's /opt/aes/.env, NOT in GitHub.
+# ─────────────────────────────────────────────────────────────────────────────
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -25,19 +24,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check deploy switch
+        run: |
+          if [ "${{ vars.DEPLOY_ENABLED }}" != "true" ]; then
+            echo "::error title=Deployments are dormant::Set the DEPLOY_ENABLED repository variable to 'true' to enable (Settings → Secrets and variables → Actions → Variables). See deploy/README.md."
+            exit 1
+          fi
+          echo "DEPLOY_ENABLED=true — proceeding."
+
   build-and-push:
     name: Build & push images
+    needs: guard
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
+      # Derive the registry host (login needs the host only, e.g. ghcr.io),
+      # while tags use the full REGISTRY prefix (e.g. ghcr.io/vulture-nest).
+      - id: reg
+        run: echo "host=${REGISTRY%%/*}" >> "$GITHUB_OUTPUT"
+        env:
+          REGISTRY: ${{ secrets.REGISTRY }}
       - uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.REGISTRY }}
+          registry: ${{ steps.reg.outputs.host }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_TOKEN }}
+
       - name: Build & push API
         uses: docker/build-push-action@v6
         with:
@@ -46,48 +64,71 @@ jobs:
           tags: |
             ${{ secrets.REGISTRY }}/aes-api:${{ github.sha }}
             ${{ secrets.REGISTRY }}/aes-api:latest
+
+      - name: Build & push Admin
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/admin
+          build-args: |
+            VITE_API_BASE_URL=/api
+          push: true
+          tags: |
+            ${{ secrets.REGISTRY }}/aes-admin:${{ github.sha }}
+            ${{ secrets.REGISTRY }}/aes-admin:latest
+
       - name: Build & push Web
         uses: docker/build-push-action@v6
         with:
           context: ./apps/web
-          push: true
           build-args: |
             VITE_API_BASE_URL=/api
+          push: true
           tags: |
             ${{ secrets.REGISTRY }}/aes-web:${{ github.sha }}
             ${{ secrets.REGISTRY }}/aes-web:latest
 
   deploy:
     name: Roll out on droplet
+    needs: [guard, build-and-push]
     runs-on: ubuntu-latest
-    needs: build-and-push
     environment: production
     steps:
       - uses: actions/checkout@v4
-      - name: Copy compose file to droplet
+
+      # Ship compose + nginx config to the droplet (strip the leading deploy/).
+      - name: Sync compose + nginx to droplet
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USER }}
           key: ${{ secrets.DO_SSH_KEY }}
-          source: deploy/compose.prod.yml
+          source: "deploy/compose.prod.yml,deploy/nginx"
           target: /opt/aes
           strip_components: 1
+          overwrite: true
+
       - name: Pull images, migrate & restart
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          REGISTRY: ${{ secrets.REGISTRY }}
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.sha }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USER }}
           key: ${{ secrets.DO_SSH_KEY }}
-          envs: REGISTRY,IMAGE_TAG,DATABASE_URL,JWT_SECRET
+          envs: REGISTRY,IMAGE_TAG,REGISTRY_USERNAME,REGISTRY_TOKEN
+          command_timeout: 15m
           script: |
+            set -e
             cd /opt/aes
-            export REGISTRY="${{ secrets.REGISTRY }}"
-            export IMAGE_TAG="${{ needs.build-and-push.outputs.sha }}"
-            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
-            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
-            echo "${{ secrets.REGISTRY_TOKEN }}" | docker login ${{ secrets.REGISTRY }} -u ${{ secrets.REGISTRY_USERNAME }} --password-stdin
+            # DATABASE_URL / JWT_SECRET / STORAGE_* come from /opt/aes/.env.
+            echo "$REGISTRY_TOKEN" | docker login "${REGISTRY%%/*}" -u "$REGISTRY_USERNAME" --password-stdin
+            export REGISTRY IMAGE_TAG
             docker compose -f compose.prod.yml pull
-            # `api` entrypoint runs `prisma migrate deploy` against the managed DB on start.
-            docker compose -f compose.prod.yml up -d
+            # api entrypoint runs `prisma migrate deploy` against the managed DB on start.
+            docker compose -f compose.prod.yml up -d --remove-orphans
             docker image prune -f
+            sleep 5
+            docker compose -f compose.prod.yml ps

@@ -1,45 +1,87 @@
 # Production compose for the DigitalOcean droplet.
-# Runs prebuilt images from the registry. Postgres is DO Managed PostgreSQL (external),
-# so no postgres service here — DATABASE_URL points at the managed cluster.
+# Runs prebuilt images pulled from the registry. Postgres is DO Managed PostgreSQL
+# (external, shared cluster — a dedicated `aes` database + user); no postgres service
+# here — DATABASE_URL points at the managed cluster.
 #
-# Expected env on the droplet (exported by the deploy workflow):
-#   REGISTRY, IMAGE_TAG, DATABASE_URL, JWT_SECRET
+# Secrets live in a droplet-local `.env` (see .env.production.example), NOT in GitHub.
+# The deploy workflow only exports REGISTRY + IMAGE_TAG so it can pull the right images.
+#
+#   docker compose -f compose.prod.yml pull
+#   docker compose -f compose.prod.yml up -d
 
 services:
   redis:
-    image: redis:7
+    image: redis:7-alpine
     restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [aes]
 
   api:
     image: ${REGISTRY}/aes-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
-    depends_on:
-      - redis
+    # DATABASE_URL, JWT_SECRET and STORAGE_* come from the droplet-local .env.
+    env_file: .env
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: ${DATABASE_URL}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET}
-      # Object storage (SharePoint/Graph or Spaces) is wired in a later stage.
-      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-minio}
-      STORAGE_PORT: ${STORAGE_PORT:-9000}
-      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-aes-minio}
-      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-changeme}
-      STORAGE_BUCKET: ${STORAGE_BUCKET:-aes-files}
+    depends_on:
+      redis:
+        condition: service_healthy
     expose:
       - "3000"
+    networks: [aes]
+
+  admin:
+    image: ${REGISTRY}/aes-admin:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - api
+    expose:
+      - "80"
+    networks: [aes]
 
   web:
     image: ${REGISTRY}/aes-web:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       - api
+    expose:
+      - "80"
+    networks: [aes]
+
+  # Reverse proxy — the only container bound to the host. Routes by hostname:
+  #   api.<domain>   -> api,   admin.<domain> -> admin,   app.<domain>/<domain> -> web.
+  # The web/admin containers each proxy their own /api to the api service, so the
+  # SPAs work same-origin. See nginx/conf.d/default.conf.
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/certbot:/var/www/certbot:ro
+    depends_on:
+      - api
+      - admin
+      - web
+    networks: [aes]
 
 volumes:
   redisdata:
+
+networks:
+  aes:
+    driver: bridge
