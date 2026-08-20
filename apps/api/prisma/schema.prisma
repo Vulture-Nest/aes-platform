@@ -14,8 +14,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")       // app role — subject to RLS (runtime)
+  directUrl = env("DATABASE_URL_OWNER") // owner role — migrations & introspection
 }
 
 /// Trivial table used only to prove connectivity + migrations in the S0 scaffold.
