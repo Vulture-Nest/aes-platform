@@ -43,10 +43,10 @@ services:
         condition: service_healthy
     expose:
       - "3000"
-    networks: [aes, edge]
+    networks: [aes]
     labels:
       - traefik.enable=true
-      - traefik.docker.network=edge
+      - traefik.docker.network=aes
       - traefik.http.routers.aes-api.rule=Host(`${API_HOST}`)
       - traefik.http.routers.aes-api.entrypoints=websecure
       - traefik.http.routers.aes-api.tls.certresolver=le
@@ -59,10 +59,19 @@ services:
       - api
     expose:
       - "80"
-    networks: [aes, edge]
+    # Override the image healthcheck: it uses http://localhost/ which resolves to
+    # IPv6 (::1) while nginx listens IPv4-only, so it false-fails and Traefik (which
+    # won't route to unhealthy containers) drops it. 127.0.0.1 fixes it, no rebuild.
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks: [aes]
     labels:
       - traefik.enable=true
-      - traefik.docker.network=edge
+      - traefik.docker.network=aes
       - traefik.http.routers.aes-admin.rule=Host(`${ADMIN_HOST}`)
       - traefik.http.routers.aes-admin.entrypoints=websecure
       - traefik.http.routers.aes-admin.tls.certresolver=le
@@ -75,10 +84,17 @@ services:
       - api
     expose:
       - "80"
-    networks: [aes, edge]
+    # See admin healthcheck note — 127.0.0.1 avoids the IPv6 localhost false-fail.
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks: [aes]
     labels:
       - traefik.enable=true
-      - traefik.docker.network=edge
+      - traefik.docker.network=aes
       - traefik.http.routers.aes-web.rule=Host(`${WEB_HOST}`)
       - traefik.http.routers.aes-web.entrypoints=websecure
       - traefik.http.routers.aes-web.tls.certresolver=le
@@ -88,7 +104,8 @@ volumes:
   redisdata:
 
 networks:
+  # Dedicated per-app network shared only with Traefik (created by server-setup.sh:
+  # `docker network create aes`). Keeps `api`/`web`/`admin` service names unique to
+  # this app so the web container's /api proxy can't hit another app's API.
   aes:
-    driver: bridge          # internal service-to-service (api <-> redis, web -> api)
-  edge:
-    external: true          # shared with the Traefik edge; created by server-setup.sh
+    external: true
