@@ -1,13 +1,18 @@
-# Production compose for the DigitalOcean droplet.
+# Production compose for the SHARED DigitalOcean droplet.
 # Runs prebuilt images pulled from the registry. Postgres is DO Managed PostgreSQL
 # (external, shared cluster — a dedicated `aes` database + user); no postgres service
 # here — DATABASE_URL points at the managed cluster.
 #
-# Secrets live in a droplet-local `.env` (see .env.production.example), NOT in GitHub.
-# The deploy workflow only exports REGISTRY + IMAGE_TAG so it can pull the right images.
+# TLS + public routing is handled by the shared Traefik edge (see vulturenest-infra),
+# NOT by a per-app nginx. Each public container joins the external `edge` network and
+# declares its hostname via Traefik labels. Nothing here binds a host port, so a
+# deploy of this stack never touches the edge or the other apps.
+#
+# Secrets + hostnames live in a droplet-local `.env` (see .env.production.example),
+# NOT in GitHub. The deploy workflow only exports REGISTRY + IMAGE_TAG.
 #
 #   docker compose -f compose.prod.yml pull
-#   docker compose -f compose.prod.yml up -d
+#   docker compose -f compose.prod.yml up -d --remove-orphans
 
 services:
   redis:
@@ -21,12 +26,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks: [aes]
+    networks: [aes]               # internal only — never exposed
 
   api:
     image: ${REGISTRY}/aes-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
-    # DATABASE_URL, JWT_SECRET and STORAGE_* come from the droplet-local .env.
+    # DATABASE_URL, DATABASE_URL_OWNER, JWT_SECRET, STORAGE_* come from the droplet .env.
     env_file: .env
     environment:
       NODE_ENV: production
@@ -38,7 +43,14 @@ services:
         condition: service_healthy
     expose:
       - "3000"
-    networks: [aes]
+    networks: [aes, edge]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.aes-api.rule=Host(`${API_HOST}`)
+      - traefik.http.routers.aes-api.entrypoints=websecure
+      - traefik.http.routers.aes-api.tls.certresolver=le
+      - traefik.http.services.aes-api.loadbalancer.server.port=3000
 
   admin:
     image: ${REGISTRY}/aes-admin:${IMAGE_TAG:-latest}
@@ -47,7 +59,14 @@ services:
       - api
     expose:
       - "80"
-    networks: [aes]
+    networks: [aes, edge]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.aes-admin.rule=Host(`${ADMIN_HOST}`)
+      - traefik.http.routers.aes-admin.entrypoints=websecure
+      - traefik.http.routers.aes-admin.tls.certresolver=le
+      - traefik.http.services.aes-admin.loadbalancer.server.port=80
 
   web:
     image: ${REGISTRY}/aes-web:${IMAGE_TAG:-latest}
@@ -56,32 +75,20 @@ services:
       - api
     expose:
       - "80"
-    networks: [aes]
-
-  # Reverse proxy — the only container bound to the host. Routes by hostname:
-  #   api.<domain>   -> api,   admin.<domain> -> admin,   app.<domain>/<domain> -> web.
-  # The web/admin containers each proxy their own /api to the api service, so the
-  # SPAs work same-origin. See nginx/conf.d/default.conf.
-  nginx:
-    image: nginx:1.27-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      - ./nginx/certbot:/var/www/certbot:ro
-    depends_on:
-      - api
-      - admin
-      - web
-    networks: [aes]
+    networks: [aes, edge]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=edge
+      - traefik.http.routers.aes-web.rule=Host(`${WEB_HOST}`)
+      - traefik.http.routers.aes-web.entrypoints=websecure
+      - traefik.http.routers.aes-web.tls.certresolver=le
+      - traefik.http.services.aes-web.loadbalancer.server.port=80
 
 volumes:
   redisdata:
 
 networks:
   aes:
-    driver: bridge
+    driver: bridge          # internal service-to-service (api <-> redis, web -> api)
+  edge:
+    external: true          # shared with the Traefik edge; created by server-setup.sh

@@ -95,14 +95,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Ship compose + nginx config to the droplet (strip the leading deploy/).
-      - name: Sync compose + nginx to droplet
+      # Ship the compose file to the droplet (strip the leading deploy/). TLS + routing
+      # is handled by the shared Traefik edge, so no per-app nginx is synced anymore.
+      # The droplet's /opt/aes/.env (hostnames + secrets) is managed out-of-band.
+      - name: Sync compose to droplet
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USER }}
           key: ${{ secrets.DO_SSH_KEY }}
-          source: "deploy/compose.prod.yml,deploy/nginx"
+          source: "deploy/compose.prod.yml"
           target: /opt/aes
           strip_components: 1
           overwrite: true
