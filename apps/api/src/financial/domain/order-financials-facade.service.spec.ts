@@ -7,22 +7,31 @@ import { OrderHealthService, OrderHealthState } from './order-health.service';
 const dec = (n: number) => new Prisma.Decimal(n);
 
 /** Build an order row (with relations) for the facade. */
-function order(overrides: Partial<{
-  valueExVat: number;
-  currency: string;
-  serviced: boolean;
-  closingDate: Date | null;
-  receipts: Array<{ amount: number; currency: string }>;
-  expenses: Array<{ amount: number }>;
-  milestones: Array<{ valuePortion: number; percentPortion: number | null; completedAt: Date | null }>;
-}> = {}) {
+function order(
+  overrides: Partial<{
+    valueExVat: number;
+    currency: string;
+    serviced: boolean;
+    closingDate: Date | null;
+    receipts: Array<{ amount: number; currency: string }>;
+    expenses: Array<{ amount: number }>;
+    milestones: Array<{
+      valuePortion: number;
+      percentPortion: number | null;
+      completedAt: Date | null;
+    }>;
+  }> = {},
+) {
   return {
     id: 'o1',
     valueExVat: dec(overrides.valueExVat ?? 10000),
     currency: overrides.currency ?? 'USD',
     serviced: overrides.serviced ?? false,
     closingDate: overrides.closingDate ?? null,
-    receipts: (overrides.receipts ?? []).map((r) => ({ amount: dec(r.amount), currency: r.currency })),
+    receipts: (overrides.receipts ?? []).map((r) => ({
+      amount: dec(r.amount),
+      currency: r.currency,
+    })),
     expenses: (overrides.expenses ?? []).map((e) => ({ amount: dec(e.amount) })),
     milestones: (overrides.milestones ?? []).map((m) => ({
       valuePortion: dec(m.valuePortion),
@@ -55,7 +64,11 @@ describe('OrderFinancialsFacadeService', () => {
   it('computes profit ex VAT, margin, outstanding, spent-to-date and total incl VAT (G16)', async () => {
     const svc = build();
     const snap = await svc.forOrder(
-      order({ valueExVat: 10000, expenses: [{ amount: 4000 }], receipts: [{ amount: 5000, currency: 'USD' }] }),
+      order({
+        valueExVat: 10000,
+        expenses: [{ amount: 4000 }],
+        receipts: [{ amount: 5000, currency: 'USD' }],
+      }),
       new Date('2026-07-24T00:00:00Z'),
     );
     expect(snap.vat).toBe(1500); // 10000 * 15%

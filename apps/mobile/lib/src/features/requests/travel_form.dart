@@ -64,12 +64,15 @@ class _TravelFormState extends State<TravelForm> {
     if (!mounted) return;
     if (result.ok) {
       Navigator.of(context).pop(
-        result.queuedOffline ? 'Saved offline — will sync when connected' : null,
+        result.queuedOffline
+            ? 'Saved offline — will sync when connected'
+            : null,
       );
     } else {
       setState(() => _busy = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.error ?? 'Could not save travel request')),
+        SnackBar(
+            content: Text(result.error ?? 'Could not save travel request')),
       );
     }
   }
@@ -92,7 +95,8 @@ class _TravelFormState extends State<TravelForm> {
                   controller: _destination,
                   enabled: !_busy,
                   decoration: const InputDecoration(labelText: 'Destination'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Where to?' : null,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Where to?' : null,
                 ),
                 const SizedBox(height: 16),
                 InkWell(
@@ -102,7 +106,9 @@ class _TravelFormState extends State<TravelForm> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Flexible(child: Text(rangeLabel, overflow: TextOverflow.ellipsis)),
+                        Flexible(
+                            child: Text(rangeLabel,
+                                overflow: TextOverflow.ellipsis)),
                         const Icon(Icons.date_range, size: 18),
                       ],
                     ),
@@ -126,7 +132,8 @@ class _TravelFormState extends State<TravelForm> {
                       child: TextFormField(
                         controller: _grade,
                         enabled: !_busy,
-                        decoration: const InputDecoration(labelText: 'Grade (optional)'),
+                        decoration: const InputDecoration(
+                            labelText: 'Grade (optional)'),
                       ),
                     ),
                   ],
@@ -139,7 +146,9 @@ class _TravelFormState extends State<TravelForm> {
                     DropdownMenuItem(value: 'USD', child: Text('USD')),
                     DropdownMenuItem(value: 'ZWG', child: Text('ZWG')),
                   ],
-                  onChanged: _busy ? null : (v) => setState(() => _currency = v ?? 'USD'),
+                  onChanged: _busy
+                      ? null
+                      : (v) => setState(() => _currency = v ?? 'USD'),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -150,7 +159,10 @@ class _TravelFormState extends State<TravelForm> {
                 FilledButton.icon(
                   onPressed: _busy ? null : () => _save(submit: true),
                   icon: _busy
-                      ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.send),
                   label: const Text('Save & submit'),
                 ),

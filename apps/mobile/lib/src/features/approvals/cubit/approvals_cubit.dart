@@ -85,7 +85,8 @@ class ApprovalsCubit extends Cubit<ApprovalsState> {
         'Confirm approval of ${item.moduleLabel} (${item.currency ?? ''} ${item.amount})',
       );
       if (!confirmed) {
-        return const DecideResult(DecideStatus.cancelled, 'Biometric confirmation cancelled');
+        return const DecideResult(
+            DecideStatus.cancelled, 'Biometric confirmation cancelled');
       }
     }
 
@@ -93,8 +94,10 @@ class ApprovalsCubit extends Cubit<ApprovalsState> {
     try {
       await _repo.decide(item.id, decision, comment: comment);
       // Drop the actioned step from the inbox.
-      emit(ApprovalsState(items: state.items.where((i) => i.id != item.id).toList()));
-      return DecideResult(DecideStatus.success, '${item.moduleLabel} ${decision.label.toLowerCase()}d');
+      emit(ApprovalsState(
+          items: state.items.where((i) => i.id != item.id).toList()));
+      return DecideResult(DecideStatus.success,
+          '${item.moduleLabel} ${decision.label.toLowerCase()}d');
     } on ApiException catch (error) {
       emit(state.copyWith(clearDeciding: true, error: error.message));
       return DecideResult(DecideStatus.failed, error.message);

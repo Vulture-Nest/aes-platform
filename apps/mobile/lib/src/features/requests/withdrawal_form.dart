@@ -37,8 +37,8 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
       if (receipt != null && mounted) setState(() => _receipt = receipt);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Could not capture the receipt')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not capture the receipt')));
       }
     }
   }
@@ -55,13 +55,16 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
     if (!mounted) return;
     if (result.ok) {
       Navigator.of(context).pop(
-        result.queuedOffline ? 'Saved offline — will sync when connected' : null,
+        result.queuedOffline
+            ? 'Saved offline — will sync when connected'
+            : null,
       );
     } else {
       setState(() => _busy = false);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(result.error ?? 'Could not save withdrawal')));
+        ..showSnackBar(SnackBar(
+            content: Text(result.error ?? 'Could not save withdrawal')));
     }
   }
 
@@ -80,7 +83,8 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
                 TextFormField(
                   controller: _amount,
                   enabled: !_busy,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: 'Amount',
                     prefixText: '${widget.float.currency} ',
@@ -98,10 +102,13 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
                   minLines: 1,
                   maxLines: 3,
                   decoration: const InputDecoration(labelText: 'Purpose'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'What is it for?' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'What is it for?'
+                      : null,
                 ),
                 const SizedBox(height: 24),
-                Text('Receipt (optional)', style: Theme.of(context).textTheme.labelLarge),
+                Text('Receipt (optional)',
+                    style: Theme.of(context).textTheme.labelLarge),
                 const SizedBox(height: 8),
                 if (_receipt == null)
                   Row(
@@ -128,12 +135,17 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.memory(_receipt!.bytes, height: 64, width: 64, fit: BoxFit.cover),
+                        child: Image.memory(_receipt!.bytes,
+                            height: 64, width: 64, fit: BoxFit.cover),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(child: Text(_receipt!.filename, overflow: TextOverflow.ellipsis)),
+                      Expanded(
+                          child: Text(_receipt!.filename,
+                              overflow: TextOverflow.ellipsis)),
                       IconButton(
-                        onPressed: _busy ? null : () => setState(() => _receipt = null),
+                        onPressed: _busy
+                            ? null
+                            : () => setState(() => _receipt = null),
                         icon: const Icon(Icons.close),
                       ),
                     ],
@@ -142,7 +154,10 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
                 FilledButton.icon(
                   onPressed: _busy ? null : _save,
                   icon: _busy
-                      ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.check),
                   label: const Text('Submit withdrawal'),
                 ),

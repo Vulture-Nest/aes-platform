@@ -177,7 +177,8 @@ export class HealthVerdictPanelService {
       );
       totalCashReceived += receivedForOrder;
 
-      const valueInclVat = this.toUsd(num(order.valueExVat), order.currency, fxRate) * (1 + VAT_RATE);
+      const valueInclVat =
+        this.toUsd(num(order.valueExVat), order.currency, fxRate) * (1 + VAT_RATE);
       receivables += valueInclVat - receivedForOrder;
     }
 

@@ -61,7 +61,10 @@ export class CreateActingAssignmentDto {
   @IsString()
   currency?: string;
 
-  @ApiPropertyOptional({ example: 15, description: 'Percent of differential (basis=PERCENT), 0..100' })
+  @ApiPropertyOptional({
+    example: 15,
+    description: 'Percent of differential (basis=PERCENT), 0..100',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
@@ -69,7 +72,10 @@ export class CreateActingAssignmentDto {
   @Max(100)
   percent?: number;
 
-  @ApiPropertyOptional({ example: 15, description: 'Minimum qualifying days in the period to earn' })
+  @ApiPropertyOptional({
+    example: 15,
+    description: 'Minimum qualifying days in the period to earn',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -87,7 +93,7 @@ export class ComputeActingForRunDto {
   @IsUUID()
   employeeId!: string;
 
-  @ApiProperty({ example: '2026-06', description: "Run period month YYYY-MM" })
+  @ApiProperty({ example: '2026-06', description: 'Run period month YYYY-MM' })
   @IsString()
   month!: string;
 

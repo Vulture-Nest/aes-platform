@@ -82,20 +82,42 @@ describe('cashflow row parsers', () => {
     const parsed = parseContractRow(
       row({ 1: 'UNK-CT-01', 2: 'Unki Mine', 3: 'Refuge chambers', 4: 480000, 13: 'ACTIVE' }),
     );
-    expect(parsed).toMatchObject({ reference: 'UNK-CT-01', clientName: 'Unki Mine', valueExVat: 480000, status: 'ACTIVE' });
+    expect(parsed).toMatchObject({
+      reference: 'UNK-CT-01',
+      clientName: 'Unki Mine',
+      valueExVat: 480000,
+      status: 'ACTIVE',
+    });
   });
 
   it('maps a Loans row (weekly rate stays a fraction here; service scales to pct)', () => {
     const parsed = parseLoanRow(
-      row({ 1: 'LN-01', 3: 'QuickCash Lender', 4: '2026-05-08T00:00:00.000Z', 5: 5000, 6: 0.05, 10: 2000 }),
+      row({
+        1: 'LN-01',
+        3: 'QuickCash Lender',
+        4: '2026-05-08T00:00:00.000Z',
+        5: 5000,
+        6: 0.05,
+        10: 2000,
+      }),
     );
-    expect(parsed).toMatchObject({ reference: 'LN-01', lender: 'QuickCash Lender', principal: 5000, weeklyRate: 0.05, paidUsd: 2000 });
+    expect(parsed).toMatchObject({
+      reference: 'LN-01',
+      lender: 'QuickCash Lender',
+      principal: 5000,
+      weeklyRate: 0.05,
+      paidUsd: 2000,
+    });
   });
 
   it('splits an OtherTaxDebt row into PAYE and VAT principals', () => {
-    const vatRow = parseTaxDebtRow(row({ 1: 'VAT arrears', 2: '2026-01-25T00:00:00.000Z', 3: 0, 4: 4000, 5: 0.1 }));
+    const vatRow = parseTaxDebtRow(
+      row({ 1: 'VAT arrears', 2: '2026-01-25T00:00:00.000Z', 3: 0, 4: 4000, 5: 0.1 }),
+    );
     expect(vatRow).toMatchObject({ vatPrincipal: 4000, payePrincipal: 0, ratePct: 0.1 });
-    const payeRow = parseTaxDebtRow(row({ 1: 'PAYE arrears', 2: '2025-12-10T00:00:00.000Z', 3: 1500, 4: 0, 5: 0.1 }));
+    const payeRow = parseTaxDebtRow(
+      row({ 1: 'PAYE arrears', 2: '2025-12-10T00:00:00.000Z', 3: 1500, 4: 0, 5: 0.1 }),
+    );
     expect(payeRow).toMatchObject({ payePrincipal: 1500, vatPrincipal: 0 });
   });
 
@@ -103,13 +125,28 @@ describe('cashflow row parsers', () => {
     const parsed = parseOverheadRow(
       row({ 1: '2026-04-30T00:00:00.000Z', 2: 8000, 6: 300, 7: 150, 8: 1000, 9: 200 }),
     );
-    expect(parsed).toMatchObject({ salaries: 8000, software: 300, internet: 150, rentals: 1000, other: 200 });
+    expect(parsed).toMatchObject({
+      salaries: 8000,
+      software: 300,
+      internet: 150,
+      rentals: 1000,
+      other: 200,
+    });
   });
 });
 
 describe('payroll header detection + row parsing', () => {
   // Head Office layout: group labels in row2, field names in row3 (subset of real sheet).
-  const row2 = row({ 16: 'Basic', 17: 'Basic', 22: 'Gross', 25: 'Allowable Deductions', 26: 'Allowable Deductions', 37: 'PAYE USD', 38: 'PAYE USD', 48: 'Net Salary' });
+  const row2 = row({
+    16: 'Basic',
+    17: 'Basic',
+    22: 'Gross',
+    25: 'Allowable Deductions',
+    26: 'Allowable Deductions',
+    37: 'PAYE USD',
+    38: 'PAYE USD',
+    48: 'Net Salary',
+  });
   const row3 = row({
     1: 'Works #',
     8: 'Station',
@@ -149,8 +186,19 @@ describe('payroll header detection + row parsing', () => {
     });
     const parsed = parsePayrollRow(dataRow, cols);
     expect(parsed).not.toBeNull();
-    expect(parsed?.employee).toMatchObject({ worksNo: 'AES-E007', firstName: 'Talent', lastName: 'Hungwe', nationalId: '04-885408T08' });
-    expect(parsed?.line).toMatchObject({ basicUsd: 400, nssaEe: 9, paye: 30.25, aidsLevy: 0.9075, netUsd: 147.34 });
+    expect(parsed?.employee).toMatchObject({
+      worksNo: 'AES-E007',
+      firstName: 'Talent',
+      lastName: 'Hungwe',
+      nationalId: '04-885408T08',
+    });
+    expect(parsed?.line).toMatchObject({
+      basicUsd: 400,
+      nssaEe: 9,
+      paye: 30.25,
+      aidsLevy: 0.9075,
+      netUsd: 147.34,
+    });
     // Missing column (nyaradzo) defaults to 0.
     expect(parsed?.line.nyaradzo).toBe(0);
   });
@@ -178,7 +226,10 @@ describe('parseSettingsSheet (G23)', () => {
       row({ 1: 'Official Exchange Rate (ZiG per USD)', 2: 26.5 }),
       row({ 1: 'Street / Parallel Rate (ZiG per USD)', 2: 33 }),
       row({ 1: 'ZIMRA Overdue-Tax Interest (per annum)', 2: 0.1 }),
-      row({ 1: 'Report / Valuation Date', 2: { formula: 'TODAY()', result: '2026-07-24T00:00:00.000Z' } }),
+      row({
+        1: 'Report / Valuation Date',
+        2: { formula: 'TODAY()', result: '2026-07-24T00:00:00.000Z' },
+      }),
     ];
     const parsed = parseSettingsSheet(rows);
     expect(parsed.vatRateFraction).toBe(0.155);

@@ -82,7 +82,9 @@ export class WhtController {
 
   @Get('credits')
   @Roles('FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'SYS_ADMIN', 'AUDITOR')
-  @ApiOperation({ summary: 'WHT-suffered credit summary (total + pending-certificate) by currency' })
+  @ApiOperation({
+    summary: 'WHT-suffered credit summary (total + pending-certificate) by currency',
+  })
   credits(@Query() query: WhtCreditsQueryDto) {
     return this.wht.credits(query);
   }

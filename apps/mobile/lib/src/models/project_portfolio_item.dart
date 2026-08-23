@@ -22,7 +22,8 @@ class ProjectPortfolioItem extends Equatable {
   final ProjectHealth health;
   final String? siteId;
 
-  static double _num(Object? v) => v == null ? 0 : double.tryParse(v.toString()) ?? 0;
+  static double _num(Object? v) =>
+      v == null ? 0 : double.tryParse(v.toString()) ?? 0;
 
   factory ProjectPortfolioItem.fromJson(Map<String, dynamic> json) {
     return ProjectPortfolioItem(

@@ -91,9 +91,11 @@ function makeService() {
   const ledger = {
     post: jest.fn().mockResolvedValue([]),
     postJournal: jest.fn().mockResolvedValue({ txnId: 'txn1', rows: [] }),
-    ensureSystemAccount: jest.fn().mockImplementation((_type: string, currency: string) =>
-      Promise.resolve({ id: `payable-${currency.toLowerCase()}` }),
-    ),
+    ensureSystemAccount: jest
+      .fn()
+      .mockImplementation((_type: string, currency: string) =>
+        Promise.resolve({ id: `payable-${currency.toLowerCase()}` }),
+      ),
     cashPosition: jest.fn().mockResolvedValue({
       accounts: [
         { accountId: 'acc-usd', currency: 'USD', balance: 100000 },

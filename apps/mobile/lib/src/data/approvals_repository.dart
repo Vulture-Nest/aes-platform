@@ -22,7 +22,8 @@ class ApprovalsRepository {
     }
   }
 
-  Future<void> decide(String approvalId, ApprovalDecision decision, {String? comment}) async {
+  Future<void> decide(String approvalId, ApprovalDecision decision,
+      {String? comment}) async {
     try {
       await _dio.post<Map<String, dynamic>>(
         '/v1/approvals/$approvalId/decide',

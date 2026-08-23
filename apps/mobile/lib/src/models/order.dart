@@ -30,15 +30,19 @@ class Order extends Equatable {
   /// Present only on the detail response (summed from receipts).
   final double? receivedTotal;
 
-  static double _num(Object? v) => v == null ? 0 : double.tryParse(v.toString()) ?? 0;
-  static DateTime? _date(Object? v) => v == null ? null : DateTime.tryParse(v.toString());
+  static double _num(Object? v) =>
+      v == null ? 0 : double.tryParse(v.toString()) ?? 0;
+  static DateTime? _date(Object? v) =>
+      v == null ? null : DateTime.tryParse(v.toString());
 
   bool get isPastClosing =>
       closingDate != null && DateTime.now().isAfter(closingDate!);
 
   /// Simplified health for the board: paid > serviced > overdue-service > open.
   OrderStatus get status {
-    if (receivedTotal != null && receivedTotal! >= valueExVat && valueExVat > 0) {
+    if (receivedTotal != null &&
+        receivedTotal! >= valueExVat &&
+        valueExVat > 0) {
       return OrderStatus.paid;
     }
     if (serviced) return OrderStatus.serviced;
@@ -58,12 +62,14 @@ class Order extends Equatable {
       closingDate: _date(json['closingDate']),
       servicedAt: _date(json['servicedAt']),
       assignedUserId: json['assignedUserId'] as String?,
-      receivedTotal: receipts?.fold<double>(0, (s, r) => s + _num((r as Map)['amount'])),
+      receivedTotal:
+          receipts?.fold<double>(0, (s, r) => s + _num((r as Map)['amount'])),
     );
   }
 
   @override
-  List<Object?> get props => [id, reference, valueExVat, serviced, closingDate, receivedTotal];
+  List<Object?> get props =>
+      [id, reference, valueExVat, serviced, closingDate, receivedTotal];
 }
 
 enum OrderStatus {

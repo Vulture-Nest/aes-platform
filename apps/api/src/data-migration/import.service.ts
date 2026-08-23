@@ -56,8 +56,18 @@ interface PayrollFile {
 }
 
 const PAYROLL_FILES: PayrollFile[] = [
-  { file: 'Head_Office_Payroll_March_2025.xlsx', sheet: 'Pay Sheet', station: 'Head Office', month: '2025-03' },
-  { file: 'Mimosa_Payroll_March_2025.xlsx', sheet: 'Paysheet', station: 'Mimosa', month: '2025-03' },
+  {
+    file: 'Head_Office_Payroll_March_2025.xlsx',
+    sheet: 'Pay Sheet',
+    station: 'Head Office',
+    month: '2025-03',
+  },
+  {
+    file: 'Mimosa_Payroll_March_2025.xlsx',
+    sheet: 'Paysheet',
+    station: 'Mimosa',
+    month: '2025-03',
+  },
   { file: 'Unki_Payroll_June_2023.xlsx', sheet: 'Paysheet', station: 'Unki', month: '2023-06' },
 ];
 
@@ -210,7 +220,8 @@ export class ImportService {
     // VAT rate: sheet stores a fraction (0.155); statutory config convention is a
     // percentage (15.5), matching the existing vat_pct rows.
     if (parsed.vatRateFraction && parsed.vatRateFraction > 0) {
-      const vatPct = parsed.vatRateFraction < 1 ? parsed.vatRateFraction * 100 : parsed.vatRateFraction;
+      const vatPct =
+        parsed.vatRateFraction < 1 ? parsed.vatRateFraction * 100 : parsed.vatRateFraction;
       await this.upsertStatutoryRate(tx, 'vat_pct', vatPct, USD, effective, actorId, counts);
     }
 
@@ -221,7 +232,15 @@ export class ImportService {
         parsed.zimraInterestFraction < 1
           ? parsed.zimraInterestFraction * 100
           : parsed.zimraInterestFraction;
-      await this.upsertStatutoryRate(tx, 'zimra_interest_pct', zimraPct, null, effective, actorId, counts);
+      await this.upsertStatutoryRate(
+        tx,
+        'zimra_interest_pct',
+        zimraPct,
+        null,
+        effective,
+        actorId,
+        counts,
+      );
     }
 
     // USD/ZWG exchange rate: official + parallel legs on a single effective row.
@@ -333,7 +352,11 @@ export class ImportService {
 
     // Input VAT is expressed as already-computed amounts (not taxable base + rate),
     // so pass a single claimable line at 100% for each recoverable bucket.
-    const asClaimableAmount = (amount: number) => ({ taxableAmount: amount, vatRatePct: 100, claimable: true });
+    const asClaimableAmount = (amount: number) => ({
+      taxableAmount: amount,
+      vatRatePct: 100,
+      claimable: true,
+    });
     const asOutputAmount = (amount: number) => ({ taxableAmount: amount, vatRatePct: 100 });
 
     const vat = this.taxConsolidation.consolidateVat({
@@ -378,7 +401,10 @@ export class ImportService {
       where: { taxType, periodMonth, entityId: DEFAULT_ENTITY_ID },
     });
     if (existing) {
-      await tx.taxLedger.update({ where: { id: existing.id }, data: { ...data, updatedBy: actorId } });
+      await tx.taxLedger.update({
+        where: { id: existing.id },
+        data: { ...data, updatedBy: actorId },
+      });
       this.bump(counts, 'tax_ledger', false);
     } else {
       await tx.taxLedger.create({ data: { ...data, createdBy: actorId, updatedBy: actorId } });
@@ -413,7 +439,12 @@ export class ImportService {
         this.bump(counts, 'clients', false);
       } else {
         const created = await tx.client.create({
-          data: { name: parsed.name, contactEmail: parsed.contactEmail, createdBy: actorId, updatedBy: actorId },
+          data: {
+            name: parsed.name,
+            contactEmail: parsed.contactEmail,
+            createdBy: actorId,
+            updatedBy: actorId,
+          },
         });
         ids.set(parsed.name, created.id);
         this.bump(counts, 'clients', true);
@@ -472,7 +503,10 @@ export class ImportService {
       };
       const existing = await tx.contract.findFirst({ where: { reference: parsed.reference } });
       if (existing) {
-        await tx.contract.update({ where: { id: existing.id }, data: { ...data, updatedBy: actorId } });
+        await tx.contract.update({
+          where: { id: existing.id },
+          data: { ...data, updatedBy: actorId },
+        });
         ids.set(parsed.reference, existing.id);
         this.bump(counts, 'contracts', false);
       } else {
@@ -512,7 +546,10 @@ export class ImportService {
       let orderId: string;
       const existing = await tx.order.findFirst({ where: { reference: parsed.reference } });
       if (existing) {
-        await tx.order.update({ where: { id: existing.id }, data: { ...data, updatedBy: actorId } });
+        await tx.order.update({
+          where: { id: existing.id },
+          data: { ...data, updatedBy: actorId },
+        });
         orderId = existing.id;
         this.bump(counts, 'orders', false);
       } else {
@@ -546,7 +583,10 @@ export class ImportService {
       legs.push({ ref: `IMP:${parsed.reference}:USD`, amount: parsed.receivedUsd });
     }
     if (parsed.receivedZig > 0 && parsed.officialRate > 0) {
-      legs.push({ ref: `IMP:${parsed.reference}:ZIG`, amount: parsed.receivedZig / parsed.officialRate });
+      legs.push({
+        ref: `IMP:${parsed.reference}:ZIG`,
+        amount: parsed.receivedZig / parsed.officialRate,
+      });
     }
     for (const leg of legs) {
       const existing = await tx.orderReceipt.findFirst({ where: { orderId, reference: leg.ref } });
@@ -559,11 +599,16 @@ export class ImportService {
       };
       let receiptId: string;
       if (existing) {
-        await tx.orderReceipt.update({ where: { id: existing.id }, data: { ...data, updatedBy: actorId } });
+        await tx.orderReceipt.update({
+          where: { id: existing.id },
+          data: { ...data, updatedBy: actorId },
+        });
         receiptId = existing.id;
         this.bump(counts, 'order_receipts', false);
       } else {
-        const created = await tx.orderReceipt.create({ data: { ...data, createdBy: actorId, updatedBy: actorId } });
+        const created = await tx.orderReceipt.create({
+          data: { ...data, createdBy: actorId, updatedBy: actorId },
+        });
         receiptId = created.id;
         this.bump(counts, 'order_receipts', true);
       }
@@ -593,7 +638,11 @@ export class ImportService {
       }
       // Natural key: order + description + amount. Idempotent replace on re-import.
       const existing = await tx.orderExpense.findFirst({
-        where: { orderId, description: parsed.description ?? null, amount: new Prisma.Decimal(parsed.amountExVat) },
+        where: {
+          orderId,
+          description: parsed.description ?? null,
+          amount: new Prisma.Decimal(parsed.amountExVat),
+        },
       });
       const data = {
         orderId,
@@ -603,7 +652,10 @@ export class ImportService {
         description: parsed.description ?? null,
       };
       if (existing) {
-        await tx.orderExpense.update({ where: { id: existing.id }, data: { ...data, updatedBy: actorId } });
+        await tx.orderExpense.update({
+          where: { id: existing.id },
+          data: { ...data, updatedBy: actorId },
+        });
         this.bump(counts, 'order_expenses', false);
       } else {
         await tx.orderExpense.create({ data: { ...data, createdBy: actorId, updatedBy: actorId } });
@@ -641,10 +693,15 @@ export class ImportService {
         expenseDate,
       };
       if (existing) {
-        await tx.generalExpense.update({ where: { id: existing.id }, data: { ...data, updatedBy: actorId } });
+        await tx.generalExpense.update({
+          where: { id: existing.id },
+          data: { ...data, updatedBy: actorId },
+        });
         this.bump(counts, 'general_expenses', false);
       } else {
-        await tx.generalExpense.create({ data: { ...data, createdBy: actorId, updatedBy: actorId } });
+        await tx.generalExpense.create({
+          data: { ...data, createdBy: actorId, updatedBy: actorId },
+        });
         this.bump(counts, 'general_expenses', true);
       }
     }
@@ -687,7 +744,10 @@ export class ImportService {
         const existing = await tx.overhead.findFirst({ where: { periodMonth, category } });
         const data = { amount: new Prisma.Decimal(amount), currency: USD, category, periodMonth };
         if (existing) {
-          await tx.overhead.update({ where: { id: existing.id }, data: { ...data, updatedBy: actorId } });
+          await tx.overhead.update({
+            where: { id: existing.id },
+            data: { ...data, updatedBy: actorId },
+          });
           this.bump(counts, 'overheads', false);
         } else {
           await tx.overhead.create({ data: { ...data, createdBy: actorId, updatedBy: actorId } });
@@ -725,7 +785,9 @@ export class ImportService {
         loanId = existing.id;
         this.bump(counts, 'loans', false);
       } else {
-        const created = await tx.loan.create({ data: { ...data, createdBy: actorId, updatedBy: actorId } });
+        const created = await tx.loan.create({
+          data: { ...data, createdBy: actorId, updatedBy: actorId },
+        });
         loanId = created.id;
         this.bump(counts, 'loans', true);
       }
@@ -734,12 +796,22 @@ export class ImportService {
         const existingRep = await tx.loanRepayment.findFirst({
           where: { loanId, amount: new Prisma.Decimal(parsed.paidUsd) },
         });
-        const repData = { loanId, amount: new Prisma.Decimal(parsed.paidUsd), currency: USD, repaidDate };
+        const repData = {
+          loanId,
+          amount: new Prisma.Decimal(parsed.paidUsd),
+          currency: USD,
+          repaidDate,
+        };
         if (existingRep) {
-          await tx.loanRepayment.update({ where: { id: existingRep.id }, data: { ...repData, updatedBy: actorId } });
+          await tx.loanRepayment.update({
+            where: { id: existingRep.id },
+            data: { ...repData, updatedBy: actorId },
+          });
           this.bump(counts, 'loan_repayments', false);
         } else {
-          await tx.loanRepayment.create({ data: { ...repData, createdBy: actorId, updatedBy: actorId } });
+          await tx.loanRepayment.create({
+            data: { ...repData, createdBy: actorId, updatedBy: actorId },
+          });
           this.bump(counts, 'loan_repayments', true);
         }
       }
@@ -774,17 +846,28 @@ export class ImportService {
       };
       let claimId: string;
       if (existing) {
-        await tx.contractClaim.update({ where: { id: existing.id }, data: { ...data, updatedBy: actorId } });
+        await tx.contractClaim.update({
+          where: { id: existing.id },
+          data: { ...data, updatedBy: actorId },
+        });
         claimId = existing.id;
         this.bump(counts, 'contract_claims', false);
       } else {
-        const created = await tx.contractClaim.create({ data: { ...data, createdBy: actorId, updatedBy: actorId } });
+        const created = await tx.contractClaim.create({
+          data: { ...data, createdBy: actorId, updatedBy: actorId },
+        });
         claimId = created.id;
         this.bump(counts, 'contract_claims', true);
       }
       // G14: recognise revenue for this claim (DEBIT receivable + CREDIT revenue; idempotent).
       await this.ledger.postContractClaim(
-        { id: claimId, amountExVat: parsed.amountExVat, currency: USD, createdBy: actorId, claimDate },
+        {
+          id: claimId,
+          amountExVat: parsed.amountExVat,
+          currency: USD,
+          createdBy: actorId,
+          claimDate,
+        },
         tx,
       );
     }
@@ -826,10 +909,15 @@ export class ImportService {
           entityId: DEFAULT_ENTITY_ID,
         };
         if (existing) {
-          await tx.otherTaxDebt.update({ where: { id: existing.id }, data: { ...data, updatedBy: actorId } });
+          await tx.otherTaxDebt.update({
+            where: { id: existing.id },
+            data: { ...data, updatedBy: actorId },
+          });
           this.bump(counts, 'other_tax_debt', false);
         } else {
-          await tx.otherTaxDebt.create({ data: { ...data, createdBy: actorId, updatedBy: actorId } });
+          await tx.otherTaxDebt.create({
+            data: { ...data, createdBy: actorId, updatedBy: actorId },
+          });
           this.bump(counts, 'other_tax_debt', true);
         }
       }
@@ -843,12 +931,18 @@ export class ImportService {
       try {
         await this.importOnePayroll(pf, actorId, counts);
       } catch (err) {
-        this.logger.error(`Payroll import failed for ${pf.file}: ${err instanceof Error ? err.message : String(err)}`);
+        this.logger.error(
+          `Payroll import failed for ${pf.file}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     }
   }
 
-  private async importOnePayroll(pf: PayrollFile, actorId: string | null, counts: Counts): Promise<void> {
+  private async importOnePayroll(
+    pf: PayrollFile,
+    actorId: string | null,
+    counts: Counts,
+  ): Promise<void> {
     const rows = await this.readSheet(pf.file, pf.sheet);
     const row2 = rows.find((r) => r[0] === 2) ?? [];
     const row3 = rows.find((r) => r[0] === 3) ?? [];
@@ -864,14 +958,28 @@ export class ImportService {
     await this.prisma.$transaction(
       async (tx) => {
         const run = await this.upsertPayrollRun(tx, site.id, pf.month, actorId, counts);
-        const totals: PayrollTotals = { paye: 0, aidsLevy: 0, nssaEe: 0, mipf: 0, nec: 0, nyaradzo: 0 };
+        const totals: PayrollTotals = {
+          paye: 0,
+          aidsLevy: 0,
+          nssaEe: 0,
+          mipf: 0,
+          nec: 0,
+          nyaradzo: 0,
+        };
 
         for (const row of dataRows) {
           const parsed = parsePayrollRow(row, cols);
           if (!parsed) {
             continue;
           }
-          const employeeId = await this.upsertEmployee(tx, parsed.employee, site.id, pf.month, actorId, counts);
+          const employeeId = await this.upsertEmployee(
+            tx,
+            parsed.employee,
+            site.id,
+            pf.month,
+            actorId,
+            counts,
+          );
           await this.upsertPayrollLine(tx, run.id, employeeId, parsed.line, actorId, counts);
           totals.paye += parsed.line.paye;
           totals.aidsLevy += parsed.line.aidsLevy;
@@ -900,7 +1008,14 @@ export class ImportService {
       return existing;
     }
     const created = await tx.payrollRun.create({
-      data: { siteId, month, status: 'APPROVED', entityId: DEFAULT_ENTITY_ID, createdBy: actorId, updatedBy: actorId },
+      data: {
+        siteId,
+        month,
+        status: 'APPROVED',
+        entityId: DEFAULT_ENTITY_ID,
+        createdBy: actorId,
+        updatedBy: actorId,
+      },
     });
     this.bump(counts, 'payroll_runs', true);
     return created;
@@ -926,7 +1041,10 @@ export class ImportService {
       entityId: DEFAULT_ENTITY_ID,
     };
     if (existing) {
-      await tx.employee.update({ where: { id: existing.id }, data: { ...base, updatedBy: actorId } });
+      await tx.employee.update({
+        where: { id: existing.id },
+        data: { ...base, updatedBy: actorId },
+      });
       this.bump(counts, 'employees', false);
       return existing.id;
     }
@@ -968,12 +1086,19 @@ export class ImportService {
       netUsd: new Prisma.Decimal(line.netUsd),
       netZwg: new Prisma.Decimal(line.netZwg),
     };
-    const existing = await tx.payrollLine.findUnique({ where: { runId_employeeId: { runId, employeeId } } });
+    const existing = await tx.payrollLine.findUnique({
+      where: { runId_employeeId: { runId, employeeId } },
+    });
     if (existing) {
-      await tx.payrollLine.update({ where: { id: existing.id }, data: { ...data, updatedBy: actorId } });
+      await tx.payrollLine.update({
+        where: { id: existing.id },
+        data: { ...data, updatedBy: actorId },
+      });
       this.bump(counts, 'payroll_lines', false);
     } else {
-      await tx.payrollLine.create({ data: { runId, employeeId, ...data, createdBy: actorId, updatedBy: actorId } });
+      await tx.payrollLine.create({
+        data: { runId, employeeId, ...data, createdBy: actorId, updatedBy: actorId },
+      });
       this.bump(counts, 'payroll_lines', true);
     }
   }
@@ -1005,10 +1130,15 @@ export class ImportService {
         sourceRef,
       };
       if (existing) {
-        await tx.statutoryReturn.update({ where: { id: existing.id }, data: { ...data, updatedBy: actorId } });
+        await tx.statutoryReturn.update({
+          where: { id: existing.id },
+          data: { ...data, updatedBy: actorId },
+        });
         this.bump(counts, 'statutory_returns', false);
       } else {
-        await tx.statutoryReturn.create({ data: { ...data, createdBy: actorId, updatedBy: actorId } });
+        await tx.statutoryReturn.create({
+          data: { ...data, createdBy: actorId, updatedBy: actorId },
+        });
         this.bump(counts, 'statutory_returns', true);
       }
     }
@@ -1023,7 +1153,9 @@ export class ImportService {
       wb = new ExcelJS.Workbook();
       await wb.xlsx.readFile(path.join(DOCS_DIR, file));
     } catch (err) {
-      this.logger.error(`Manhours workbook unreadable: ${err instanceof Error ? err.message : String(err)}`);
+      this.logger.error(
+        `Manhours workbook unreadable: ${err instanceof Error ? err.message : String(err)}`,
+      );
       return;
     }
 
@@ -1031,7 +1163,9 @@ export class ImportService {
       try {
         await this.importOneManhoursSheet(ws, actorId, counts);
       } catch (err) {
-        this.logger.error(`Manhours sheet "${ws.name}" failed: ${err instanceof Error ? err.message : String(err)}`);
+        this.logger.error(
+          `Manhours sheet "${ws.name}" failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     }
   }
@@ -1084,7 +1218,9 @@ export class ImportService {
         }
         const date = new Date(Date.UTC(year, monthNum - 1, day));
         const existing = await this.prisma.timesheetEntry.findUnique({
-          where: { periodId_employeeId_date: { periodId: period.id, employeeId: employee.id, date } },
+          where: {
+            periodId_employeeId_date: { periodId: period.id, employeeId: employee.id, date },
+          },
         });
         if (existing) {
           await this.prisma.timesheetEntry.update({
@@ -1115,7 +1251,9 @@ export class ImportService {
     actorId: string | null,
     counts: Counts,
   ) {
-    const existing = await this.prisma.timesheetPeriod.findUnique({ where: { siteId_month: { siteId, month } } });
+    const existing = await this.prisma.timesheetPeriod.findUnique({
+      where: { siteId_month: { siteId, month } },
+    });
     if (existing) {
       return existing;
     }
@@ -1129,10 +1267,23 @@ export class ImportService {
   /** "OCT 22" → "2022-10"; returns undefined for non-month sheet names. */
   private monthFromSheetName(name: string): string | undefined {
     const months: Record<string, string> = {
-      jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
-      jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+      jan: '01',
+      feb: '02',
+      mar: '03',
+      apr: '04',
+      may: '05',
+      jun: '06',
+      jul: '07',
+      aug: '08',
+      sep: '09',
+      oct: '10',
+      nov: '11',
+      dec: '12',
     };
-    const m = name.trim().toLowerCase().match(/^([a-z]{3})[a-z]*\s*'?(\d{2,4})$/);
+    const m = name
+      .trim()
+      .toLowerCase()
+      .match(/^([a-z]{3})[a-z]*\s*'?(\d{2,4})$/);
     if (!m || !months[m[1]]) {
       return undefined;
     }

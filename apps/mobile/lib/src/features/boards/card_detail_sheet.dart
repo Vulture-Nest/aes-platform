@@ -53,8 +53,9 @@ class _CardBodyState extends State<_CardBody> {
   }
 
   Future<void> _toggle(ChecklistItem item) async {
-    final error =
-        await context.read<BoardDetailCubit>().toggleChecklistItem(item.id, !item.done);
+    final error = await context
+        .read<BoardDetailCubit>()
+        .toggleChecklistItem(item.id, !item.done);
     if (error != null && mounted) _snack(error);
   }
 
@@ -62,8 +63,9 @@ class _CardBodyState extends State<_CardBody> {
     final text = _checklistController.text.trim();
     if (text.isEmpty) return;
     setState(() => _addingChecklist = true);
-    final error =
-        await context.read<BoardDetailCubit>().addChecklistItem(widget.card.id, text);
+    final error = await context
+        .read<BoardDetailCubit>()
+        .addChecklistItem(widget.card.id, text);
     if (!mounted) return;
     setState(() => _addingChecklist = false);
     if (error == null) {
@@ -126,7 +128,8 @@ class _CardBodyState extends State<_CardBody> {
                   _meta(Icons.person_outline, 'Assigned'),
               ],
             ),
-            if (card.description != null && card.description!.trim().isNotEmpty) ...[
+            if (card.description != null &&
+                card.description!.trim().isNotEmpty) ...[
               const SizedBox(height: 16),
               Text('Description', style: text.titleSmall),
               const SizedBox(height: 4),
@@ -164,7 +167,10 @@ class _CardBodyState extends State<_CardBody> {
                   style: item.done
                       ? text.bodyMedium?.copyWith(
                           decoration: TextDecoration.lineThrough,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.5),
                         )
                       : text.bodyMedium,
                 ),
@@ -200,7 +206,10 @@ class _CardBodyState extends State<_CardBody> {
                           Text(comment.body, style: text.bodyMedium),
                           if (comment.createdAt != null)
                             Text(
-                              comment.createdAt!.toIso8601String().substring(0, 16).replaceFirst('T', ' '),
+                              comment.createdAt!
+                                  .toIso8601String()
+                                  .substring(0, 16)
+                                  .replaceFirst('T', ' '),
                               style: text.bodySmall?.copyWith(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -268,7 +277,8 @@ class _AddRow extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: hint,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),
               onSubmitted: (_) => busy ? null : onSubmit(),
             ),

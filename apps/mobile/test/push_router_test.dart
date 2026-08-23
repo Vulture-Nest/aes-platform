@@ -5,18 +5,23 @@ void main() {
   const router = PushRouter();
 
   test('routes an alert push to the command centre', () {
-    final route = router.routeFor(const PushMessage(subjectTable: 'alerts', subjectId: 'a1'));
+    final route = router
+        .routeFor(const PushMessage(subjectTable: 'alerts', subjectId: 'a1'));
     expect(route, '/command-centre');
   });
 
   test('routes an approval push to the approvals inbox', () {
-    expect(router.routeFor(const PushMessage(subjectTable: 'approvals')), '/approvals');
+    expect(router.routeFor(const PushMessage(subjectTable: 'approvals')),
+        '/approvals');
   });
 
   test('routes a requisition/travel/petty-cash push to requests', () {
-    expect(router.routeFor(const PushMessage(subjectTable: 'requisitions')), '/requests');
-    expect(router.routeFor(const PushMessage(subjectTable: 'travel_requests')), '/requests');
-    expect(router.routeFor(const PushMessage(subjectTable: 'petty_cash_txns')), '/requests');
+    expect(router.routeFor(const PushMessage(subjectTable: 'requisitions')),
+        '/requests');
+    expect(router.routeFor(const PushMessage(subjectTable: 'travel_requests')),
+        '/requests');
+    expect(router.routeFor(const PushMessage(subjectTable: 'petty_cash_txns')),
+        '/requests');
   });
 
   test('returns null for an unknown subject', () {

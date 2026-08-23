@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
@@ -276,12 +267,10 @@ export class BoardsController {
   @Get(':id/container')
   @Roles('SYS_ADMIN')
   @ApiOperation({
-    summary: 'Admin: get board container metadata only (no content; confidential access is audited)',
+    summary:
+      'Admin: get board container metadata only (no content; confidential access is audited)',
   })
-  adminContainer(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
+  adminContainer(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.boards.adminGetBoardContainer(id, user);
   }
 

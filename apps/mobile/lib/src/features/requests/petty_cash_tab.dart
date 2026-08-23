@@ -15,7 +15,9 @@ class PettyCashTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<PettyCashCubit, PettyCashState>(
       buildWhen: (a, b) =>
-          a.floats != b.floats || a.floatsLoading != b.floatsLoading || a.error != b.error,
+          a.floats != b.floats ||
+          a.floatsLoading != b.floatsLoading ||
+          a.error != b.error,
       builder: (context, state) {
         if (state.floatsLoading && state.floats.isEmpty) {
           return const Center(child: CircularProgressIndicator());
@@ -26,15 +28,22 @@ class PettyCashTab extends StatelessWidget {
               ? ListView(
                   children: [
                     const SizedBox(height: 120),
-                    Icon(state.error != null ? Icons.cloud_off : Icons.savings_outlined, size: 48),
+                    Icon(
+                        state.error != null
+                            ? Icons.cloud_off
+                            : Icons.savings_outlined,
+                        size: 48),
                     const SizedBox(height: 12),
-                    Center(child: Text(state.error ?? 'No petty-cash floats for your site')),
+                    Center(
+                        child: Text(state.error ??
+                            'No petty-cash floats for your site')),
                   ],
                 )
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: state.floats.length,
-                  itemBuilder: (context, i) => _FloatCard(float: state.floats[i]),
+                  itemBuilder: (context, i) =>
+                      _FloatCard(float: state.floats[i]),
                 ),
         );
       },

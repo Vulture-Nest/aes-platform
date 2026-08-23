@@ -99,7 +99,8 @@ class SqfliteTimesheetDraftStore implements TimesheetDraftStore {
   @override
   Future<void> put(TimesheetDraft draft) async {
     final db = await _db;
-    await db.insert(_table, _toRow(draft), conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(_table, _toRow(draft),
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   @override

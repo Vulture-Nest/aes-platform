@@ -31,7 +31,9 @@ export class ComplianceController {
 
   @Post('from-run/:runId')
   @Roles('FINANCE_OFFICER', 'FINANCE_DIRECTOR', 'SYS_ADMIN')
-  @ApiOperation({ summary: 'Generate compliance obligations from a payroll run’s statutory returns' })
+  @ApiOperation({
+    summary: 'Generate compliance obligations from a payroll run’s statutory returns',
+  })
   generate(@Param('runId', ParseUUIDPipe) runId: string, @CurrentUser('id') actorId: string) {
     return this.compliance.generateFromPayrollRun(runId, actorId);
   }

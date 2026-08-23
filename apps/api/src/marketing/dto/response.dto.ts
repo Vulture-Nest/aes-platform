@@ -37,7 +37,10 @@ export class CreateResponseDto {
   @IsString()
   contactPhone?: string;
 
-  @ApiPropertyOptional({ example: '2026-07-15T09:30:00Z', description: 'Defaults to now if omitted' })
+  @ApiPropertyOptional({
+    example: '2026-07-15T09:30:00Z',
+    description: 'Defaults to now if omitted',
+  })
   @IsOptional()
   @Type(() => Date)
   @IsDate()
@@ -73,7 +76,10 @@ export class UpdateResponseStatusDto {
 }
 
 export class ConvertResponseDto {
-  @ApiProperty({ example: 'Mimosa water-treatment plant upgrade', description: 'Title for the created CRM opportunity' })
+  @ApiProperty({
+    example: 'Mimosa water-treatment plant upgrade',
+    description: 'Title for the created CRM opportunity',
+  })
   @IsString()
   @MinLength(2)
   title!: string;

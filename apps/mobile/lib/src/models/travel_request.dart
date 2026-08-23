@@ -29,8 +29,10 @@ class TravelRequest extends Equatable {
   final double? shortfall;
   final DateTime? createdAt;
 
-  static double _num(Object? v) => v == null ? 0 : double.tryParse(v.toString()) ?? 0;
-  static DateTime? _date(Object? v) => v == null ? null : DateTime.tryParse(v.toString());
+  static double _num(Object? v) =>
+      v == null ? 0 : double.tryParse(v.toString()) ?? 0;
+  static DateTime? _date(Object? v) =>
+      v == null ? null : DateTime.tryParse(v.toString());
 
   factory TravelRequest.fromJson(Map<String, dynamic> json) => TravelRequest(
         id: json['id'] as String,

@@ -55,7 +55,13 @@ describe('HealthVerdictPanelService.compute', () => {
       { amountDue: dec(1200), amountPaid: dec(200), currency: 'USD' },
     ]);
     prisma.otherTaxDebt.findMany.mockResolvedValue([
-      { principal: dec(500), paidToDate: dec(0), ratePct: dec(0), dueDate: new Date('2027-01-01'), currency: 'USD' },
+      {
+        principal: dec(500),
+        paidToDate: dec(0),
+        ratePct: dec(0),
+        dueDate: new Date('2027-01-01'),
+        currency: 'USD',
+      },
     ]);
     prisma.zimraAssessment.findMany.mockResolvedValue([
       { assessedAmount: dec(300), currency: 'USD' },

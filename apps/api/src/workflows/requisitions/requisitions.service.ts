@@ -306,7 +306,10 @@ export class RequisitionsService implements OnModuleInit {
 
     // Post the cash outflow as a balanced double-entry journal: money paid out of the source
     // (cash) account is a DEBIT; the contra PAYABLE account is CREDITed for the same amount.
-    const payable = await this.ledger.ensureSystemAccount('PAYABLE', requisition.currency as string);
+    const payable = await this.ledger.ensureSystemAccount(
+      'PAYABLE',
+      requisition.currency as string,
+    );
     await this.ledger.postJournal(
       [
         {

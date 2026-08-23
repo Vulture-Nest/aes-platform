@@ -17,7 +17,9 @@ export class AttachmentsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Upload a base64 attachment (receipt/document); returns its storage key' })
+  @ApiOperation({
+    summary: 'Upload a base64 attachment (receipt/document); returns its storage key',
+  })
   upload(@Body() dto: UploadAttachmentDto, @CurrentUser('id') actorId: string) {
     return this.attachments.upload(dto, actorId);
   }

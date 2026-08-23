@@ -69,7 +69,9 @@ class _RequisitionFormState extends State<RequisitionForm> {
     if (!mounted) return;
     if (result.ok) {
       Navigator.of(context).pop(
-        result.queuedOffline ? 'Saved offline — will sync when connected' : null,
+        result.queuedOffline
+            ? 'Saved offline — will sync when connected'
+            : null,
       );
     } else {
       setState(() => _busy = false);
@@ -98,7 +100,9 @@ class _RequisitionFormState extends State<RequisitionForm> {
                   decoration: const InputDecoration(labelText: 'Purpose'),
                   minLines: 1,
                   maxLines: 3,
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Describe what this is for' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Describe what this is for'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -107,7 +111,8 @@ class _RequisitionFormState extends State<RequisitionForm> {
                       child: TextFormField(
                         controller: _amount,
                         enabled: !_busy,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                         decoration: const InputDecoration(labelText: 'Amount'),
                         validator: (v) {
                           final n = double.tryParse(v ?? '');
@@ -121,12 +126,15 @@ class _RequisitionFormState extends State<RequisitionForm> {
                       width: 110,
                       child: DropdownButtonFormField<String>(
                         initialValue: _currency,
-                        decoration: const InputDecoration(labelText: 'Currency'),
+                        decoration:
+                            const InputDecoration(labelText: 'Currency'),
                         items: const [
                           DropdownMenuItem(value: 'USD', child: Text('USD')),
                           DropdownMenuItem(value: 'ZWG', child: Text('ZWG')),
                         ],
-                        onChanged: _busy ? null : (v) => setState(() => _currency = v ?? 'USD'),
+                        onChanged: _busy
+                            ? null
+                            : (v) => setState(() => _currency = v ?? 'USD'),
                       ),
                     ),
                   ],
@@ -138,7 +146,10 @@ class _RequisitionFormState extends State<RequisitionForm> {
                     decoration: const InputDecoration(labelText: 'Required by'),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [Text(dateLabel), const Icon(Icons.calendar_today, size: 18)],
+                      children: [
+                        Text(dateLabel),
+                        const Icon(Icons.calendar_today, size: 18)
+                      ],
                     ),
                   ),
                 ),
@@ -154,7 +165,10 @@ class _RequisitionFormState extends State<RequisitionForm> {
                 FilledButton.icon(
                   onPressed: _busy ? null : () => _save(submit: true),
                   icon: _busy
-                      ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.send),
                   label: const Text('Save & submit'),
                 ),
@@ -193,7 +207,8 @@ class _ReceiptField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Receipt (optional)', style: Theme.of(context).textTheme.labelLarge),
+        Text('Receipt (optional)',
+            style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: 8),
         if (receipt == null)
           Row(
@@ -220,10 +235,13 @@ class _ReceiptField extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.memory(receipt!.bytes, height: 64, width: 64, fit: BoxFit.cover),
+                child: Image.memory(receipt!.bytes,
+                    height: 64, width: 64, fit: BoxFit.cover),
               ),
               const SizedBox(width: 12),
-              Expanded(child: Text(receipt!.filename, overflow: TextOverflow.ellipsis)),
+              Expanded(
+                  child:
+                      Text(receipt!.filename, overflow: TextOverflow.ellipsis)),
               IconButton(
                 onPressed: busy ? null : onRemove,
                 icon: const Icon(Icons.close),

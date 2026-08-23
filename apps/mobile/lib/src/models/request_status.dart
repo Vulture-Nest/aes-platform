@@ -5,7 +5,13 @@ class RequestLifecycle {
   RequestLifecycle._();
 
   /// Ordered happy-path stages shown in the timeline.
-  static const stages = ['Draft', 'Submitted', 'Approved', 'Disbursed', 'Closed'];
+  static const stages = [
+    'Draft',
+    'Submitted',
+    'Approved',
+    'Disbursed',
+    'Closed'
+  ];
 
   /// Index into [stages] for a raw API status (approved variants collapse to
   /// "Approved"; retired collapses to "Closed"). Rejected/returned map to the
@@ -34,11 +40,13 @@ class RequestLifecycle {
 
   static bool isRejected(String status) => status == 'REJECTED';
   static bool isReturned(String status) => status == 'RETURNED';
-  static bool isTerminalBad(String status) => isRejected(status) || isReturned(status);
+  static bool isTerminalBad(String status) =>
+      isRejected(status) || isReturned(status);
 
   static bool isDraft(String status) => status == 'DRAFT';
 
-  static bool isPendingFunds(String status) => status == 'APPROVED_PENDING_FUNDS';
+  static bool isPendingFunds(String status) =>
+      status == 'APPROVED_PENDING_FUNDS';
 
   /// Human label for a raw status, e.g. `APPROVED_PENDING_FUNDS` -> `Approved · pending funds`.
   static String label(String status) {
@@ -50,7 +58,8 @@ class RequestLifecycle {
       default:
         return status
             .split('_')
-            .map((w) => w.isEmpty ? w : '${w[0]}${w.substring(1).toLowerCase()}')
+            .map(
+                (w) => w.isEmpty ? w : '${w[0]}${w.substring(1).toLowerCase()}')
             .join(' ');
     }
   }

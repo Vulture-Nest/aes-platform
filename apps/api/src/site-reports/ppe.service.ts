@@ -108,7 +108,10 @@ export class PpeService {
     // Derive replacement-due from the matching requirement's lifespan when not supplied.
     if (!replacementDue) {
       const req = await this.prisma.ppeRequirement.findFirst({
-        where: { itemType: dto.itemType, OR: [{ employeeId: dto.employeeId }, { employeeId: null }] },
+        where: {
+          itemType: dto.itemType,
+          OR: [{ employeeId: dto.employeeId }, { employeeId: null }],
+        },
       });
       if (req?.lifespanMonths) replacementDue = addMonths(issueDate, req.lifespanMonths);
     }
@@ -218,7 +221,11 @@ export class PpeService {
         compliantCount += Math.min(inDate.length, req.quantity);
         for (const i of matching) {
           if (i.replacementDue != null && i.replacementDue >= now && i.replacementDue <= horizon) {
-            expiring.push({ employeeId: i.employeeId, itemType: i.itemType, replacementDue: i.replacementDue });
+            expiring.push({
+              employeeId: i.employeeId,
+              itemType: i.itemType,
+              replacementDue: i.replacementDue,
+            });
           }
         }
       }

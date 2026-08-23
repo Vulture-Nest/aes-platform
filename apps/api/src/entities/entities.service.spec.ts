@@ -7,7 +7,12 @@ describe('EntitiesService', () => {
     site: { findUnique: jest.fn(), count: jest.fn() },
     employee: { count: jest.fn() },
     order: { count: jest.fn() },
-    publicHoliday: { findMany: jest.fn(), findFirst: jest.fn(), create: jest.fn(), delete: jest.fn() },
+    publicHoliday: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+    },
   };
   const audit = { record: jest.fn() };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

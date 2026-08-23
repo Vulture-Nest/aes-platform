@@ -642,15 +642,15 @@ describe('canDecideStep', () => {
   });
 
   it('allows a caller holding the step role for the matching site', () => {
-    expect(
-      canDecideStep(step, { roles: [{ siteId: 's1', role: 'FINANCE_OFFICER' }] }, 's1'),
-    ).toBe(true);
+    expect(canDecideStep(step, { roles: [{ siteId: 's1', role: 'FINANCE_OFFICER' }] }, 's1')).toBe(
+      true,
+    );
   });
 
   it('rejects a caller whose site-scoped role is for a different site', () => {
-    expect(
-      canDecideStep(step, { roles: [{ siteId: 's2', role: 'FINANCE_OFFICER' }] }, 's1'),
-    ).toBe(false);
+    expect(canDecideStep(step, { roles: [{ siteId: 's2', role: 'FINANCE_OFFICER' }] }, 's1')).toBe(
+      false,
+    );
   });
 
   it('rejects a caller with the wrong role', () => {

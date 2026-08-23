@@ -160,7 +160,8 @@ GoRouter buildRouter(AuthCubit authCubit) {
         path: '/director',
         name: 'director',
         builder: (context, __) => BlocProvider(
-          create: (context) => DirectorCubit(context.read<DirectorRepository>()),
+          create: (context) =>
+              DirectorCubit(context.read<DirectorRepository>()),
           child: const DirectorScreen(),
         ),
       ),
@@ -168,7 +169,8 @@ GoRouter buildRouter(AuthCubit authCubit) {
         path: '/projects',
         name: 'projects',
         builder: (context, __) => BlocProvider(
-          create: (context) => PortfolioCubit(context.read<ProjectsRepository>())..load(),
+          create: (context) =>
+              PortfolioCubit(context.read<ProjectsRepository>())..load(),
           child: const ProjectsScreen(),
         ),
       ),
@@ -176,14 +178,16 @@ GoRouter buildRouter(AuthCubit authCubit) {
         path: '/boards',
         name: 'boards',
         builder: (context, __) => BlocProvider(
-          create: (context) => BoardsListCubit(context.read<BoardsRepository>()),
+          create: (context) =>
+              BoardsListCubit(context.read<BoardsRepository>()),
           child: const BoardsScreen(),
         ),
       ),
       GoRoute(
         path: '/timesheets',
         name: 'timesheets',
-        builder: (context, __) => buildTimesheetsRoute(context.read<TimesheetsRepository>()),
+        builder: (context, __) =>
+            buildTimesheetsRoute(context.read<TimesheetsRepository>()),
       ),
       GoRoute(
         path: '/profile',

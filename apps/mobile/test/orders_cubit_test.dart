@@ -12,7 +12,8 @@ void main() {
     expect(cubit.state.clientNames['c1'], 'Mimosa Mine');
   });
 
-  test('board sorts attention-first (overdue before open before serviced)', () async {
+  test('board sorts attention-first (overdue before open before serviced)',
+      () async {
     final overdue = Order(
       id: 'a',
       reference: 'A',
@@ -24,7 +25,11 @@ void main() {
     );
     final cubit = OrdersCubit(
       FakeOrdersRepository(
-        items: [openOrder(id: 'serv', serviced: true), openOrder(id: 'open'), overdue],
+        items: [
+          openOrder(id: 'serv', serviced: true),
+          openOrder(id: 'open'),
+          overdue
+        ],
       ),
     );
     await cubit.load();

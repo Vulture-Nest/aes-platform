@@ -13,4 +13,3 @@ linter:
     prefer_const_constructors: true
     prefer_final_locals: true
     avoid_print: true
-    require_trailing_commas: true

@@ -48,8 +48,10 @@ class ProjectNode extends Equatable {
 
   bool get isComplete => percentComplete >= 100;
 
-  static double _num(Object? v) => v == null ? 0 : double.tryParse(v.toString()) ?? 0;
-  static DateTime? _date(Object? v) => v == null ? null : DateTime.tryParse(v.toString());
+  static double _num(Object? v) =>
+      v == null ? 0 : double.tryParse(v.toString()) ?? 0;
+  static DateTime? _date(Object? v) =>
+      v == null ? null : DateTime.tryParse(v.toString());
 
   factory ProjectNode.fromJson(Map<String, dynamic> json) {
     return ProjectNode(
@@ -67,5 +69,6 @@ class ProjectNode extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, parentId, type, title, percentComplete, position];
+  List<Object?> get props =>
+      [id, parentId, type, title, percentComplete, position];
 }

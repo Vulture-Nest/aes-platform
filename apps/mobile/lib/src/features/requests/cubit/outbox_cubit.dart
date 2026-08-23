@@ -10,8 +10,8 @@ class OutboxState extends Equatable {
   final int pending;
   final bool syncing;
 
-  OutboxState copyWith({int? pending, bool? syncing}) =>
-      OutboxState(pending: pending ?? this.pending, syncing: syncing ?? this.syncing);
+  OutboxState copyWith({int? pending, bool? syncing}) => OutboxState(
+      pending: pending ?? this.pending, syncing: syncing ?? this.syncing);
 
   @override
   List<Object?> get props => [pending, syncing];

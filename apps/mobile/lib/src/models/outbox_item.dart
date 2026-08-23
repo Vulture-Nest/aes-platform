@@ -11,8 +11,8 @@ enum OutboxKind {
   const OutboxKind(this.wire);
   final String wire;
 
-  static OutboxKind fromWire(String w) =>
-      OutboxKind.values.firstWhere((k) => k.wire == w, orElse: () => OutboxKind.requisition);
+  static OutboxKind fromWire(String w) => OutboxKind.values
+      .firstWhere((k) => k.wire == w, orElse: () => OutboxKind.requisition);
 
   String get label => switch (this) {
         OutboxKind.requisition => 'Requisition',

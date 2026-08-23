@@ -38,7 +38,8 @@ class AuthRepository {
   /// Revoke the refresh token server-side (best-effort; ignores failures).
   Future<void> logout(String refreshToken) async {
     try {
-      await _dio.post<void>('/v1/auth/logout', data: {'refreshToken': refreshToken});
+      await _dio
+          .post<void>('/v1/auth/logout', data: {'refreshToken': refreshToken});
     } on DioException {
       // Local sign-out proceeds regardless of the server response.
     }

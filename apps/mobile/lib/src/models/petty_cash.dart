@@ -17,7 +17,8 @@ class PettyCashFloat extends Equatable {
   final bool locked;
   final String? siteId;
 
-  static double _num(Object? v) => v == null ? 0 : double.tryParse(v.toString()) ?? 0;
+  static double _num(Object? v) =>
+      v == null ? 0 : double.tryParse(v.toString()) ?? 0;
 
   factory PettyCashFloat.fromJson(Map<String, dynamic> json) => PettyCashFloat(
         id: json['id'] as String,
@@ -53,7 +54,8 @@ class PettyCashTxn extends Equatable {
   final String? receiptKey;
   final DateTime? createdAt;
 
-  static double _num(Object? v) => v == null ? 0 : double.tryParse(v.toString()) ?? 0;
+  static double _num(Object? v) =>
+      v == null ? 0 : double.tryParse(v.toString()) ?? 0;
 
   String get typeLabel => type
       .split('_')
@@ -68,7 +70,9 @@ class PettyCashTxn extends Equatable {
         status: json['status'] as String? ?? 'DRAFT',
         purpose: json['purpose'] as String?,
         receiptKey: json['receiptKey'] as String?,
-        createdAt: json['createdAt'] == null ? null : DateTime.tryParse(json['createdAt'].toString()),
+        createdAt: json['createdAt'] == null
+            ? null
+            : DateTime.tryParse(json['createdAt'].toString()),
       );
 
   @override

@@ -93,8 +93,7 @@ export class AnalyticsService {
       const valueWon = opportunities
         .filter((o) => o.campaignId === campaign.id && o.stage === OpportunityStage.WON)
         .reduce((sum, o) => sum + this.num(o.estimatedValue), 0);
-      const costPerLead =
-        totalResponses > 0 ? this.round(totalChannelCost / totalResponses) : null;
+      const costPerLead = totalResponses > 0 ? this.round(totalChannelCost / totalResponses) : null;
       return {
         campaignId: campaign.id,
         name: campaign.name,

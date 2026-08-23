@@ -1,17 +1,9 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { BoardVisibility, Prisma } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthenticatedUser } from '../auth/types/authenticated-user';
-import {
-  canSeeConfidential,
-  isDirector,
-  isSysAdmin,
-} from './confidentiality';
+import { canSeeConfidential, isDirector, isSysAdmin } from './confidentiality';
 import {
   AddBoardMemberDto,
   AddChecklistItemDto,
@@ -168,10 +160,7 @@ export class BoardsService {
 
   async createBoard(dto: CreateBoardDto, user: AuthenticatedUser) {
     // Only directors may create a DIRECTOR_CONFIDENTIAL board.
-    if (
-      dto.visibility === BoardVisibility.DIRECTOR_CONFIDENTIAL &&
-      !isDirector(rolesOf(user))
-    ) {
+    if (dto.visibility === BoardVisibility.DIRECTOR_CONFIDENTIAL && !isDirector(rolesOf(user))) {
       throw new ForbiddenException('Only directors may create confidential boards');
     }
     const board = await this.prisma.board.create({
@@ -425,11 +414,7 @@ export class BoardsService {
   // Checklist items
   // =========================================================================
 
-  async addChecklistItem(
-    cardId: string,
-    dto: AddChecklistItemDto,
-    user: AuthenticatedUser,
-  ) {
+  async addChecklistItem(cardId: string, dto: AddChecklistItemDto, user: AuthenticatedUser) {
     await this.requireVisibleCard(cardId, user);
     const position =
       dto.position ??
@@ -441,11 +426,7 @@ export class BoardsService {
     });
   }
 
-  async toggleChecklistItem(
-    itemId: string,
-    dto: ToggleChecklistItemDto,
-    user: AuthenticatedUser,
-  ) {
+  async toggleChecklistItem(itemId: string, dto: ToggleChecklistItemDto, user: AuthenticatedUser) {
     const item = await this.prisma.cardChecklistItem.findUnique({
       where: { id: itemId },
     });
@@ -543,10 +524,7 @@ export class BoardsService {
     if (!board) {
       throw new NotFoundException('Board not found');
     }
-    if (
-      board.visibility === BoardVisibility.DIRECTOR_CONFIDENTIAL &&
-      !isDirector(roles)
-    ) {
+    if (board.visibility === BoardVisibility.DIRECTOR_CONFIDENTIAL && !isDirector(roles)) {
       await this.audit.record({
         actorUserId: user.id,
         action: 'STATUS_CHANGE',

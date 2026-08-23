@@ -13,7 +13,8 @@ import 'support/fakes.dart';
 
 void main() {
   group('LoginScreen', () {
-    testWidgets('renders the form and validates the email field', (tester) async {
+    testWidgets('renders the form and validates the email field',
+        (tester) async {
       final cubit = AuthCubit(
         authRepository: FakeAuthRepository(),
         tokenStore: InMemoryTokenStore(),
@@ -38,7 +39,8 @@ void main() {
 
     testWidgets('a valid submission calls login', (tester) async {
       final repo = FakeAuthRepository();
-      final cubit = AuthCubit(authRepository: repo, tokenStore: InMemoryTokenStore());
+      final cubit =
+          AuthCubit(authRepository: repo, tokenStore: InMemoryTokenStore());
       addTearDown(cubit.close);
 
       await tester.pumpWidget(
@@ -77,10 +79,12 @@ void main() {
       );
     }
 
-    testWidgets('shows role-appropriate tiles and the danger banner', (tester) async {
+    testWidgets('shows role-appropriate tiles and the danger banner',
+        (tester) async {
       final store = InMemoryTokenStore();
       await store.write(const TokenPair(accessToken: 'at', refreshToken: 'rt'));
-      final auth = AuthCubit(authRepository: FakeAuthRepository(), tokenStore: store);
+      final auth =
+          AuthCubit(authRepository: FakeAuthRepository(), tokenStore: store);
       await auth.bootstrap(); // -> Authenticated(financeDirector)
       addTearDown(auth.close);
 
@@ -114,8 +118,10 @@ void main() {
       await pumpHome(tester, auth: auth, dashboard: dashboard);
       await tester.pump();
 
-      expect(find.text('Requests'), findsOneWidget); // clerks can raise requests
-      expect(find.text('Command Centre'), findsNothing); // but not the command centre
+      expect(
+          find.text('Requests'), findsOneWidget); // clerks can raise requests
+      expect(find.text('Command Centre'),
+          findsNothing); // but not the command centre
     });
   });
 }

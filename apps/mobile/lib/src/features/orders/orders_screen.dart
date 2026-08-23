@@ -43,7 +43,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
           }
           if (state.orders.isEmpty) {
             return EmptyState(
-              icon: state.error != null ? Icons.cloud_off : Icons.local_shipping_outlined,
+              icon: state.error != null
+                  ? Icons.cloud_off
+                  : Icons.local_shipping_outlined,
               message: state.error ?? 'No orders yet',
               isError: state.error != null,
             );
@@ -55,12 +57,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
               children: [
                 _Summary(orders: state.orders),
-                const SectionLabel('Orders', padding: EdgeInsets.fromLTRB(8, 16, 8, 8)),
+                const SectionLabel('Orders',
+                    padding: EdgeInsets.fromLTRB(8, 16, 8, 8)),
                 for (final o in orders)
                   _OrderCard(
                     order: o,
                     client: state.clientNames[o.clientId],
-                    onTap: () => _openDetail(context, o, state.clientNames[o.clientId]),
+                    onTap: () =>
+                        _openDetail(context, o, state.clientNames[o.clientId]),
                   ),
               ],
             ),
@@ -70,7 +74,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
-  Future<void> _openDetail(BuildContext context, Order order, String? client) async {
+  Future<void> _openDetail(
+      BuildContext context, Order order, String? client) async {
     final cubit = context.read<OrdersCubit>();
     final messenger = ScaffoldMessenger.of(context);
     final serviced = await showModalBottomSheet<bool>(
@@ -97,8 +102,10 @@ class _Summary extends StatelessWidget {
   Widget build(BuildContext context) {
     final overdue = orders.where((o) => o.status == OrderStatus.overdue).length;
     final open = orders.where((o) => o.status == OrderStatus.open).length;
-    final serviced =
-        orders.where((o) => o.status == OrderStatus.serviced || o.status == OrderStatus.paid).length;
+    final serviced = orders
+        .where((o) =>
+            o.status == OrderStatus.serviced || o.status == OrderStatus.paid)
+        .length;
     return Row(
       children: [
         _stat('Overdue', overdue, AppTheme.danger),
@@ -114,7 +121,11 @@ class _Summary extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 14),
             child: Column(
               children: [
-                Text('$count', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: color)),
+                Text('$count',
+                    style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: color)),
                 const SizedBox(height: 2),
                 Text(label, style: const TextStyle(fontSize: 12)),
               ],
@@ -125,7 +136,8 @@ class _Summary extends StatelessWidget {
 }
 
 class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order, required this.client, required this.onTap});
+  const _OrderCard(
+      {required this.order, required this.client, required this.onTap});
   final Order order;
   final String? client;
   final VoidCallback onTap;
@@ -140,7 +152,8 @@ class _OrderCard extends StatelessWidget {
         contentPadding: const EdgeInsets.only(left: 0, right: 12),
         title: Padding(
           padding: const EdgeInsets.only(left: 12),
-          child: Text(order.reference, style: const TextStyle(fontWeight: FontWeight.w700)),
+          child: Text(order.reference,
+              style: const TextStyle(fontWeight: FontWeight.w700)),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(left: 12, top: 4),
@@ -148,7 +161,8 @@ class _OrderCard extends StatelessWidget {
             children: [
               if (client != null && client!.isNotEmpty)
                 Flexible(child: Text(client!, overflow: TextOverflow.ellipsis)),
-              if (client != null && client!.isNotEmpty) const SizedBox(width: 8),
+              if (client != null && client!.isNotEmpty)
+                const SizedBox(width: 8),
               StatusPill(label: order.status.label, color: color),
             ],
           ),
@@ -176,7 +190,8 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
 
   Future<void> _markServiced() async {
     setState(() => _busy = true);
-    final error = await context.read<OrdersCubit>().markServiced(widget.order.id);
+    final error =
+        await context.read<OrdersCubit>().markServiced(widget.order.id);
     if (!mounted) return;
     if (error == null) {
       Navigator.of(context).pop(true);
@@ -206,7 +221,8 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
           Row(
             children: [
               Expanded(
-                child: Text(o.reference, style: Theme.of(context).textTheme.titleLarge),
+                child: Text(o.reference,
+                    style: Theme.of(context).textTheme.titleLarge),
               ),
               StatusPill(label: o.status.label, color: color),
             ],
@@ -216,18 +232,24 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
             Text(widget.client!, style: Theme.of(context).textTheme.bodyMedium),
           ],
           const SizedBox(height: 16),
-          _row('Value (ex VAT)', Money.format(o.valueExVat, currency: o.currency)),
+          _row('Value (ex VAT)',
+              Money.format(o.valueExVat, currency: o.currency)),
           if (o.receivedTotal != null)
-            _row('Received', Money.format(o.receivedTotal, currency: o.currency)),
+            _row('Received',
+                Money.format(o.receivedTotal, currency: o.currency)),
           _row('Serviced', o.serviced ? 'Yes' : 'No'),
           if (o.closingDate != null)
-            _row('Closing date', o.closingDate!.toIso8601String().substring(0, 10)),
+            _row('Closing date',
+                o.closingDate!.toIso8601String().substring(0, 10)),
           if (!o.serviced) ...[
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: _busy ? null : _markServiced,
               icon: _busy
-                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.check_circle_outline),
               label: const Text('Mark serviced'),
             ),

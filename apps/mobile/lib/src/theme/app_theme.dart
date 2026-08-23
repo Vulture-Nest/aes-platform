@@ -50,8 +50,10 @@ class AppTheme {
     );
     final scaffoldBg = dark ? _darkScaffold : scaffold;
     final cardColor = dark ? _darkSurface : Colors.white;
-    final border = (dark ? Colors.white : charcoal).withValues(alpha: dark ? 0.10 : 0.06);
-    final inputBorder = (dark ? Colors.white : charcoal).withValues(alpha: dark ? 0.20 : 0.15);
+    final border =
+        (dark ? Colors.white : charcoal).withValues(alpha: dark ? 0.10 : 0.06);
+    final inputBorder =
+        (dark ? Colors.white : charcoal).withValues(alpha: dark ? 0.20 : 0.15);
 
     return ThemeData(
       colorScheme: scheme,
@@ -103,7 +105,8 @@ class AppTheme {
           foregroundColor: dark ? charcoal : Colors.white,
           minimumSize: const Size.fromHeight(52),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -111,7 +114,8 @@ class AppTheme {
           minimumSize: const Size.fromHeight(48),
           foregroundColor: scheme.onSurface,
           side: BorderSide(color: inputBorder),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
@@ -120,7 +124,8 @@ class AppTheme {
         contentTextStyle: const TextStyle(color: Colors.white),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
-      dividerTheme: DividerThemeData(color: scheme.onSurface.withValues(alpha: 0.08), space: 24),
+      dividerTheme: DividerThemeData(
+          color: scheme.onSurface.withValues(alpha: 0.08), space: 24),
     );
   }
 }

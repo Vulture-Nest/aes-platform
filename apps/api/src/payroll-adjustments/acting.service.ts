@@ -64,7 +64,13 @@ export class ActingService {
   computeProration(
     assignment: Pick<
       ActingAssignment,
-      'employeeId' | 'basis' | 'fixedAmount' | 'percent' | 'minQualifyingDays' | 'dateFrom' | 'dateTo'
+      | 'employeeId'
+      | 'basis'
+      | 'fixedAmount'
+      | 'percent'
+      | 'minQualifyingDays'
+      | 'dateFrom'
+      | 'dateTo'
     >,
     month: string,
     inputs: { ownBasic?: number; actingGradeBasic?: number } = {},
@@ -273,8 +279,11 @@ export class ActingService {
     }
 
     let ownBasic = dto.ownBasic;
-    let actingGradeBasic = dto.actingGradeBasic;
-    if (assignment.basis === ActingBasis.PERCENT && (ownBasic == null || actingGradeBasic == null)) {
+    const actingGradeBasic = dto.actingGradeBasic;
+    if (
+      assignment.basis === ActingBasis.PERCENT &&
+      (ownBasic == null || actingGradeBasic == null)
+    ) {
       // Fall back to the employee record's hourly rate annualised where a basic is absent.
       const employee = await this.prisma.employee.findUnique({ where: { id: dto.employeeId } });
       const hourly = this.num(employee?.hourlyRate ?? null);

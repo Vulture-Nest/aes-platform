@@ -64,7 +64,8 @@ export function canDecideStep(
   delegatedRoles: { siteId: string | null; role: string }[] = [],
 ): boolean {
   const matches = (r: { siteId: string | null; role: string }): boolean =>
-    r.role === step.approverRole && (r.siteId === null || chainSiteId === null || r.siteId === chainSiteId);
+    r.role === step.approverRole &&
+    (r.siteId === null || chainSiteId === null || r.siteId === chainSiteId);
   return caller.roles.some(matches) || delegatedRoles.some(matches);
 }
 

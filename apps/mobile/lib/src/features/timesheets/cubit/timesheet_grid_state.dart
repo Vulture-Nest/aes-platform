@@ -52,6 +52,14 @@ class TimesheetGridState extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [loading, saving, submitting, syncing, grid, pendingDrafts, offline, error];
+  List<Object?> get props => [
+        loading,
+        saving,
+        submitting,
+        syncing,
+        grid,
+        pendingDrafts,
+        offline,
+        error
+      ];
 }

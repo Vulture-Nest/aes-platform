@@ -30,12 +30,14 @@ class TimesheetEntry extends Equatable {
   final bool anomalyFlag;
 
   /// Sum of all categories for the day — the compact number shown in a grid cell.
-  double get total => hoursNormal + hoursOt15 + hoursOt20 + ugShift + nightHours;
+  double get total =>
+      hoursNormal + hoursOt15 + hoursOt20 + ugShift + nightHours;
 
   /// True when nothing has been captured for the day (empty cell).
   bool get isEmpty => total == 0 && (remarks == null || remarks!.isEmpty);
 
-  static double _num(Object? v) => v == null ? 0 : double.tryParse(v.toString()) ?? 0;
+  static double _num(Object? v) =>
+      v == null ? 0 : double.tryParse(v.toString()) ?? 0;
 
   TimesheetEntry copyWith({
     double? hoursNormal,
@@ -85,11 +87,20 @@ class TimesheetEntry extends Equatable {
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   /// A stable key for one employee-day cell (used to key drafts + the grid map).
-  static String cellKey(String employeeId, DateTime date) => '$employeeId@${_dateOnly(date)}';
+  static String cellKey(String employeeId, DateTime date) =>
+      '$employeeId@${_dateOnly(date)}';
 
   String get key => cellKey(employeeId, date);
 
   @override
-  List<Object?> get props =>
-      [employeeId, date, hoursNormal, hoursOt15, hoursOt20, ugShift, nightHours, remarks];
+  List<Object?> get props => [
+        employeeId,
+        date,
+        hoursNormal,
+        hoursOt15,
+        hoursOt20,
+        ugShift,
+        nightHours,
+        remarks
+      ];
 }

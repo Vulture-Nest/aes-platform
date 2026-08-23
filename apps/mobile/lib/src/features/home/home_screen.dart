@@ -12,7 +12,8 @@ import 'widgets/danger_banner.dart';
 /// A role-gated dashboard destination. [route] navigates when set; otherwise the
 /// tile shows a "coming soon" hint until its screen ships.
 class _Tile {
-  const _Tile(this.label, this.icon, this.roles, {this.route, this.accent = AppTheme.greenDark, this.subtitle});
+  const _Tile(this.label, this.icon, this.roles,
+      {this.route, this.accent = AppTheme.greenDark, this.subtitle});
   final String label;
   final IconData icon;
   final Set<String> roles;
@@ -49,7 +50,12 @@ const _tiles = <_Tile>[
   _Tile(
     'Orders',
     Icons.local_shipping_outlined,
-    {Roles.financeOfficer, Roles.financeDirector, Roles.sysAdmin, Roles.auditor},
+    {
+      Roles.financeOfficer,
+      Roles.financeDirector,
+      Roles.sysAdmin,
+      Roles.auditor
+    },
     route: '/orders',
     accent: Color(0xFF7B5CD6),
     subtitle: 'Order health board',
@@ -129,7 +135,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            _Header(user: user, onSignOut: () => context.read<AuthCubit>().logout()),
+            _Header(
+                user: user,
+                onSignOut: () => context.read<AuthCubit>().logout()),
             BlocBuilder<DashboardCubit, DashboardState>(
               builder: (context, state) => state.dangerAlerts.isEmpty
                   ? const SizedBox.shrink()
@@ -148,7 +156,10 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: EdgeInsets.fromLTRB(20, 24, 20, 8),
               child: Text(
                 'Quick actions',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.4),
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4),
               ),
             ),
             Padding(
@@ -203,7 +214,10 @@ class _Header extends StatelessWidget {
     final topPad = MediaQuery.of(context).padding.top;
     final role = user == null || user!.roles.isEmpty
         ? ''
-        : user!.roles.first.role.split('_').map((w) => '${w[0]}${w.substring(1).toLowerCase()}').join(' ');
+        : user!.roles.first.role
+            .split('_')
+            .map((w) => '${w[0]}${w.substring(1).toLowerCase()}')
+            .join(' ');
     return Container(
       padding: EdgeInsets.fromLTRB(20, topPad + 16, 12, 22),
       decoration: const BoxDecoration(
@@ -219,7 +233,8 @@ class _Header extends StatelessWidget {
               const Spacer(),
               IconButton(
                 tooltip: 'Profile',
-                icon: const Icon(Icons.account_circle_outlined, color: Colors.white),
+                icon: const Icon(Icons.account_circle_outlined,
+                    color: Colors.white),
                 onPressed: () => context.push('/profile'),
               ),
               IconButton(
@@ -237,7 +252,8 @@ class _Header extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             user?.email ?? '',
-            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
+            style: const TextStyle(
+                color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
           ),
           if (role.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -249,7 +265,10 @@ class _Header extends StatelessWidget {
               ),
               child: Text(
                 role,
-                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -297,7 +316,10 @@ class _DashboardCard extends StatelessWidget {
                     width: 46,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [accent, Color.lerp(accent, Colors.black, 0.18)!],
+                        colors: [
+                          accent,
+                          Color.lerp(accent, Colors.black, 0.18)!
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -328,7 +350,10 @@ class _DashboardCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.55),
                     ),
                   ),
                 ],

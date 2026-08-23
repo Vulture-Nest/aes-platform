@@ -4,7 +4,8 @@ import 'package:image_picker/image_picker.dart';
 
 /// A captured receipt image ready to upload.
 class CapturedReceipt {
-  const CapturedReceipt({required this.bytes, required this.filename, required this.contentType});
+  const CapturedReceipt(
+      {required this.bytes, required this.filename, required this.contentType});
 
   final Uint8List bytes;
   final String filename;
@@ -19,7 +20,8 @@ abstract class ReceiptCapture {
 }
 
 class ImagePickerReceiptCapture implements ReceiptCapture {
-  ImagePickerReceiptCapture([ImagePicker? picker]) : _picker = picker ?? ImagePicker();
+  ImagePickerReceiptCapture([ImagePicker? picker])
+      : _picker = picker ?? ImagePicker();
 
   final ImagePicker _picker;
 

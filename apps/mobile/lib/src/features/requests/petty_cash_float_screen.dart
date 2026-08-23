@@ -83,7 +83,8 @@ class _PettyCashFloatScreenState extends State<PettyCashFloatScreen> {
           const Divider(),
           Expanded(
             child: BlocBuilder<PettyCashCubit, PettyCashState>(
-              buildWhen: (a, b) => a.txns != b.txns || a.txnsLoading != b.txnsLoading,
+              buildWhen: (a, b) =>
+                  a.txns != b.txns || a.txnsLoading != b.txnsLoading,
               builder: (context, state) {
                 if (state.txnsLoading && state.txns.isEmpty) {
                   return const Center(child: CircularProgressIndicator());
@@ -92,7 +93,8 @@ class _PettyCashFloatScreenState extends State<PettyCashFloatScreen> {
                   return const Center(child: Text('No transactions yet'));
                 }
                 return RefreshIndicator(
-                  onRefresh: () => context.read<PettyCashCubit>().loadTxns(f.id),
+                  onRefresh: () =>
+                      context.read<PettyCashCubit>().loadTxns(f.id),
                   child: ListView.builder(
                     itemCount: state.txns.length,
                     itemBuilder: (context, i) => _TxnTile(txn: state.txns[i]),
@@ -120,7 +122,8 @@ class _TxnTile extends StatelessWidget {
         isOut ? Icons.arrow_upward : Icons.arrow_downward,
         color: isOut ? Theme.of(context).colorScheme.error : null,
       ),
-      title: Text(txn.purpose?.isNotEmpty == true ? txn.purpose! : txn.typeLabel),
+      title:
+          Text(txn.purpose?.isNotEmpty == true ? txn.purpose! : txn.typeLabel),
       subtitle: Row(
         children: [
           Text(txn.typeLabel),

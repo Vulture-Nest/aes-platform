@@ -63,7 +63,10 @@ export class ListKpisQueryDto {
 }
 
 export class UpsertTargetDto {
-  @ApiPropertyOptional({ example: '2026-07', description: 'Month this target applies to (stepped targets)' })
+  @ApiPropertyOptional({
+    example: '2026-07',
+    description: 'Month this target applies to (stepped targets)',
+  })
   @IsOptional()
   @Matches(MONTH_REGEX, { message: 'periodMonth must be YYYY-MM' })
   periodMonth?: string;

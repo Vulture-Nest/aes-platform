@@ -134,7 +134,9 @@ export class ComplianceService {
    * most one active alert; remit() resolves it.
    */
   async checkDueAndOverdue(now: Date = new Date()) {
-    const pending = await this.prisma.complianceObligation.findMany({ where: { status: 'PENDING' } });
+    const pending = await this.prisma.complianceObligation.findMany({
+      where: { status: 'PENDING' },
+    });
     const soonThreshold = new Date(now.getTime() + DUE_SOON_DAYS * 86_400_000);
     let overdue = 0;
     let dueSoon = 0;
@@ -149,7 +151,11 @@ export class ComplianceService {
           subjectTable: 'compliance_obligations',
           subjectId: ob.id,
           message: `${ob.label} for ${ob.periodMonth} is OVERDUE (was due ${due}; ${ob.currency} ${ob.amount})`,
-          payload: { head: ob.head, amount: ob.amount.toString(), dueDate: ob.dueDate.toISOString() },
+          payload: {
+            head: ob.head,
+            amount: ob.amount.toString(),
+            dueDate: ob.dueDate.toISOString(),
+          },
         });
       } else if (ob.dueDate <= soonThreshold) {
         dueSoon += 1;
@@ -159,7 +165,11 @@ export class ComplianceService {
           subjectTable: 'compliance_obligations',
           subjectId: ob.id,
           message: `${ob.label} for ${ob.periodMonth} due soon (${due}; ${ob.currency} ${ob.amount})`,
-          payload: { head: ob.head, amount: ob.amount.toString(), dueDate: ob.dueDate.toISOString() },
+          payload: {
+            head: ob.head,
+            amount: ob.amount.toString(),
+            dueDate: ob.dueDate.toISOString(),
+          },
         });
       }
     }

@@ -6,7 +6,8 @@ import 'support/fakes.dart';
 
 void main() {
   test('load populates withdrawals', () async {
-    final cubit = DirectorCubit(FakeDirectorRepository(items: [draftWithdrawal()]));
+    final cubit =
+        DirectorCubit(FakeDirectorRepository(items: [draftWithdrawal()]));
     await cubit.load();
     expect(cubit.state.items, hasLength(1));
   });

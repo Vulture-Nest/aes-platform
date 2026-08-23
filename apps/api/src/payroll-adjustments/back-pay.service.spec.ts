@@ -5,7 +5,12 @@ describe('BackPayService', () => {
   const prisma = {
     employee: { findMany: jest.fn() },
     payrollLine: { findMany: jest.fn() },
-    backPayBatch: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn(), findMany: jest.fn() },
+    backPayBatch: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      findMany: jest.fn(),
+    },
     payrollExtraEarning: { create: jest.fn() },
     $transaction: jest.fn(),
   };
@@ -35,12 +40,16 @@ describe('BackPayService', () => {
     });
 
     it('falls back to NEC class when no grade matches', () => {
-      const match = service.matchRate({ grade: 'Z9', necClass: 'C' }, [{ necClass: 'C', basic: 400 }]);
+      const match = service.matchRate({ grade: 'Z9', necClass: 'C' }, [
+        { necClass: 'C', basic: 400 },
+      ]);
       expect(match?.matchedBy).toBe('necClass');
     });
 
     it('returns null when nothing matches', () => {
-      expect(service.matchRate({ grade: 'Z9', necClass: null }, [{ grade: 'B3', hourly: 3 }])).toBeNull();
+      expect(
+        service.matchRate({ grade: 'Z9', necClass: null }, [{ grade: 'B3', hourly: 3 }]),
+      ).toBeNull();
     });
   });
 
@@ -141,8 +150,22 @@ describe('BackPayService', () => {
         entityId: null,
         currency: 'USD',
         lines: [
-          { employeeId: 'e1', periodMonth: '2024-01', difference: new Prisma.Decimal(100), taxable: true, pensionable: false, nssaAble: false },
-          { employeeId: 'e1', periodMonth: '2024-02', difference: new Prisma.Decimal(100), taxable: true, pensionable: false, nssaAble: false },
+          {
+            employeeId: 'e1',
+            periodMonth: '2024-01',
+            difference: new Prisma.Decimal(100),
+            taxable: true,
+            pensionable: false,
+            nssaAble: false,
+          },
+          {
+            employeeId: 'e1',
+            periodMonth: '2024-02',
+            difference: new Prisma.Decimal(100),
+            taxable: true,
+            pensionable: false,
+            nssaAble: false,
+          },
         ],
       });
       const created: unknown[] = [];

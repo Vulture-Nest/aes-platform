@@ -11,7 +11,8 @@ class CommandCentreRepository {
 
   Future<CommandCentre> dashboard() async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>('/v1/command-centre');
+      final response =
+          await _dio.get<Map<String, dynamic>>('/v1/command-centre');
       return CommandCentre.fromJson(response.data ?? {});
     } on DioException catch (error) {
       throw ApiException.fromDio(error);

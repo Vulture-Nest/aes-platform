@@ -83,10 +83,7 @@ export class EmailTransport implements NotificationTransport {
   }
 
   private renderBody(notification: Notification): string {
-    const lines = [
-      `Template: ${notification.template}`,
-      `Severity: ${notification.severity}`,
-    ];
+    const lines = [`Template: ${notification.template}`, `Severity: ${notification.severity}`];
     if (notification.payload && notification.payload !== null) {
       lines.push('', JSON.stringify(notification.payload, null, 2));
     }
@@ -100,7 +97,9 @@ export class EmailTransport implements NotificationTransport {
     }
     // Indirect specifier so tsc doesn't require nodemailer's types at build time; the
     // package is a runtime dependency resolved on first send.
-    const nodemailer = (await import(/* webpackIgnore: true */ 'nodemailer' as string)) as unknown as NodemailerModule;
+    const nodemailer = (await import(
+      /* webpackIgnore: true */ 'nodemailer' as string
+    )) as unknown as NodemailerModule;
     const options = this.mail.smtpUrl
       ? this.mail.smtpUrl
       : {

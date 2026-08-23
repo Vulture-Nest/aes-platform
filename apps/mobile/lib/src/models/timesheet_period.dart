@@ -26,7 +26,8 @@ class TimesheetPeriod extends Equatable {
   final DateTime? lockedAt;
   final DateTime? createdAt;
 
-  static DateTime? _date(Object? v) => v == null ? null : DateTime.tryParse(v.toString());
+  static DateTime? _date(Object? v) =>
+      v == null ? null : DateTime.tryParse(v.toString());
 
   /// Only OPEN periods accept entry edits (mirrors the API's assertEditable).
   bool get isOpen => status == 'OPEN';
@@ -50,7 +51,8 @@ class TimesheetPeriod extends Equatable {
     return '${names[m]} $year';
   }
 
-  factory TimesheetPeriod.fromJson(Map<String, dynamic> json) => TimesheetPeriod(
+  factory TimesheetPeriod.fromJson(Map<String, dynamic> json) =>
+      TimesheetPeriod(
         id: json['id'] as String,
         siteId: json['siteId'] as String? ?? '',
         month: json['month'] as String? ?? '',

@@ -27,8 +27,10 @@ class ProjectDetail extends Equatable {
   final DateTime? plannedStart;
   final DateTime? plannedFinish;
 
-  static double _num(Object? v) => v == null ? 0 : double.tryParse(v.toString()) ?? 0;
-  static DateTime? _date(Object? v) => v == null ? null : DateTime.tryParse(v.toString());
+  static double _num(Object? v) =>
+      v == null ? 0 : double.tryParse(v.toString()) ?? 0;
+  static DateTime? _date(Object? v) =>
+      v == null ? null : DateTime.tryParse(v.toString());
 
   /// Top-level phases (parentId == null), in stored order.
   List<ProjectNode> get roots {

@@ -82,7 +82,10 @@ export class ListCampaignsQueryDto {
 }
 
 export class CreateChannelDto {
-  @ApiProperty({ example: 'Facebook', description: 'Free string: Facebook/LinkedIn/WhatsApp/X/Instagram/Expo/Flier' })
+  @ApiProperty({
+    example: 'Facebook',
+    description: 'Free string: Facebook/LinkedIn/WhatsApp/X/Instagram/Expo/Flier',
+  })
   @IsString()
   @MinLength(1)
   channelType!: string;
@@ -99,12 +102,16 @@ export class CreateChannelDto {
   @IsString()
   currency?: string;
 
-  @ApiPropertyOptional({ description: 'Tracking link (auto-stubbed for Flier channels if omitted)' })
+  @ApiPropertyOptional({
+    description: 'Tracking link (auto-stubbed for Flier channels if omitted)',
+  })
   @IsOptional()
   @IsString()
   trackingLink?: string;
 
-  @ApiPropertyOptional({ description: 'Flier code (auto-generated AES-FL-<seq> for Flier channels if omitted)' })
+  @ApiPropertyOptional({
+    description: 'Flier code (auto-generated AES-FL-<seq> for Flier channels if omitted)',
+  })
   @IsOptional()
   @IsString()
   flierCode?: string;

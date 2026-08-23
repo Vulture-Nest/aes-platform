@@ -19,10 +19,12 @@ class PlusConnectivityMonitor implements ConnectivityMonitor {
   final Connectivity _connectivity;
 
   @override
-  Future<bool> isOnline() async => _isOnline(await _connectivity.checkConnectivity());
+  Future<bool> isOnline() async =>
+      _isOnline(await _connectivity.checkConnectivity());
 
   @override
-  Stream<bool> get onStatusChange => _connectivity.onConnectivityChanged.map(_isOnline);
+  Stream<bool> get onStatusChange =>
+      _connectivity.onConnectivityChanged.map(_isOnline);
 }
 
 /// Always-online monitor for tests.

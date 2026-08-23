@@ -12,5 +12,13 @@ module.exports = {
   rules: {
     ...require('eslint-plugin-react-hooks').configs.recommended.rules,
     'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        ignoreRestSiblings: true,
+      },
+    ],
   },
 };

@@ -28,7 +28,8 @@ class AuthInterceptor extends Interceptor {
   Future<TokenPair?>? _refreshing;
 
   @override
-  Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  Future<void> onRequest(
+      RequestOptions options, RequestInterceptorHandler handler) async {
     if (!_isAuthPath(options.path)) {
       final tokens = await tokenStore.read();
       if (tokens != null) {
@@ -39,10 +40,13 @@ class AuthInterceptor extends Interceptor {
   }
 
   @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(
+      DioException err, ErrorInterceptorHandler handler) async {
     final request = err.requestOptions;
     final alreadyRetried = request.extra['__retried'] == true;
-    if (err.response?.statusCode != 401 || _isAuthPath(request.path) || alreadyRetried) {
+    if (err.response?.statusCode != 401 ||
+        _isAuthPath(request.path) ||
+        alreadyRetried) {
       return handler.next(err);
     }
 

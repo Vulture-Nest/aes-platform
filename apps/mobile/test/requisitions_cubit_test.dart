@@ -25,12 +25,14 @@ void main() {
       );
 
   test('load populates the list', () async {
-    final cubit = build(FakeRequisitionsRepository(items: [draftRequisition()]));
+    final cubit =
+        build(FakeRequisitionsRepository(items: [draftRequisition()]));
     await cubit.load();
     expect(cubit.state.items, hasLength(1));
   });
 
-  test('create without a receipt does not upload and prepends the new draft', () async {
+  test('create without a receipt does not upload and prepends the new draft',
+      () async {
     final repo = FakeRequisitionsRepository();
     final att = FakeAttachmentsRepository();
     final cubit = build(repo, att: att);
@@ -44,7 +46,8 @@ void main() {
     expect(cubit.state.items.first.id, result.createdId);
   });
 
-  test('create with a receipt uploads first and attaches the returned key', () async {
+  test('create with a receipt uploads first and attaches the returned key',
+      () async {
     final repo = FakeRequisitionsRepository();
     final att = FakeAttachmentsRepository(key: 'attachments/x/receipt.jpg');
     final cubit = build(repo, att: att);
@@ -62,7 +65,9 @@ void main() {
     expect(repo.submitted, [result.createdId]);
   });
 
-  test('create with submit reloads so the item shows its true (SUBMITTED) status', () async {
+  test(
+      'create with submit reloads so the item shows its true (SUBMITTED) status',
+      () async {
     // Regression: previously the pre-submit DRAFT object was left in state, so the
     // UI kept a Submit action and re-taps hit 400 ("cannot be submitted from
     // SUBMITTED"). After submit the cubit must reflect the server's reloaded view.
@@ -74,13 +79,16 @@ void main() {
     await cubit.create(input(), submit: true);
 
     expect(repo.submitted, hasLength(1));
-    expect(cubit.state.items.map((r) => r.status), everyElement(equals('SUBMITTED')));
+    expect(cubit.state.items.map((r) => r.status),
+        everyElement(equals('SUBMITTED')));
     expect(cubit.state.items.any((r) => r.status == 'DRAFT'), isFalse);
   });
 
-  test('offline create queues the draft to the outbox instead of failing', () async {
+  test('offline create queues the draft to the outbox instead of failing',
+      () async {
     final outbox = InMemoryOutboxStore();
-    final cubit = build(FakeRequisitionsRepository(offline: true), outbox: outbox);
+    final cubit =
+        build(FakeRequisitionsRepository(offline: true), outbox: outbox);
 
     final result = await cubit.create(input(), submit: true);
 
@@ -93,7 +101,8 @@ void main() {
   });
 
   test('submit forwards to the repo and reloads', () async {
-    final repo = FakeRequisitionsRepository(items: [draftRequisition(id: 'r9')]);
+    final repo =
+        FakeRequisitionsRepository(items: [draftRequisition(id: 'r9')]);
     final cubit = build(repo);
     await cubit.load();
 

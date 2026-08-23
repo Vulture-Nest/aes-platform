@@ -1,12 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import {
-  IsBoolean,
-  IsISO8601,
-  IsOptional,
-  IsString,
-  Length,
-  MinLength,
-} from 'class-validator';
+import { IsBoolean, IsISO8601, IsOptional, IsString, Length, MinLength } from 'class-validator';
 
 export class CreateEntityDto {
   @ApiProperty({ example: 'AES Zimbabwe' })

@@ -18,8 +18,10 @@ class TimesheetPeriodsCubit extends Cubit<TimesheetPeriodsState> {
     emit(state.copyWith(loadingSites: true, clearError: true));
     try {
       final sites = await _repo.sites();
-      final selected = state.selectedSiteId ?? (sites.isNotEmpty ? sites.first.id : null);
-      emit(state.copyWith(loadingSites: false, sites: sites, selectedSiteId: selected));
+      final selected =
+          state.selectedSiteId ?? (sites.isNotEmpty ? sites.first.id : null);
+      emit(state.copyWith(
+          loadingSites: false, sites: sites, selectedSiteId: selected));
       if (selected != null) await loadPeriods();
     } on ApiException catch (e) {
       emit(state.copyWith(loadingSites: false, error: e.message));
@@ -54,7 +56,8 @@ class TimesheetPeriodsCubit extends Cubit<TimesheetPeriodsState> {
     emit(state.copyWith(creating: true, clearError: true));
     try {
       final period = await _repo.createPeriod(siteId: siteId, month: month);
-      emit(state.copyWith(creating: false, periods: [period, ...state.periods]));
+      emit(
+          state.copyWith(creating: false, periods: [period, ...state.periods]));
       return (period, null);
     } on ApiException catch (e) {
       emit(state.copyWith(creating: false));

@@ -270,9 +270,7 @@ describe('DangerEngineService.evaluate', () => {
   // ---------------------------------------------------------------------------
   it('raises petty_cash_variance WATCH for each locked float (deduped by subjectId)', async () => {
     const { engine, rules, alerts, prisma } = makeEngine();
-    rules.listEnabled.mockResolvedValue([
-      rule('petty_cash_variance', {}, AlertSeverity.WATCH),
-    ]);
+    rules.listEnabled.mockResolvedValue([rule('petty_cash_variance', {}, AlertSeverity.WATCH)]);
     prisma.pettyCashFloat.findMany.mockResolvedValue([
       {
         id: 'f1',
@@ -302,9 +300,7 @@ describe('DangerEngineService.evaluate', () => {
 
   it('clears petty_cash_variance when no floats are locked', async () => {
     const { engine, rules, alerts, prisma } = makeEngine();
-    rules.listEnabled.mockResolvedValue([
-      rule('petty_cash_variance', {}, AlertSeverity.WATCH),
-    ]);
+    rules.listEnabled.mockResolvedValue([rule('petty_cash_variance', {}, AlertSeverity.WATCH)]);
     prisma.pettyCashFloat.findMany.mockResolvedValue([]);
 
     const summary = await engine.evaluate(new Date('2026-07-19'));
@@ -398,7 +394,11 @@ describe('DangerEngineService.evaluate', () => {
       expect.objectContaining({
         ruleKey: 'conversion_loss',
         severity: AlertSeverity.WATCH,
-        payload: expect.objectContaining({ cumulativeLoss: 25, convertedVolume: 100, lossPct: 0.25 }),
+        payload: expect.objectContaining({
+          cumulativeLoss: 25,
+          convertedVolume: 100,
+          lossPct: 0.25,
+        }),
       }),
     );
     expect(summary.alertsRaised).toBe(1);

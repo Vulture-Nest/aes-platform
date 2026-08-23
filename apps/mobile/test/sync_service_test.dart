@@ -48,7 +48,8 @@ void main() {
   test('a transient failure keeps the item queued (marked failed)', () async {
     final store = InMemoryOutboxStore();
     await store.enqueue(reqItem());
-    final sync = build(store: store, req: FakeRequisitionsRepository(offline: true));
+    final sync =
+        build(store: store, req: FakeRequisitionsRepository(offline: true));
 
     final summary = await sync.flush();
 
@@ -57,7 +58,8 @@ void main() {
     expect((await store.all()).single.failed, isTrue);
   });
 
-  test('a permanent (4xx) rejection drops the item and reports a conflict', () async {
+  test('a permanent (4xx) rejection drops the item and reports a conflict',
+      () async {
     final store = InMemoryOutboxStore();
     await store.enqueue(reqItem());
     final sync = build(store: store, req: _RejectingRequisitions());

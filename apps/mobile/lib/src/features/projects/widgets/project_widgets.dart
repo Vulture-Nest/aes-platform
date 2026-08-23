@@ -39,7 +39,8 @@ class ProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fill = color ?? AppTheme.greenDark;
-    final track = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10);
+    final track =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.10);
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
       child: LinearProgressIndicator(

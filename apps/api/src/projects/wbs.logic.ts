@@ -191,14 +191,21 @@ export function flattenTemplate(structure: unknown): FlatTemplateNode[] {
 
   const roots: TemplateNode[] = Array.isArray(structure)
     ? (structure as TemplateNode[])
-    : structure && typeof structure === 'object' && Array.isArray((structure as any).nodes)
-      ? ((structure as any).nodes as TemplateNode[])
+    : structure &&
+        typeof structure === 'object' &&
+        Array.isArray((structure as { nodes?: unknown }).nodes)
+      ? ((structure as { nodes?: unknown }).nodes as TemplateNode[])
       : [];
 
-  const walk = (node: TemplateNode, parentTempId: string | null, depth: number, position: number) => {
+  const walk = (
+    node: TemplateNode,
+    parentTempId: string | null,
+    depth: number,
+    position: number,
+  ) => {
     const tempId = `t${counter++}`;
     const type =
-      node.type && DEPTH_TYPE.includes(node.type as any)
+      node.type && DEPTH_TYPE.includes(node.type as (typeof DEPTH_TYPE)[number])
         ? (node.type as 'PHASE' | 'TASK' | 'SUBTASK')
         : DEPTH_TYPE[Math.min(depth, DEPTH_TYPE.length - 1)];
     out.push({

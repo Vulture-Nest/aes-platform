@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test mocks intentionally use `any` for loosely-typed Prisma stubs */
 import { ConflictException } from '@nestjs/common';
 import { SiteReportsService, STANDARD_SECTIONS } from './site-reports.service';
 
@@ -5,7 +6,12 @@ function makePrisma() {
   return {
     site: { findUnique: jest.fn(), findMany: jest.fn() },
     contract: { findMany: jest.fn() },
-    siteReportPeriod: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), findMany: jest.fn() },
+    siteReportPeriod: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      findMany: jest.fn(),
+    },
     siteReportSection: { update: jest.fn(), create: jest.fn() },
     siteKpi: { findFirst: jest.fn() },
     siteKpiActual: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
@@ -46,13 +52,17 @@ describe('SiteReportsService', () => {
   it('rejects opening a duplicate period', async () => {
     prisma.site.findUnique.mockResolvedValue({ id: 's1', entityId: null });
     prisma.siteReportPeriod.findUnique.mockResolvedValue({ id: 'exists' });
-    await expect(service.open({ siteId: 's1', periodMonth: '2026-07' }, 'actor')).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      service.open({ siteId: 's1', periodMonth: '2026-07' }, 'actor'),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('rejects submitting an already-submitted report', async () => {
-    prisma.siteReportPeriod.findUnique.mockResolvedValue({ id: 'p1', status: 'LOCKED', sections: [] });
+    prisma.siteReportPeriod.findUnique.mockResolvedValue({
+      id: 'p1',
+      status: 'LOCKED',
+      sections: [],
+    });
     await expect(service.submit('p1', { narrative: 'x' }, 'actor')).rejects.toBeInstanceOf(
       ConflictException,
     );
@@ -102,7 +112,9 @@ describe('SiteReportsService', () => {
     const res = await service.submit('p1', { narrative: 'done' }, 'actor');
     expect(res.late).toBe(false);
     expect(prisma.siteKpiActual.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ actualValue: 100, rag: 'GREEN' }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ actualValue: 100, rag: 'GREEN' }),
+      }),
     );
   });
 
@@ -126,7 +138,13 @@ describe('SiteReportsService', () => {
       .mockResolvedValueOnce(null) // openForMonth existence check for s2
       .mockResolvedValueOnce(null); // open() duplicate check for s2
     prisma.site.findUnique.mockResolvedValue({ id: 's2', entityId: null });
-    prisma.siteReportPeriod.create.mockResolvedValue({ id: 'p2', siteId: 's2', periodMonth: '2026-07', status: 'OPEN', sections: [] });
+    prisma.siteReportPeriod.create.mockResolvedValue({
+      id: 'p2',
+      siteId: 's2',
+      periodMonth: '2026-07',
+      status: 'OPEN',
+      sections: [],
+    });
 
     const res = await service.openForMonth({ periodMonth: '2026-07' }, 'actor');
     expect(res.opened).toBe(1);

@@ -120,7 +120,10 @@ export class CreateOrderMilestoneDto {
   @MinLength(1)
   description!: string;
 
-  @ApiPropertyOptional({ example: 5000, description: 'Order value ex VAT delivered by this milestone' })
+  @ApiPropertyOptional({
+    example: 5000,
+    description: 'Order value ex VAT delivered by this milestone',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
@@ -135,7 +138,10 @@ export class CreateOrderMilestoneDto {
   @Max(100)
   percentPortion?: number;
 
-  @ApiPropertyOptional({ example: '2025-07-15', description: 'When completed (omit if not yet done)' })
+  @ApiPropertyOptional({
+    example: '2025-07-15',
+    description: 'When completed (omit if not yet done)',
+  })
   @IsOptional()
   @Type(() => Date)
   @IsDate()

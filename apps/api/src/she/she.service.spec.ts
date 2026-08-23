@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test mocks intentionally use `any` for loosely-typed Prisma stubs */
 import { BadRequestException } from '@nestjs/common';
 import { SheService } from './she.service';
 

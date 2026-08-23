@@ -21,13 +21,7 @@ import {
   UpdateProjectDto,
   UpdateTemplateDto,
 } from './dto/project.dto';
-import {
-  flattenTemplate,
-  projectPercent,
-  rollUp,
-  RollUpNode,
-  scheduleHealth,
-} from './wbs.logic';
+import { flattenTemplate, projectPercent, rollUp, RollUpNode, scheduleHealth } from './wbs.logic';
 
 /** Default RAG red threshold (% behind schedule). Command-centre reads `slip` off this. */
 const DEFAULT_RED_THRESHOLD = 10;

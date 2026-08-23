@@ -87,7 +87,10 @@ function makeService(statutoryStub: unknown) {
       update: jest.fn(),
     },
     timesheetPeriod: { findUnique: jest.fn() },
-    payrollLine: { deleteMany: jest.fn(), createMany: jest.fn((a: any) => created.push(...a.data)) },
+    payrollLine: {
+      deleteMany: jest.fn(),
+      createMany: jest.fn((a: any) => created.push(...a.data)),
+    },
     payrollExtraEarning: { findMany: jest.fn().mockResolvedValue([]), updateMany: jest.fn() },
     employee: { findMany: jest.fn() },
     exchangeRate: { findUnique: jest.fn() },

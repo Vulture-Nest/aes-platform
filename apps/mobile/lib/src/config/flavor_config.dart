@@ -22,11 +22,13 @@ class FlavorConfig {
   //   flutter run --flavor dev -t lib/main_dev.dart --dart-define=API_BASE_URL=http://10.0.2.2:3000
   static const dev = FlavorConfig(
     flavor: Flavor.dev,
-    apiBaseUrl: String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:3000'),
+    apiBaseUrl: String.fromEnvironment('API_BASE_URL',
+        defaultValue: 'http://localhost:3000'),
   );
 
   static const prod = FlavorConfig(
     flavor: Flavor.prod,
-    apiBaseUrl: String.fromEnvironment('API_BASE_URL', defaultValue: 'https://api.aes.vulturenest.org'),
+    apiBaseUrl: String.fromEnvironment('API_BASE_URL',
+        defaultValue: 'https://api.aes.vulturenest.org'),
   );
 }

@@ -189,10 +189,20 @@ export class LedgerService {
    * `prisma`/`tx` optional so the caller can post inside its own transaction (the importer does).
    */
   async postOrderReceipt(
-    receipt: { id: string; amount: number; currency: string; createdBy?: string | null; receivedDate?: Date },
+    receipt: {
+      id: string;
+      amount: number;
+      currency: string;
+      createdBy?: string | null;
+      receivedDate?: Date;
+    },
     tx: Prisma.TransactionClient = this.prisma,
   ): Promise<void> {
-    if ((await tx.ledgerEntry.count({ where: { sourceTable: 'order_receipts', sourceId: receipt.id } })) > 0) {
+    if (
+      (await tx.ledgerEntry.count({
+        where: { sourceTable: 'order_receipts', sourceId: receipt.id },
+      })) > 0
+    ) {
       return; // already posted for this receipt
     }
     const bank = await this.ensureSystemAccountTx(tx, 'BANK', receipt.currency);
@@ -200,10 +210,25 @@ export class LedgerService {
     await tx.ledgerEntry.createMany({
       data: this.journalRows(
         [
-          { accountId: bank.id, credit: receipt.amount, currency: receipt.currency, description: 'Order receipt (cash in)' },
-          { accountId: revenue.id, debit: receipt.amount, currency: receipt.currency, description: 'Order receipt revenue' },
+          {
+            accountId: bank.id,
+            credit: receipt.amount,
+            currency: receipt.currency,
+            description: 'Order receipt (cash in)',
+          },
+          {
+            accountId: revenue.id,
+            debit: receipt.amount,
+            currency: receipt.currency,
+            description: 'Order receipt revenue',
+          },
         ],
-        { sourceTable: 'order_receipts', sourceId: receipt.id, entryDate: receipt.receivedDate, createdBy: receipt.createdBy ?? undefined },
+        {
+          sourceTable: 'order_receipts',
+          sourceId: receipt.id,
+          entryDate: receipt.receivedDate,
+          createdBy: receipt.createdBy ?? undefined,
+        },
       ),
     });
   }
@@ -215,10 +240,20 @@ export class LedgerService {
    * (contract_claims, claimId).
    */
   async postContractClaim(
-    claim: { id: string; amountExVat: number; currency: string; createdBy?: string | null; claimDate?: Date },
+    claim: {
+      id: string;
+      amountExVat: number;
+      currency: string;
+      createdBy?: string | null;
+      claimDate?: Date;
+    },
     tx: Prisma.TransactionClient = this.prisma,
   ): Promise<void> {
-    if ((await tx.ledgerEntry.count({ where: { sourceTable: 'contract_claims', sourceId: claim.id } })) > 0) {
+    if (
+      (await tx.ledgerEntry.count({
+        where: { sourceTable: 'contract_claims', sourceId: claim.id },
+      })) > 0
+    ) {
       return; // already posted for this claim
     }
     const receivable = await this.ensureSystemAccountTx(tx, 'RECEIVABLE', claim.currency);
@@ -226,10 +261,25 @@ export class LedgerService {
     await tx.ledgerEntry.createMany({
       data: this.journalRows(
         [
-          { accountId: receivable.id, debit: claim.amountExVat, currency: claim.currency, description: 'Contract claim receivable' },
-          { accountId: revenue.id, credit: claim.amountExVat, currency: claim.currency, description: 'Contract claim revenue' },
+          {
+            accountId: receivable.id,
+            debit: claim.amountExVat,
+            currency: claim.currency,
+            description: 'Contract claim receivable',
+          },
+          {
+            accountId: revenue.id,
+            credit: claim.amountExVat,
+            currency: claim.currency,
+            description: 'Contract claim revenue',
+          },
         ],
-        { sourceTable: 'contract_claims', sourceId: claim.id, entryDate: claim.claimDate, createdBy: claim.createdBy ?? undefined },
+        {
+          sourceTable: 'contract_claims',
+          sourceId: claim.id,
+          entryDate: claim.claimDate,
+          createdBy: claim.createdBy ?? undefined,
+        },
       ),
     });
   }
