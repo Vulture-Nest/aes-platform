@@ -27,6 +27,6 @@ class FlavorConfig {
 
   static const prod = FlavorConfig(
     flavor: Flavor.prod,
-    apiBaseUrl: String.fromEnvironment('API_BASE_URL', defaultValue: 'https://api.aes.example'),
+    apiBaseUrl: String.fromEnvironment('API_BASE_URL', defaultValue: 'https://api.aes.vulturenest.org'),
   );
 }
