@@ -60,7 +60,8 @@ class CommandCentreCubit extends Cubit<CommandCentreState> {
   Future<void> load() async {
     emit(state.copyWith(loading: true, clearError: true));
     try {
-      final results = await Future.wait([_repo.dashboard(), _alerts.activeAlerts()]);
+      final results =
+          await Future.wait([_repo.dashboard(), _alerts.activeAlerts()]);
       emit(
         CommandCentreState(
           dashboard: results[0] as CommandCentre,

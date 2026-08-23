@@ -45,7 +45,8 @@ class ProjectHealth extends Equatable {
 
   bool get isAhead => (daysAheadBehind ?? 0) >= 0;
 
-  static double _num(Object? v) => v == null ? 0 : double.tryParse(v.toString()) ?? 0;
+  static double _num(Object? v) =>
+      v == null ? 0 : double.tryParse(v.toString()) ?? 0;
 
   factory ProjectHealth.fromJson(Map<String, dynamic> json) {
     final days = json['daysAheadBehind'];
@@ -60,5 +61,12 @@ class ProjectHealth extends Equatable {
   }
 
   @override
-  List<Object?> get props => [plannedPercent, actualPercent, variancePercent, daysAheadBehind, rag, slip];
+  List<Object?> get props => [
+        plannedPercent,
+        actualPercent,
+        variancePercent,
+        daysAheadBehind,
+        rag,
+        slip
+      ];
 }

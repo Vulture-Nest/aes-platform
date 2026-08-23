@@ -35,7 +35,9 @@ export class ReturnsController {
 
   @Post('recompute')
   @Roles('FINANCE_DIRECTOR', 'FINANCE_OFFICER', 'SYS_ADMIN')
-  @ApiOperation({ summary: 'Persist freshly-computed status (DUE/OVERDUE/PARTIAL/PAID) for a period' })
+  @ApiOperation({
+    summary: 'Persist freshly-computed status (DUE/OVERDUE/PARTIAL/PAID) for a period',
+  })
   recompute(@Query('period') period?: string) {
     return this.returns.persistStatuses(period);
   }

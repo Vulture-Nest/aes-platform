@@ -61,7 +61,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             onRefresh: () => context.read<PortfolioCubit>().load(),
             child: state.items.isEmpty
                 ? EmptyState(
-                    icon: state.error != null ? Icons.cloud_off : Icons.account_tree_outlined,
+                    icon: state.error != null
+                        ? Icons.cloud_off
+                        : Icons.account_tree_outlined,
                     message: state.error ?? 'No projects yet',
                     isError: state.error != null,
                   )
@@ -115,18 +117,26 @@ class _ProjectCard extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(child: ProgressBar(percent: pct, color: ragColor(item.health.rag))),
+                  Expanded(
+                      child: ProgressBar(
+                          percent: pct, color: ragColor(item.health.rag))),
                   const SizedBox(width: 12),
-                  Text('${pct.round()}%', style: Theme.of(context).textTheme.titleSmall),
+                  Text('${pct.round()}%',
+                      style: Theme.of(context).textTheme.titleSmall),
                 ],
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
                   Icon(
-                    item.health.isAhead ? Icons.trending_up : Icons.trending_down,
+                    item.health.isAhead
+                        ? Icons.trending_up
+                        : Icons.trending_down,
                     size: 16,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -137,7 +147,10 @@ class _ProjectCard extends StatelessWidget {
                   Text(
                     item.status,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                   ),
                 ],

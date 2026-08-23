@@ -238,7 +238,9 @@ export class BackPayService {
   async submit(id: string, actorId: string) {
     const batch = await this.findOne(id);
     if (batch.status !== 'DRAFT') {
-      throw new BadRequestException(`Only a DRAFT batch can be submitted (current: ${batch.status})`);
+      throw new BadRequestException(
+        `Only a DRAFT batch can be submitted (current: ${batch.status})`,
+      );
     }
     return this.transition(batch, 'SUBMITTED', actorId);
   }
@@ -251,7 +253,9 @@ export class BackPayService {
   async approve(id: string, actorId: string, approvalRef?: string) {
     const batch = await this.findOne(id);
     if (batch.status !== 'SUBMITTED') {
-      throw new BadRequestException(`Only a SUBMITTED batch can be approved (current: ${batch.status})`);
+      throw new BadRequestException(
+        `Only a SUBMITTED batch can be approved (current: ${batch.status})`,
+      );
     }
 
     // Group lines by employee.

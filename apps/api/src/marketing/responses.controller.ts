@@ -10,13 +10,7 @@ import {
 } from './dto/response.dto';
 import { ResponsesService } from './responses.service';
 
-const BD_USER = [
-  'OPS_STAFF',
-  'OPS_DIRECTOR',
-  'DIRECTOR',
-  'FINANCE_DIRECTOR',
-  'SYS_ADMIN',
-] as const;
+const BD_USER = ['OPS_STAFF', 'OPS_DIRECTOR', 'DIRECTOR', 'FINANCE_DIRECTOR', 'SYS_ADMIN'] as const;
 
 @ApiTags('marketing-responses')
 @ApiBearerAuth()
@@ -40,7 +34,9 @@ export class ResponsesController {
 
   @Post()
   @Roles(...BD_USER)
-  @ApiOperation({ summary: 'Capture an inbound campaign response (BD user entry; howHeard required)' })
+  @ApiOperation({
+    summary: 'Capture an inbound campaign response (BD user entry; howHeard required)',
+  })
   create(@Body() dto: CreateResponseDto, @CurrentUser('id') actorId: string) {
     return this.responses.create(dto, actorId);
   }

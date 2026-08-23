@@ -32,7 +32,8 @@ class DangerBanner extends StatelessWidget {
               Expanded(
                 child: Text(
                   headline,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),

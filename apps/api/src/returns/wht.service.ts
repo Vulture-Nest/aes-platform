@@ -73,9 +73,7 @@ export class WhtService {
         ...(dto.thresholdAmount !== undefined
           ? { thresholdAmount: new Prisma.Decimal(dto.thresholdAmount) }
           : {}),
-        ...(dto.effectiveFrom !== undefined
-          ? { effectiveFrom: new Date(dto.effectiveFrom) }
-          : {}),
+        ...(dto.effectiveFrom !== undefined ? { effectiveFrom: new Date(dto.effectiveFrom) } : {}),
         updatedBy: actorId,
       },
     });
@@ -192,7 +190,12 @@ export class WhtService {
     });
 
     return {
-      transaction: { ...txn, taxBase: num(txn.taxBase), rate: num(txn.rate), amount: num(txn.amount) },
+      transaction: {
+        ...txn,
+        taxBase: num(txn.taxBase),
+        rate: num(txn.rate),
+        amount: num(txn.amount),
+      },
       withheld,
       statutoryReturn,
     };
@@ -217,7 +220,12 @@ export class WhtService {
 
     if (existing) {
       const newDue = num(existing.amountDue) + amount;
-      const status = num(existing.amountPaid) >= newDue ? 'PAID' : existing.status === 'PAID' ? 'PARTIAL' : existing.status;
+      const status =
+        num(existing.amountPaid) >= newDue
+          ? 'PAID'
+          : existing.status === 'PAID'
+            ? 'PARTIAL'
+            : existing.status;
       return this.prisma.statutoryReturn.update({
         where: { id: existing.id },
         data: {
@@ -290,7 +298,15 @@ export class WhtService {
       orderBy: { taxPeriod: 'asc' },
     });
 
-    const byCurrency: Record<string, { totalCredit: number; certificatedCredit: number; pendingCertificateCredit: number; count: number }> = {};
+    const byCurrency: Record<
+      string,
+      {
+        totalCredit: number;
+        certificatedCredit: number;
+        pendingCertificateCredit: number;
+        count: number;
+      }
+    > = {};
     for (const t of txns) {
       const amt = num(t.amount);
       const acc = (byCurrency[t.currency] ??= {

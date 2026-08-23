@@ -13,7 +13,9 @@ class OrdersRepository {
   Future<List<Order>> list() async {
     try {
       final response = await _dio.get<List<dynamic>>('/v1/orders');
-      return (response.data ?? []).map((j) => Order.fromJson(j as Map<String, dynamic>)).toList();
+      return (response.data ?? [])
+          .map((j) => Order.fromJson(j as Map<String, dynamic>))
+          .toList();
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     }
@@ -42,7 +44,8 @@ class OrdersRepository {
       final response = await _dio.get<List<dynamic>>('/v1/clients');
       return {
         for (final c in response.data ?? [])
-          (c as Map<String, dynamic>)['id'] as String: c['name'] as String? ?? '',
+          (c as Map<String, dynamic>)['id'] as String:
+              c['name'] as String? ?? '',
       };
     } on DioException {
       return const {};

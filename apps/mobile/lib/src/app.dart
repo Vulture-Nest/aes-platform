@@ -94,7 +94,8 @@ class _AesAppState extends State<AesApp> {
     )..start();
     _biometric = LocalAuthBiometricAuthenticator();
     _receiptCapture = ImagePickerReceiptCapture();
-    _authCubit = AuthCubit(authRepository: _authRepository, tokenStore: tokenStore);
+    _authCubit =
+        AuthCubit(authRepository: _authRepository, tokenStore: tokenStore);
     _router = buildRouter(_authCubit);
     _authCubit.bootstrap();
   }
@@ -113,17 +114,25 @@ class _AesAppState extends State<AesApp> {
         RepositoryProvider<FlavorConfig>.value(value: widget.config),
         RepositoryProvider<AuthRepository>.value(value: _authRepository),
         RepositoryProvider<AlertsRepository>.value(value: _alertsRepository),
-        RepositoryProvider<ApprovalsRepository>.value(value: _approvalsRepository),
-        RepositoryProvider<RequisitionsRepository>.value(value: _requisitionsRepository),
+        RepositoryProvider<ApprovalsRepository>.value(
+            value: _approvalsRepository),
+        RepositoryProvider<RequisitionsRepository>.value(
+            value: _requisitionsRepository),
         RepositoryProvider<TravelRepository>.value(value: _travelRepository),
-        RepositoryProvider<PettyCashRepository>.value(value: _pettyCashRepository),
-        RepositoryProvider<AttachmentsRepository>.value(value: _attachmentsRepository),
-        RepositoryProvider<CommandCentreRepository>.value(value: _commandCentreRepository),
+        RepositoryProvider<PettyCashRepository>.value(
+            value: _pettyCashRepository),
+        RepositoryProvider<AttachmentsRepository>.value(
+            value: _attachmentsRepository),
+        RepositoryProvider<CommandCentreRepository>.value(
+            value: _commandCentreRepository),
         RepositoryProvider<OrdersRepository>.value(value: _ordersRepository),
-        RepositoryProvider<DirectorRepository>.value(value: _directorRepository),
-        RepositoryProvider<ProjectsRepository>.value(value: _projectsRepository),
+        RepositoryProvider<DirectorRepository>.value(
+            value: _directorRepository),
+        RepositoryProvider<ProjectsRepository>.value(
+            value: _projectsRepository),
         RepositoryProvider<BoardsRepository>.value(value: _boardsRepository),
-        RepositoryProvider<TimesheetsRepository>.value(value: _timesheetsRepository),
+        RepositoryProvider<TimesheetsRepository>.value(
+            value: _timesheetsRepository),
         RepositoryProvider<OutboxStore>.value(value: _outboxStore),
         RepositoryProvider<SyncService>.value(value: _syncService),
         RepositoryProvider<BiometricAuthenticator>.value(value: _biometric),
@@ -132,7 +141,8 @@ class _AesAppState extends State<AesApp> {
       child: MultiBlocProvider(
         providers: [
           BlocProvider<AuthCubit>.value(value: _authCubit),
-          BlocProvider<DashboardCubit>(create: (_) => DashboardCubit(_alertsRepository)),
+          BlocProvider<DashboardCubit>(
+              create: (_) => DashboardCubit(_alertsRepository)),
         ],
         child: MaterialApp.router(
           title: 'AES Operations',

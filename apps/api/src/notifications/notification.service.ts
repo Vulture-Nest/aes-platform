@@ -4,10 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { EmailTransport } from './transports/email.transport';
 import { PushTransport } from './transports/push.transport';
 import { TeamsTransport } from './transports/teams.transport';
-import {
-  NotificationRecipient,
-  NotificationTransport,
-} from './transports/notification-transport';
+import { NotificationRecipient, NotificationTransport } from './transports/notification-transport';
 
 export interface SendNotificationParams {
   userIds: string[];

@@ -130,7 +130,11 @@ export class ParityService {
 
     const checks: ParityCheck[] = [
       this.mk('Cash received (orders)', EXPECTED.cashReceived, health.drivers.totalCashReceived),
-      this.mk('Outstanding receivables', EXPECTED.outstandingReceivables, health.drivers.receivables),
+      this.mk(
+        'Outstanding receivables',
+        EXPECTED.outstandingReceivables,
+        health.drivers.receivables,
+      ),
       this.mk('Operating profit ex VAT', EXPECTED.operatingProfitExVat, operatingProfitExVat, {
         note:
           'Workbook FinancialSummary definition: order-centric (Σ order value ex VAT − Σ order ' +
@@ -152,8 +156,16 @@ export class ParityService {
     const sumReceived = round2(orderChecks.reduce((s, o) => s + o.received, 0));
     const sumReceivables = round2(orderChecks.reduce((s, o) => s + o.outstanding, 0));
     checks.push(
-      this.granular('Σ per-order cash = headline cash received', health.drivers.totalCashReceived, sumReceived),
-      this.granular('Σ per-order receivables = headline receivables', health.drivers.receivables, sumReceivables),
+      this.granular(
+        'Σ per-order cash = headline cash received',
+        health.drivers.totalCashReceived,
+        sumReceived,
+      ),
+      this.granular(
+        'Σ per-order receivables = headline receivables',
+        health.drivers.receivables,
+        sumReceivables,
+      ),
     );
 
     const verdictPass = health.verdict === EXPECTED_VERDICT;
@@ -217,7 +229,10 @@ export class ParityService {
         closingDate: order.closingDate ?? new Date(8640000000000000),
         milestones:
           order.milestones.length > 0
-            ? order.milestones.map((m) => ({ value: this.num(m.valuePortion), completed: m.completedAt != null }))
+            ? order.milestones.map((m) => ({
+                value: this.num(m.valuePortion),
+                completed: m.completedAt != null,
+              }))
             : undefined,
       });
 
@@ -311,7 +326,12 @@ export class ParityService {
     return typeof value === 'number' ? value : Number(value);
   }
 
-  private mk(name: string, expected: number, actual: number, extra?: { note?: string }): ParityCheck {
+  private mk(
+    name: string,
+    expected: number,
+    actual: number,
+    extra?: { note?: string },
+  ): ParityCheck {
     const delta = round2(actual - expected);
     return {
       name,

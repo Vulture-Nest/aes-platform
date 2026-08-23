@@ -36,12 +36,14 @@ class TimesheetGridCubit extends Cubit<TimesheetGridState> {
     try {
       final grid = await _repo.getGrid(periodId);
       final merged = await _mergeDrafts(grid);
-      emit(state.copyWith(
-        loading: false,
-        grid: merged,
-        pendingDrafts: await _drafts.count(),
-        offline: !await _sync.isOnline(),
-      ),);
+      emit(
+        state.copyWith(
+          loading: false,
+          grid: merged,
+          pendingDrafts: await _drafts.count(),
+          offline: !await _sync.isOnline(),
+        ),
+      );
     } on ApiException catch (e) {
       emit(state.copyWith(loading: false, error: e.message));
     }
@@ -54,7 +56,8 @@ class TimesheetGridCubit extends Cubit<TimesheetGridState> {
     if (grid == null || !grid.period.isOpen) return;
 
     // Optimistic UI: reflect the edit immediately.
-    emit(state.copyWith(grid: grid.withEntry(entry), saving: true, clearError: true));
+    emit(state.copyWith(
+        grid: grid.withEntry(entry), saving: true, clearError: true));
 
     await _drafts.put(TimesheetDraft(periodId: periodId, entry: entry));
 
@@ -62,23 +65,31 @@ class TimesheetGridCubit extends Cubit<TimesheetGridState> {
       await _repo.upsertEntries(periodId, [entry]);
       // Synced — clear this cell's draft.
       await _drafts.remove(TimesheetDraft(periodId: periodId, entry: entry).id);
-      emit(state.copyWith(saving: false, pendingDrafts: await _drafts.count(), offline: false));
+      emit(state.copyWith(
+          saving: false, pendingDrafts: await _drafts.count(), offline: false));
     } on ApiException catch (e) {
-      if (e.statusCode == null || e.statusCode == 429 || (e.statusCode ?? 0) >= 500) {
+      if (e.statusCode == null ||
+          e.statusCode == 429 ||
+          (e.statusCode ?? 0) >= 500) {
         // Transient — keep the draft queued for the next sync.
-        emit(state.copyWith(
-          saving: false,
-          pendingDrafts: await _drafts.count(),
-          offline: e.statusCode == null,
-        ),);
+        emit(
+          state.copyWith(
+            saving: false,
+            pendingDrafts: await _drafts.count(),
+            offline: e.statusCode == null,
+          ),
+        );
       } else {
         // Permanent rejection (e.g. validation) — drop the draft and surface it.
-        await _drafts.remove(TimesheetDraft(periodId: periodId, entry: entry).id);
-        emit(state.copyWith(
-          saving: false,
-          pendingDrafts: await _drafts.count(),
-          error: e.message,
-        ),);
+        await _drafts
+            .remove(TimesheetDraft(periodId: periodId, entry: entry).id);
+        emit(
+          state.copyWith(
+            saving: false,
+            pendingDrafts: await _drafts.count(),
+            error: e.message,
+          ),
+        );
       }
     }
   }
@@ -91,14 +102,17 @@ class TimesheetGridCubit extends Cubit<TimesheetGridState> {
     try {
       final grid = await _repo.getGrid(periodId);
       final merged = await _mergeDrafts(grid);
-      emit(state.copyWith(
-        syncing: false,
-        grid: merged,
-        pendingDrafts: await _drafts.count(),
-        offline: !await _sync.isOnline(),
-      ),);
+      emit(
+        state.copyWith(
+          syncing: false,
+          grid: merged,
+          pendingDrafts: await _drafts.count(),
+          offline: !await _sync.isOnline(),
+        ),
+      );
     } on ApiException {
-      emit(state.copyWith(syncing: false, pendingDrafts: await _drafts.count()));
+      emit(
+          state.copyWith(syncing: false, pendingDrafts: await _drafts.count()));
     }
     return summary;
   }
@@ -116,16 +130,21 @@ class TimesheetGridCubit extends Cubit<TimesheetGridState> {
       }
       await _repo.submit(periodId);
       await load();
-      emit(state.copyWith(submitting: false, pendingDrafts: await _drafts.count()));
+      emit(state.copyWith(
+          submitting: false, pendingDrafts: await _drafts.count()));
       return null;
     } on ApiException catch (e) {
       // Offline: mark the queued drafts for submission so a later sync submits it.
       if (e.statusCode == null) {
         final pending = await _drafts.forPeriod(periodId);
         for (final d in pending) {
-          await _drafts.put(TimesheetDraft(periodId: periodId, entry: d.entry, submitAfter: true));
+          await _drafts.put(TimesheetDraft(
+              periodId: periodId, entry: d.entry, submitAfter: true));
         }
-        emit(state.copyWith(submitting: false, offline: true, pendingDrafts: await _drafts.count()));
+        emit(state.copyWith(
+            submitting: false,
+            offline: true,
+            pendingDrafts: await _drafts.count()));
         return 'Offline — will submit when connectivity returns';
       }
       emit(state.copyWith(submitting: false, error: e.message));

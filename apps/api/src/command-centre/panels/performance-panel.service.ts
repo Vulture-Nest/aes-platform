@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { IncomeTaxProvision, IncomeTaxProvisionService } from '../../financial/domain/income-tax-provision.service';
+import {
+  IncomeTaxProvision,
+  IncomeTaxProvisionService,
+} from '../../financial/domain/income-tax-provision.service';
 import { PerformanceService } from '../../financial/domain/performance.service';
 import { ExchangeRatesService } from '../../reference/exchange-rates/exchange-rates.service';
 import { PrismaService } from '../../prisma/prisma.service';

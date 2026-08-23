@@ -25,10 +25,13 @@ export class StoresWithdrawalsService {
     private readonly audit: AuditService,
   ) {}
 
-  private decorate<
-    T extends { quantity: Prisma.Decimal; allocation: Prisma.Decimal | null },
-  >(w: T) {
-    const flag = overAllocation(Number(w.quantity), w.allocation == null ? null : Number(w.allocation));
+  private decorate<T extends { quantity: Prisma.Decimal; allocation: Prisma.Decimal | null }>(
+    w: T,
+  ) {
+    const flag = overAllocation(
+      Number(w.quantity),
+      w.allocation == null ? null : Number(w.allocation),
+    );
     return { ...w, ...flag };
   }
 

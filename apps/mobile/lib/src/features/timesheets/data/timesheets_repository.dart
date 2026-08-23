@@ -39,7 +39,8 @@ class TimesheetsRepository {
   }
 
   /// List periods, optionally filtered by site and/or month (YYYY-MM).
-  Future<List<TimesheetPeriod>> listPeriods({String? siteId, String? month}) async {
+  Future<List<TimesheetPeriod>> listPeriods(
+      {String? siteId, String? month}) async {
     try {
       final response = await _dio.get<List<dynamic>>(
         '/v1/timesheet-periods',
@@ -57,7 +58,8 @@ class TimesheetsRepository {
   }
 
   /// Open (create) a monthly period for a site.
-  Future<TimesheetPeriod> createPeriod({required String siteId, required String month}) async {
+  Future<TimesheetPeriod> createPeriod(
+      {required String siteId, required String month}) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/v1/timesheet-periods',
@@ -76,7 +78,8 @@ class TimesheetsRepository {
     final TimesheetPeriod period;
     final List<TimesheetEntry> entries;
     try {
-      final response = await _dio.get<Map<String, dynamic>>('/v1/timesheet-periods/$periodId');
+      final response = await _dio
+          .get<Map<String, dynamic>>('/v1/timesheet-periods/$periodId');
       final data = response.data!;
       period = TimesheetPeriod.fromJson(data);
       entries = ((data['entries'] as List<dynamic>?) ?? [])
@@ -110,7 +113,8 @@ class TimesheetsRepository {
   /// Submit the period for Site-Manager approval.
   Future<void> submit(String periodId) async {
     try {
-      await _dio.post<Map<String, dynamic>>('/v1/timesheet-periods/$periodId/submit');
+      await _dio
+          .post<Map<String, dynamic>>('/v1/timesheet-periods/$periodId/submit');
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     }
@@ -137,7 +141,8 @@ class TimesheetsRepository {
     final ids = <String>{for (final e in entries) e.employeeId};
     return [
       for (final id in ids)
-        TimesheetEmployee(id: id, name: 'Employee ${id.substring(0, id.length.clamp(0, 6))}'),
+        TimesheetEmployee(
+            id: id, name: 'Employee ${id.substring(0, id.length.clamp(0, 6))}'),
     ];
   }
 }

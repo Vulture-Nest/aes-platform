@@ -74,7 +74,9 @@ class BoardDetailScreen extends StatelessWidget {
           }
           if (board == null) {
             return EmptyState(
-              icon: state.error != null ? Icons.cloud_off : Icons.dashboard_outlined,
+              icon: state.error != null
+                  ? Icons.cloud_off
+                  : Icons.dashboard_outlined,
               message: state.error ?? 'Board unavailable',
               isError: state.error != null,
             );
@@ -129,7 +131,8 @@ class _EmptyBoard extends StatelessWidget {
           Icon(
             Icons.view_column_outlined,
             size: 52,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
           ),
           const SizedBox(height: 14),
           const Text('No lists yet'),
@@ -165,7 +168,8 @@ class _ListColumn extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+          color:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
         ),
       ),
       child: Column(
@@ -186,7 +190,10 @@ class _ListColumn extends StatelessWidget {
                 Text(
                   '${list.cards.length}',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.55),
                       ),
                 ),
               ],
@@ -222,7 +229,8 @@ class _CardTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subtle = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55);
+    final subtle =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55);
     final hasMeta = card.dueLabel != null ||
         card.assigneeId != null ||
         card.checklistItems.isNotEmpty ||
@@ -237,7 +245,8 @@ class _CardTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(card.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(card.title,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
               if (hasMeta) ...[
                 const SizedBox(height: 8),
                 Wrap(
@@ -253,11 +262,15 @@ class _CardTile extends StatelessWidget {
                             : subtle,
                       ),
                     if (card.assigneeId != null)
-                      _MetaChip(icon: Icons.person_outline, label: 'Assigned', color: subtle),
+                      _MetaChip(
+                          icon: Icons.person_outline,
+                          label: 'Assigned',
+                          color: subtle),
                     if (card.checklistItems.isNotEmpty)
                       _MetaChip(
                         icon: Icons.check_box_outlined,
-                        label: '${card.doneCount}/${card.checklistItems.length}',
+                        label:
+                            '${card.doneCount}/${card.checklistItems.length}',
                         color: subtle,
                       ),
                     if (card.comments.isNotEmpty)
@@ -278,7 +291,8 @@ class _CardTile extends StatelessWidget {
 }
 
 class _MetaChip extends StatelessWidget {
-  const _MetaChip({required this.icon, required this.label, required this.color});
+  const _MetaChip(
+      {required this.icon, required this.label, required this.color});
   final IconData icon;
   final String label;
   final Color color;
@@ -328,7 +342,9 @@ Future<String?> _promptText(
         },
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel')),
         FilledButton(
           onPressed: () {
             final v = controller.text.trim();

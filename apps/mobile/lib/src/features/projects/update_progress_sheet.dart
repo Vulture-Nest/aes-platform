@@ -79,15 +79,18 @@ class _UpdateProgressSheetState extends State<UpdateProgressSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(node.type.label, style: Theme.of(context).textTheme.labelMedium),
+            Text(node.type.label,
+                style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 2),
             Text(node.title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Progress', style: Theme.of(context).textTheme.titleMedium),
-                Text('${effectivePercent.round()}%', style: Theme.of(context).textTheme.titleMedium),
+                Text('Progress',
+                    style: Theme.of(context).textTheme.titleMedium),
+                Text('${effectivePercent.round()}%',
+                    style: Theme.of(context).textTheme.titleMedium),
               ],
             ),
             Slider(
@@ -131,7 +134,10 @@ class _UpdateProgressSheetState extends State<UpdateProgressSheet> {
             FilledButton.icon(
               onPressed: saving ? null : _save,
               icon: saving
-                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.save_outlined),
               label: const Text('Save progress'),
             ),
@@ -190,10 +196,13 @@ class _PhotoField extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.memory(photo!.bytes, height: 64, width: 64, fit: BoxFit.cover),
+                child: Image.memory(photo!.bytes,
+                    height: 64, width: 64, fit: BoxFit.cover),
               ),
               const SizedBox(width: 12),
-              Expanded(child: Text(photo!.filename, overflow: TextOverflow.ellipsis)),
+              Expanded(
+                  child:
+                      Text(photo!.filename, overflow: TextOverflow.ellipsis)),
               IconButton(
                 onPressed: busy ? null : onRemove,
                 icon: const Icon(Icons.close),

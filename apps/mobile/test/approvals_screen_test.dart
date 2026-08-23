@@ -28,8 +28,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('renders a money item with amount and biometric hint', (tester) async {
-    await pump(tester, FakeApprovalsRepository(items: [moneyApproval(amount: 500)]));
+  testWidgets('renders a money item with amount and biometric hint',
+      (tester) async {
+    await pump(
+        tester, FakeApprovalsRepository(items: [moneyApproval(amount: 500)]));
 
     expect(find.text('Requisition'), findsOneWidget);
     expect(find.text('USD 500.00'), findsOneWidget);
@@ -41,7 +43,8 @@ void main() {
     expect(find.text('No approvals waiting'), findsOneWidget);
   });
 
-  testWidgets('approving a money item through the sheet records the decision', (tester) async {
+  testWidgets('approving a money item through the sheet records the decision',
+      (tester) async {
     final repo = FakeApprovalsRepository(items: [moneyApproval()]);
     await pump(tester, repo);
 
@@ -50,9 +53,11 @@ void main() {
     expect(find.text('Approve'), findsOneWidget); // sheet is up
 
     await tester.tap(find.text('Approve'));
-    await tester.pumpAndSettle(); // biometric (auto-confirm) + decide + close sheet
+    await tester
+        .pumpAndSettle(); // biometric (auto-confirm) + decide + close sheet
 
     expect(repo.decisions.length, 1);
-    expect(find.text('No approvals waiting'), findsOneWidget); // inbox now empty
+    expect(
+        find.text('No approvals waiting'), findsOneWidget); // inbox now empty
   });
 }

@@ -13,7 +13,8 @@ PreferredSizeWidget gradientAppBar(
   return AppBar(
     title: Text(title),
     foregroundColor: Colors.white,
-    titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
+    titleTextStyle: const TextStyle(
+        color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
     iconTheme: const IconThemeData(color: Colors.white),
     actionsIconTheme: const IconThemeData(color: Colors.white),
     elevation: 0,
@@ -47,7 +48,8 @@ class SectionLabel extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.8,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+          color:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
         ),
       ),
     );
@@ -71,7 +73,8 @@ class StatusPill extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -79,15 +82,20 @@ class StatusPill extends StatelessWidget {
 
 /// A centred empty / error state with an icon and message.
 class EmptyState extends StatelessWidget {
-  const EmptyState({super.key, required this.icon, required this.message, this.isError = false});
+  const EmptyState(
+      {super.key,
+      required this.icon,
+      required this.message,
+      this.isError = false});
   final IconData icon;
   final String message;
   final bool isError;
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        isError ? AppTheme.danger : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45);
+    final color = isError
+        ? AppTheme.danger
+        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45);
     return ListView(
       children: [
         const SizedBox(height: 120),
@@ -96,7 +104,8 @@ class EmptyState extends StatelessWidget {
         Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(message, textAlign: TextAlign.center, style: TextStyle(color: color)),
+            child: Text(message,
+                textAlign: TextAlign.center, style: TextStyle(color: color)),
           ),
         ),
       ],
@@ -106,7 +115,8 @@ class EmptyState extends StatelessWidget {
 
 /// A leading circular icon badge (soft brand-green by default).
 class IconBadge extends StatelessWidget {
-  const IconBadge(this.icon, {super.key, this.color, this.background, this.size = 44});
+  const IconBadge(this.icon,
+      {super.key, this.color, this.background, this.size = 44});
   final IconData icon;
   final Color? color;
   final Color? background;
@@ -117,7 +127,8 @@ class IconBadge extends StatelessWidget {
     return Container(
       height: size,
       width: size,
-      decoration: BoxDecoration(color: background ?? AppTheme.greenSoft, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+          color: background ?? AppTheme.greenSoft, shape: BoxShape.circle),
       child: Icon(icon, size: size * 0.52, color: color ?? AppTheme.greenDark),
     );
   }

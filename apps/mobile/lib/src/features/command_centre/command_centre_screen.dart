@@ -36,7 +36,9 @@ class _CommandCentreScreenState extends State<CommandCentreScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (state.dashboard == null) {
-            return _ErrorView(message: state.error, onRetry: () => context.read<CommandCentreCubit>().load());
+            return _ErrorView(
+                message: state.error,
+                onRetry: () => context.read<CommandCentreCubit>().load());
           }
           final cc = state.dashboard!;
           return RefreshIndicator(
@@ -59,25 +61,51 @@ class _CommandCentreScreenState extends State<CommandCentreScreen> {
 
   Widget _panels(CommandCentre cc) {
     final cards = <Widget>[
-      _MetricCard(icon: Icons.account_balance_wallet_outlined, label: 'Cash on hand', value: _usd(cc.cashUsd)),
-      _MetricCard(icon: Icons.swap_vert, label: 'Net money in/out', value: _usd(cc.net)),
-      _MetricCard(icon: Icons.shield_outlined, label: 'Expected in', value: _usd(cc.expectedIn)),
-      _MetricCard(icon: Icons.outbox_outlined, label: 'Expected out', value: _usd(cc.expectedOut)),
-      _MetricCard(icon: Icons.receipt_long_outlined, label: 'Obligations', value: _usd(cc.obligationsUsd)),
+      _MetricCard(
+          icon: Icons.account_balance_wallet_outlined,
+          label: 'Cash on hand',
+          value: _usd(cc.cashUsd)),
+      _MetricCard(
+          icon: Icons.swap_vert,
+          label: 'Net money in/out',
+          value: _usd(cc.net)),
+      _MetricCard(
+          icon: Icons.shield_outlined,
+          label: 'Expected in',
+          value: _usd(cc.expectedIn)),
+      _MetricCard(
+          icon: Icons.outbox_outlined,
+          label: 'Expected out',
+          value: _usd(cc.expectedOut)),
+      _MetricCard(
+          icon: Icons.receipt_long_outlined,
+          label: 'Obligations',
+          value: _usd(cc.obligationsUsd)),
       _MetricCard(
         icon: Icons.warning_amber_outlined,
         label: 'Unfunded gap',
         value: _usd(cc.unfundedGapUsd),
         emphasise: (cc.unfundedGapUsd ?? 0) > 0,
       ),
-      _MetricCard(icon: Icons.request_quote_outlined, label: 'Receivables', value: _usd(cc.receivables)),
-      _MetricCard(icon: Icons.trending_up, label: 'Operating profit', value: _usd(cc.operatingProfit)),
+      _MetricCard(
+          icon: Icons.request_quote_outlined,
+          label: 'Receivables',
+          value: _usd(cc.receivables)),
+      _MetricCard(
+          icon: Icons.trending_up,
+          label: 'Operating profit',
+          value: _usd(cc.operatingProfit)),
       _MetricCard(
         icon: Icons.percent,
         label: 'Margin',
-        value: cc.margin == null ? '—' : '${(cc.margin! * 100).toStringAsFixed(1)}%',
+        value: cc.margin == null
+            ? '—'
+            : '${(cc.margin! * 100).toStringAsFixed(1)}%',
       ),
-      _MetricCard(icon: Icons.gavel_outlined, label: 'Tax + interest', value: _usd(cc.taxWithInterest)),
+      _MetricCard(
+          icon: Icons.gavel_outlined,
+          label: 'Tax + interest',
+          value: _usd(cc.taxWithInterest)),
     ];
     return GridView.count(
       crossAxisCount: 2,
@@ -108,7 +136,8 @@ class _VerdictBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+      decoration:
+          BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
           const Icon(Icons.insights, color: Colors.white),
@@ -116,7 +145,10 @@ class _VerdictBanner extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16),
             ),
           ),
         ],
@@ -148,7 +180,8 @@ class _MetricCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, color: emphasise ? AppTheme.danger : scheme.primary, size: 22),
+            Icon(icon,
+                color: emphasise ? AppTheme.danger : scheme.primary, size: 22),
             Text(label, style: Theme.of(context).textTheme.bodySmall),
             Text(
               value,
@@ -211,9 +244,13 @@ class _AlertTile extends StatelessWidget {
         title: Text(alert.message),
         subtitle: Text(alert.severity.name.toUpperCase()),
         trailing: acking
-            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 2))
             : TextButton(
-                onPressed: () => context.read<CommandCentreCubit>().acknowledge(alert.id),
+                onPressed: () =>
+                    context.read<CommandCentreCubit>().acknowledge(alert.id),
                 child: const Text('Ack'),
               ),
       ),

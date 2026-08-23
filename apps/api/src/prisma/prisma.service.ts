@@ -31,6 +31,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   constructor(private readonly rls: RlsContext) {
     super();
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- needed inside the extension method shorthand below, where `this` is not the class instance
     const self = this;
 
     const extended = this.$extends({

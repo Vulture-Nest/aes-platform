@@ -185,7 +185,12 @@ export class SiteReportsService {
   }
 
   /** Set a section's content and/or mark it complete. */
-  async updateSection(reportId: string, sectionKey: string, dto: UpdateSectionDto, actorId: string) {
+  async updateSection(
+    reportId: string,
+    sectionKey: string,
+    dto: UpdateSectionDto,
+    actorId: string,
+  ) {
     const period = await this.findOne(reportId);
     this.assertEditable(period.status);
     const section = period.sections.find((s) => s.sectionKey === sectionKey);
@@ -279,7 +284,14 @@ export class SiteReportsService {
         });
       } else {
         await this.prisma.siteKpiActual.create({
-          data: { kpiId: kpi.id, periodMonth, actualValue, rag, createdBy: actorId, updatedBy: actorId },
+          data: {
+            kpiId: kpi.id,
+            periodMonth,
+            actualValue,
+            rag,
+            createdBy: actorId,
+            updatedBy: actorId,
+          },
         });
       }
     } catch {
@@ -347,7 +359,12 @@ export class SiteReportsService {
         night += Number(e.nightHours);
       }
     }
-    return { normalHours: normal, overtimeHours: overtime, nightHours: night, totalHours: normal + overtime };
+    return {
+      normalHours: normal,
+      overtimeHours: overtime,
+      nightHours: night,
+      totalHours: normal + overtime,
+    };
   }
 
   private async autoProgress(siteId: string) {

@@ -23,7 +23,8 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       appBar: gradientAppBar('Profile'),
       body: user == null
-          ? const EmptyState(icon: Icons.person_off_outlined, message: 'No active session.')
+          ? const EmptyState(
+              icon: Icons.person_off_outlined, message: 'No active session.')
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               children: [
@@ -36,9 +37,11 @@ class ProfileScreen extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: () => _confirmSignOut(context),
                   icon: const Icon(Icons.logout, color: AppTheme.danger),
-                  label: const Text('Sign out', style: TextStyle(color: AppTheme.danger)),
+                  label: const Text('Sign out',
+                      style: TextStyle(color: AppTheme.danger)),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppTheme.danger.withValues(alpha: 0.5)),
+                    side: BorderSide(
+                        color: AppTheme.danger.withValues(alpha: 0.5)),
                   ),
                 ),
               ],
@@ -80,7 +83,8 @@ class _IdentityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
-    final primaryRole = user.roles.isEmpty ? null : _humanizeRole(user.roles.first.role);
+    final primaryRole =
+        user.roles.isEmpty ? null : _humanizeRole(user.roles.first.role);
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -97,7 +101,8 @@ class _IdentityCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.16),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2),
+                    border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.4), width: 2),
                   ),
                   alignment: Alignment.center,
                   child: Text(
@@ -113,19 +118,26 @@ class _IdentityCard extends StatelessWidget {
                 Text(
                   user.email,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700),
                 ),
                 if (primaryRole != null) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       primaryRole,
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -141,7 +153,9 @@ class _IdentityCard extends StatelessWidget {
                     label: 'Status',
                     valueWidget: StatusPill(
                       label: user.status,
-                      color: user.status == 'ACTIVE' ? AppTheme.greenDark : AppTheme.watch,
+                      color: user.status == 'ACTIVE'
+                          ? AppTheme.greenDark
+                          : AppTheme.watch,
                     ),
                   ),
                 ),
@@ -184,13 +198,16 @@ class _RolesCard extends StatelessWidget {
             if (i > 0) const Divider(height: 1),
             ListTile(
               leading: IconBadge(
-                roles[i].siteId == null ? Icons.public : Icons.location_on_outlined,
+                roles[i].siteId == null
+                    ? Icons.public
+                    : Icons.location_on_outlined,
               ),
               title: Text(
                 _humanizeRole(roles[i].role),
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              subtitle: Text(roles[i].siteId == null ? 'All sites' : 'Site-scoped'),
+              subtitle:
+                  Text(roles[i].siteId == null ? 'All sites' : 'Site-scoped'),
             ),
           ],
         ],
@@ -272,7 +289,10 @@ class _KeyValue extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   value ?? '',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: valueColor),
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: valueColor),
                 ),
               ),
         ],
@@ -291,10 +311,13 @@ String _humanizeRole(String role) => role
 /// Two-letter avatar initials from the local part of an email.
 String _initials(String email) {
   final local = email.split('@').first;
-  final parts = local.split(RegExp(r'[._-]')).where((p) => p.isNotEmpty).toList();
+  final parts =
+      local.split(RegExp(r'[._-]')).where((p) => p.isNotEmpty).toList();
   if (parts.isEmpty) return '?';
   if (parts.length == 1) {
-    return parts.first.substring(0, parts.first.length >= 2 ? 2 : 1).toUpperCase();
+    return parts.first
+        .substring(0, parts.first.length >= 2 ? 2 : 1)
+        .toUpperCase();
   }
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }

@@ -24,12 +24,15 @@ void main() {
     expect(cubit.state.floatsLoading, isFalse);
   });
 
-  test('createWithdrawal without a receipt posts amount+purpose and reloads txns', () async {
+  test(
+      'createWithdrawal without a receipt posts amount+purpose and reloads txns',
+      () async {
     final repo = FakePettyCashRepository();
     final att = FakeAttachmentsRepository();
     final cubit = build(repo, att: att);
 
-    final result = await cubit.createWithdrawal('f1', amount: 40, purpose: 'Tyres');
+    final result =
+        await cubit.createWithdrawal('f1', amount: 40, purpose: 'Tyres');
 
     expect(result.ok, isTrue);
     expect(att.uploads, 0);
@@ -39,12 +42,14 @@ void main() {
     expect(cubit.state.txns, hasLength(1)); // reloaded
   });
 
-  test('createWithdrawal with a receipt uploads first and attaches the key', () async {
+  test('createWithdrawal with a receipt uploads first and attaches the key',
+      () async {
     final repo = FakePettyCashRepository();
     final att = FakeAttachmentsRepository(key: 'attachments/z/receipt.jpg');
     final cubit = build(repo, att: att);
 
-    await cubit.createWithdrawal('f1', amount: 25, purpose: 'Fuel', receipt: fakeCaptured());
+    await cubit.createWithdrawal('f1',
+        amount: 25, purpose: 'Fuel', receipt: fakeCaptured());
 
     expect(att.uploads, 1);
     expect(repo.withdrawals.single.receiptKey, 'attachments/z/receipt.jpg');
@@ -54,7 +59,8 @@ void main() {
     final outbox = InMemoryOutboxStore();
     final cubit = build(FakePettyCashRepository(offline: true), outbox: outbox);
 
-    final result = await cubit.createWithdrawal('f1', amount: 30, purpose: 'Spares');
+    final result =
+        await cubit.createWithdrawal('f1', amount: 30, purpose: 'Spares');
 
     expect(result.queuedOffline, isTrue);
     final queued = await outbox.all();

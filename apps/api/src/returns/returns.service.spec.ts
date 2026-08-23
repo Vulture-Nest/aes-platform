@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test mocks intentionally use `any` for loosely-typed Prisma stubs */
 import { Prisma } from '@prisma/client';
 import { ReturnsService } from './returns.service';
 
@@ -27,8 +28,26 @@ describe('ReturnsService', () => {
       {
         entityId: null,
         lines: [
-          { paye: D(100), aidsLevy: D(3), nssaEe: D(10), nssaEr: D(20), zimdef: D(5), nec: D(2), mipf: D(1), nyaradzo: D(4) },
-          { paye: D(50), aidsLevy: D(1.5), nssaEe: D(5), nssaEr: D(10), zimdef: D(2.5), nec: D(1), mipf: D(0.5), nyaradzo: D(2) },
+          {
+            paye: D(100),
+            aidsLevy: D(3),
+            nssaEe: D(10),
+            nssaEr: D(20),
+            zimdef: D(5),
+            nec: D(2),
+            mipf: D(1),
+            nyaradzo: D(4),
+          },
+          {
+            paye: D(50),
+            aidsLevy: D(1.5),
+            nssaEe: D(5),
+            nssaEr: D(10),
+            zimdef: D(2.5),
+            nec: D(1),
+            mipf: D(0.5),
+            nyaradzo: D(2),
+          },
         ],
       },
     ]);
@@ -47,14 +66,23 @@ describe('ReturnsService', () => {
     expect(prisma.statutoryReturn.findFirst).toHaveBeenCalled();
   });
 
-  it('derives the head list from a run\'s actual non-zero heads (data-driven per country)', async () => {
+  it("derives the head list from a run's actual non-zero heads (data-driven per country)", async () => {
     // A run in another country that levies only PAYE + NSSA (no AIDS levy / ZIMDEF / NEC / MIPF /
     // NYARADZO): those zero heads must NOT be filed, while a ZW-shaped run keeps its full set.
     prisma.payrollRun.findMany.mockResolvedValue([
       {
         entityId: 'entity-xx',
         lines: [
-          { paye: D(200), aidsLevy: D(0), nssaEe: D(15), nssaEr: D(15), zimdef: D(0), nec: D(0), mipf: D(0), nyaradzo: D(0) },
+          {
+            paye: D(200),
+            aidsLevy: D(0),
+            nssaEe: D(15),
+            nssaEr: D(15),
+            zimdef: D(0),
+            nec: D(0),
+            mipf: D(0),
+            nyaradzo: D(0),
+          },
         ],
       },
     ]);

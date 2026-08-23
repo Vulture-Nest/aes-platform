@@ -19,11 +19,43 @@ describe('StatutoryRatesService — country scoping + fallback', () => {
   // Seed: ZW-style country-agnostic (NULL) rows + XX-specific rows with DISTINCT values.
   const rows: any[] = [
     // Country-agnostic default (the existing ZW behaviour): vat_pct 15, aids_levy_pct 3.
-    { id: 'z-vat', key: 'vat_pct', currency: null, country: null, value: dec(15), params: null, dateEffective: new Date('2025-01-01') },
-    { id: 'z-aids', key: 'aids_levy_pct', currency: null, country: null, value: dec(3), params: null, dateEffective: new Date('2025-01-01') },
+    {
+      id: 'z-vat',
+      key: 'vat_pct',
+      currency: null,
+      country: null,
+      value: dec(15),
+      params: null,
+      dateEffective: new Date('2025-01-01'),
+    },
+    {
+      id: 'z-aids',
+      key: 'aids_levy_pct',
+      currency: null,
+      country: null,
+      value: dec(3),
+      params: null,
+      dateEffective: new Date('2025-01-01'),
+    },
     // XX-specific overrides: distinct values so isolation is unambiguous.
-    { id: 'x-vat', key: 'vat_pct', currency: null, country: 'XX', value: dec(20), params: null, dateEffective: new Date('2025-01-01') },
-    { id: 'x-head', key: 'xx_special_pct', currency: null, country: 'XX', value: dec(7.5), params: null, dateEffective: new Date('2025-01-01') },
+    {
+      id: 'x-vat',
+      key: 'vat_pct',
+      currency: null,
+      country: 'XX',
+      value: dec(20),
+      params: null,
+      dateEffective: new Date('2025-01-01'),
+    },
+    {
+      id: 'x-head',
+      key: 'xx_special_pct',
+      currency: null,
+      country: 'XX',
+      value: dec(7.5),
+      params: null,
+      dateEffective: new Date('2025-01-01'),
+    },
   ];
 
   const prisma = {
@@ -85,8 +117,8 @@ describe('StatutoryRatesService — country scoping + fallback', () => {
   });
 
   it('throws when neither a scoped nor a country-agnostic row exists', async () => {
-    await expect(
-      service.valueAsOf('does_not_exist', asOf, undefined, 'XX'),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.valueAsOf('does_not_exist', asOf, undefined, 'XX')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });

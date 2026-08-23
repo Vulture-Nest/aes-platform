@@ -483,27 +483,83 @@ export function detectPayrollColumns(row2: Row, row3: Row): Record<string, numbe
     }
   };
 
-  set('worksNo', find((h) => h.includes('works')));
-  set('station', find((h) => h.includes('station')));
-  set('grade', find((h) => h === 'grade' || h.endsWith(' grade')));
-  set('nssaNo', find((h) => h.includes('nssa number')));
-  set('hours', find((h) => h === 'hours' || h.includes('hours worked')));
-  set('basicUsd', find((h) => h.includes('basic') && h.includes('usd') && !h.includes('zwl')));
+  set(
+    'worksNo',
+    find((h) => h.includes('works')),
+  );
+  set(
+    'station',
+    find((h) => h.includes('station')),
+  );
+  set(
+    'grade',
+    find((h) => h === 'grade' || h.endsWith(' grade')),
+  );
+  set(
+    'nssaNo',
+    find((h) => h.includes('nssa number')),
+  );
+  set(
+    'hours',
+    find((h) => h === 'hours' || h.includes('hours worked')),
+  );
+  set(
+    'basicUsd',
+    find((h) => h.includes('basic') && h.includes('usd') && !h.includes('zwl')),
+  );
   set(
     'basicZwg',
-    find((h) => h.includes('basic') && (h.includes('zwl') || h.includes('zwg') || h.includes('zig'))),
+    find(
+      (h) => h.includes('basic') && (h.includes('zwl') || h.includes('zwg') || h.includes('zig')),
+    ),
   );
-  set('ugAllowance', find((h) => h.includes('underground')));
-  set('nightAllowance', find((h) => h.includes('night shift')));
-  set('gross', find((h) => h.includes('gross') && h.includes('total')));
-  set('nssaEe', find((h) => h.includes('nssa usd')));
-  set('mipf', find((h) => h.includes('mipf')));
-  set('nec', find((h) => h === 'nec' || h.endsWith(' nec')));
-  set('paye', find((h) => h.includes('paye usd')));
-  set('aidsLevy', find((h) => h.includes('aids')));
-  set('nyaradzo', find((h) => h.includes('nyaradzo')));
-  set('netUsd', find((h) => h.includes('net salary') && h.includes('usd')));
-  set('netZwg', find((h) => h.includes('net salary') && (h.includes('zwl') || h.includes('zwg') || h.includes('zig'))));
+  set(
+    'ugAllowance',
+    find((h) => h.includes('underground')),
+  );
+  set(
+    'nightAllowance',
+    find((h) => h.includes('night shift')),
+  );
+  set(
+    'gross',
+    find((h) => h.includes('gross') && h.includes('total')),
+  );
+  set(
+    'nssaEe',
+    find((h) => h.includes('nssa usd')),
+  );
+  set(
+    'mipf',
+    find((h) => h.includes('mipf')),
+  );
+  set(
+    'nec',
+    find((h) => h === 'nec' || h.endsWith(' nec')),
+  );
+  set(
+    'paye',
+    find((h) => h.includes('paye usd')),
+  );
+  set(
+    'aidsLevy',
+    find((h) => h.includes('aids')),
+  );
+  set(
+    'nyaradzo',
+    find((h) => h.includes('nyaradzo')),
+  );
+  set(
+    'netUsd',
+    find((h) => h.includes('net salary') && h.includes('usd')),
+  );
+  set(
+    'netZwg',
+    find(
+      (h) =>
+        h.includes('net salary') && (h.includes('zwl') || h.includes('zwg') || h.includes('zig')),
+    ),
+  );
 
   return map;
 }

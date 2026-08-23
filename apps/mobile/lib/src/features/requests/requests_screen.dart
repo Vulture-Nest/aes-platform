@@ -45,7 +45,8 @@ class RequestsScreen extends StatefulWidget {
   State<RequestsScreen> createState() => _RequestsScreenState();
 }
 
-class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProviderStateMixin {
+class _RequestsScreenState extends State<RequestsScreen>
+    with SingleTickerProviderStateMixin {
   late final TabController _tabs = TabController(length: 3, vsync: this);
 
   @override
@@ -75,13 +76,15 @@ class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProvid
     if (_tabs.index == 0) {
       message = await Navigator.of(context).push<String>(
         MaterialPageRoute(
-          builder: (_) => BlocProvider.value(value: requisitions, child: const RequisitionForm()),
+          builder: (_) => BlocProvider.value(
+              value: requisitions, child: const RequisitionForm()),
         ),
       );
     } else {
       message = await Navigator.of(context).push<String>(
         MaterialPageRoute(
-          builder: (_) => BlocProvider.value(value: travel, child: const TravelForm()),
+          builder: (_) =>
+              BlocProvider.value(value: travel, child: const TravelForm()),
         ),
       );
     }
@@ -124,7 +127,11 @@ class _RequestsScreenState extends State<RequestsScreen> with SingleTickerProvid
           Expanded(
             child: TabBarView(
               controller: _tabs,
-              children: const [_RequisitionsTab(), _TravelTab(), PettyCashTab()],
+              children: const [
+                _RequisitionsTab(),
+                _TravelTab(),
+                PettyCashTab()
+              ],
             ),
           ),
         ],
@@ -149,7 +156,9 @@ class _PendingSyncBanner extends StatelessWidget {
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(content: Text(parts.isEmpty ? 'Nothing to sync' : parts.join(' · '))),
+        SnackBar(
+            content:
+                Text(parts.isEmpty ? 'Nothing to sync' : parts.join(' · '))),
       );
   }
 
@@ -166,11 +175,17 @@ class _PendingSyncBanner extends StatelessWidget {
               children: [
                 const Icon(Icons.cloud_upload_outlined, size: 20),
                 const SizedBox(width: 12),
-                Expanded(child: Text('${state.pending} draft(s) saved offline')),
+                Expanded(
+                    child: Text('${state.pending} draft(s) saved offline')),
                 if (state.syncing)
-                  const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
                 else
-                  TextButton(onPressed: () => _sync(context), child: const Text('Sync now')),
+                  TextButton(
+                      onPressed: () => _sync(context),
+                      child: const Text('Sync now')),
               ],
             ),
           ),
@@ -202,9 +217,15 @@ class _RequisitionsTab extends StatelessWidget {
               rows: [
                 ('Amount', Money.format(r.amount, currency: r.currency)),
                 if (r.requiredByDate != null)
-                  ('Required by', r.requiredByDate!.toIso8601String().substring(0, 10)),
+                  (
+                    'Required by',
+                    r.requiredByDate!.toIso8601String().substring(0, 10)
+                  ),
                 if (r.shortfall != null && r.shortfall! > 0)
-                  ('Shortfall', Money.format(r.shortfall, currency: r.currency)),
+                  (
+                    'Shortfall',
+                    Money.format(r.shortfall, currency: r.currency)
+                  ),
                 if (r.attachmentKey != null) ('Receipt', 'Attached'),
               ],
             ),
@@ -236,11 +257,18 @@ class _TravelTab extends StatelessWidget {
                   : '${t.dateFrom!.toIso8601String().substring(0, 10)} → ${t.dateTo!.toIso8601String().substring(0, 10)}',
               status: t.status,
               rows: [
-                ('Advance', Money.format(t.advanceAmount, currency: t.currency)),
-                if (t.perDiem != null) ('Per diem', Money.format(t.perDiem, currency: t.currency)),
+                (
+                  'Advance',
+                  Money.format(t.advanceAmount, currency: t.currency)
+                ),
+                if (t.perDiem != null)
+                  ('Per diem', Money.format(t.perDiem, currency: t.currency)),
                 if (t.destinationClass != null) ('Class', t.destinationClass!),
                 if (t.shortfall != null && t.shortfall! > 0)
-                  ('Shortfall', Money.format(t.shortfall, currency: t.currency)),
+                  (
+                    'Shortfall',
+                    Money.format(t.shortfall, currency: t.currency)
+                  ),
               ],
             ),
         ],
@@ -291,9 +319,12 @@ class _RequestListView extends StatelessWidget {
           ? ListView(
               children: [
                 const SizedBox(height: 120),
-                Icon(error != null ? Icons.cloud_off : Icons.inbox_outlined, size: 48),
+                Icon(error != null ? Icons.cloud_off : Icons.inbox_outlined,
+                    size: 48),
                 const SizedBox(height: 12),
-                Center(child: Text(error ?? 'No requests yet — tap + to raise one')),
+                Center(
+                    child:
+                        Text(error ?? 'No requests yet — tap + to raise one')),
               ],
             )
           : ListView.builder(
@@ -304,7 +335,8 @@ class _RequestListView extends StatelessWidget {
                 return Card(
                   child: ListTile(
                     onTap: () => _openDetail(context, vm),
-                    title: Text(vm.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    title: Text(vm.title,
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

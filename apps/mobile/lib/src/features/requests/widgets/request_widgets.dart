@@ -43,7 +43,8 @@ class StatusChip extends StatelessWidget {
       ),
       child: Text(
         RequestLifecycle.label(status),
-        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -123,7 +124,9 @@ class _Step extends StatelessWidget {
               ),
               if (!isLast)
                 Expanded(
-                  child: Container(width: 2, color: done ? AppTheme.seed : scheme.outlineVariant),
+                  child: Container(
+                      width: 2,
+                      color: done ? AppTheme.seed : scheme.outlineVariant),
                 ),
             ],
           ),
@@ -133,7 +136,8 @@ class _Step extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                fontWeight: (active || failed) ? FontWeight.w700 : FontWeight.normal,
+                fontWeight:
+                    (active || failed) ? FontWeight.w700 : FontWeight.normal,
                 color: reached ? null : scheme.outline,
               ),
             ),

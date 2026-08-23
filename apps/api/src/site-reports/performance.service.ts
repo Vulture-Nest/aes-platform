@@ -9,12 +9,7 @@ import {
   UpsertActualDto,
   UpsertTargetDto,
 } from './dto/kpi.dto';
-import {
-  computeRag,
-  KpiDirection,
-  scoreToRag,
-  weightedScore,
-} from './performance.util';
+import { computeRag, KpiDirection, scoreToRag, weightedScore } from './performance.util';
 
 interface KpiWithRelations {
   id: string;
@@ -38,15 +33,16 @@ interface KpiWithRelations {
  * Resolve the target that applies to a KPI in a given month: prefer an exact
  * periodMonth match, else the latest effective-from at/before the month, else the first.
  */
-export function resolveTarget<
-  T extends { periodMonth: string | null; effectiveFrom: Date | null },
->(targets: T[], periodMonth: string): T | undefined {
+export function resolveTarget<T extends { periodMonth: string | null; effectiveFrom: Date | null }>(
+  targets: T[],
+  periodMonth: string,
+): T | undefined {
   const exact = targets.find((t) => t.periodMonth === periodMonth);
   if (exact) return exact;
   const monthStart = new Date(`${periodMonth}-01T00:00:00.000Z`);
   const dated = targets
     .filter((t) => t.effectiveFrom != null && t.effectiveFrom <= monthStart)
-    .sort((a, b) => (b.effectiveFrom!.getTime() - a.effectiveFrom!.getTime()));
+    .sort((a, b) => b.effectiveFrom!.getTime() - a.effectiveFrom!.getTime());
   if (dated.length) return dated[0];
   return targets.find((t) => t.periodMonth == null && t.effectiveFrom == null) ?? targets[0];
 }
@@ -252,9 +248,17 @@ export class PerformanceService {
     if (!periodMonth) throw new BadRequestException('period is required');
     const siteIds = await this.siteIdsWithKpis();
     const sites = siteIds.length
-      ? await this.prisma.site.findMany({ where: { id: { in: siteIds } }, select: { id: true, name: true } })
+      ? await this.prisma.site.findMany({
+          where: { id: { in: siteIds } },
+          select: { id: true, name: true },
+        })
       : [];
-    const results = [] as Array<{ siteId: string; siteName: string; weightedScore: number; rag: RagStatus }>;
+    const results = [] as Array<{
+      siteId: string;
+      siteName: string;
+      weightedScore: number;
+      rag: RagStatus;
+    }>;
     for (const site of sites) {
       const perf = await this.performance(site.id, periodMonth);
       results.push({
@@ -303,9 +307,7 @@ export class PerformanceService {
     })) as unknown as KpiWithRelations[];
 
     // All months for which any actual exists.
-    const months = [
-      ...new Set(kpis.flatMap((k) => k.actuals.map((a) => a.periodMonth))),
-    ].sort();
+    const months = [...new Set(kpis.flatMap((k) => k.actuals.map((a) => a.periodMonth)))].sort();
 
     const periods = months.map((month) => {
       const rows = kpis.map((k) => this.evaluateKpi(k, month));
@@ -317,7 +319,8 @@ export class PerformanceService {
     const overall =
       periods.length === 0
         ? 0
-        : Math.round((periods.reduce((s, p) => s + p.weightedScore, 0) / periods.length) * 100) / 100;
+        : Math.round((periods.reduce((s, p) => s + p.weightedScore, 0) / periods.length) * 100) /
+          100;
 
     return {
       contractId,

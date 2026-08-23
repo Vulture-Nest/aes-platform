@@ -6,7 +6,10 @@ describe('resolveTarget', () => {
       { periodMonth: '2026-06', effectiveFrom: null },
       { periodMonth: '2026-07', effectiveFrom: null },
     ];
-    expect(resolveTarget(targets, '2026-07')).toEqual({ periodMonth: '2026-07', effectiveFrom: null });
+    expect(resolveTarget(targets, '2026-07')).toEqual({
+      periodMonth: '2026-07',
+      effectiveFrom: null,
+    });
   });
 
   it('falls back to the latest effective-from at/before the month (stepped targets)', () => {

@@ -79,7 +79,8 @@ class _Body extends StatelessWidget {
       return ListView(
         children: [
           const SizedBox(height: 120),
-          Icon(Icons.cloud_off, size: 48, color: Theme.of(context).disabledColor),
+          Icon(Icons.cloud_off,
+              size: 48, color: Theme.of(context).disabledColor),
           const SizedBox(height: 12),
           Center(child: Text(state.error!, textAlign: TextAlign.center)),
         ],
@@ -111,7 +112,8 @@ class _Body extends StatelessWidget {
 }
 
 class _ApprovalCard extends StatelessWidget {
-  const _ApprovalCard({required this.item, required this.busy, required this.onTap});
+  const _ApprovalCard(
+      {required this.item, required this.busy, required this.onTap});
 
   final ApprovalItem item;
   final bool busy;
@@ -127,7 +129,9 @@ class _ApprovalCard extends StatelessWidget {
       child: ListTile(
         onTap: busy ? null : onTap,
         leading: CircleAvatar(
-          child: Icon(item.isMoneyItem ? Icons.payments_outlined : Icons.description_outlined),
+          child: Icon(item.isMoneyItem
+              ? Icons.payments_outlined
+              : Icons.description_outlined),
         ),
         title: Text(item.moduleLabel, style: theme.textTheme.titleMedium),
         subtitle: Column(
@@ -135,7 +139,8 @@ class _ApprovalCard extends StatelessWidget {
           children: [
             if (amountLabel != null)
               Text(amountLabel, style: theme.textTheme.titleSmall),
-            Text('${item.subjectTable} · step ${item.step} · as ${item.approverRole}'),
+            Text(
+                '${item.subjectTable} · step ${item.step} · as ${item.approverRole}'),
             if (item.isMoneyItem)
               Row(
                 children: [
@@ -205,7 +210,8 @@ class _DecisionSheetState extends State<_DecisionSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(item.moduleLabel + amountLabel, style: Theme.of(context).textTheme.titleMedium),
+          Text(item.moduleLabel + amountLabel,
+              style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
             '${item.subjectTable} · acting as ${item.approverRole}',
@@ -248,7 +254,8 @@ class _DecisionSheetState extends State<_DecisionSheet> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _busy ? null : () => _decide(ApprovalDecision.returned),
+                  onPressed:
+                      _busy ? null : () => _decide(ApprovalDecision.returned),
                   icon: const Icon(Icons.undo),
                   label: const Text('Return'),
                 ),
@@ -256,7 +263,8 @@ class _DecisionSheetState extends State<_DecisionSheet> {
               const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _busy ? null : () => _decide(ApprovalDecision.rejected),
+                  onPressed:
+                      _busy ? null : () => _decide(ApprovalDecision.rejected),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Theme.of(context).colorScheme.error,
                   ),

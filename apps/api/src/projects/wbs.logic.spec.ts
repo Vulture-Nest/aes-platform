@@ -1,10 +1,4 @@
-import {
-  flattenTemplate,
-  projectPercent,
-  rollUp,
-  RollUpNode,
-  scheduleHealth,
-} from './wbs.logic';
+import { flattenTemplate, projectPercent, rollUp, RollUpNode, scheduleHealth } from './wbs.logic';
 
 describe('rollUp', () => {
   it('leaves keep their own percent', () => {

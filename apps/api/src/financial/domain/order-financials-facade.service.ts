@@ -106,7 +106,10 @@ export class OrderFinancialsFacadeService {
   ) {}
 
   /** Compute the enriched snapshot for one order id. Throws nothing if absent → null. */
-  async forOrderId(orderId: string, asOf: Date = new Date()): Promise<OrderFinancialsSnapshot | null> {
+  async forOrderId(
+    orderId: string,
+    asOf: Date = new Date(),
+  ): Promise<OrderFinancialsSnapshot | null> {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: { receipts: true, expenses: true, milestones: true },
@@ -146,7 +149,10 @@ export class OrderFinancialsFacadeService {
 
     const milestones: ServiceMilestone[] | undefined =
       order.milestones.length > 0
-        ? order.milestones.map((m) => ({ value: num(m.valuePortion), completed: m.completedAt != null }))
+        ? order.milestones.map((m) => ({
+            value: num(m.valuePortion),
+            completed: m.completedAt != null,
+          }))
         : undefined;
 
     const health = this.health.evaluate({
@@ -213,7 +219,8 @@ export class OrderFinancialsFacadeService {
     const servicedFraction = Math.min(1, Math.max(0, rawFraction));
 
     const fullyServiced = completedCount === milestoneCount || servicedFraction >= 1;
-    const partiallyServiced = completedCount > 0 && completedCount < milestoneCount && !fullyServiced;
+    const partiallyServiced =
+      completedCount > 0 && completedCount < milestoneCount && !fullyServiced;
 
     return {
       milestoneCount,
@@ -231,7 +238,8 @@ export class OrderFinancialsFacadeService {
    * we try the null-currency lookup first and fall back to the USD-scoped row.
    */
   async resolveVatPct(asOf: Date): Promise<number> {
-    const value = (await this.lookupVatValue(asOf, undefined)) ?? (await this.lookupVatValue(asOf, 'USD'));
+    const value =
+      (await this.lookupVatValue(asOf, undefined)) ?? (await this.lookupVatValue(asOf, 'USD'));
     if (value == null || value <= 0) {
       return DEFAULT_VAT_PCT;
     }

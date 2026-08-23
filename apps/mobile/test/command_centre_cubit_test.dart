@@ -5,7 +5,8 @@ import 'support/fakes.dart';
 
 void main() {
   test('load fetches the dashboard + active alerts', () async {
-    final alerts = FakeAlertsRepository(alerts: [dangerAlert('Cash runway negative')]);
+    final alerts =
+        FakeAlertsRepository(alerts: [dangerAlert('Cash runway negative')]);
     final cubit = CommandCentreCubit(
       repository: FakeCommandCentreRepository(),
       alerts: alerts,
@@ -20,7 +21,8 @@ void main() {
   });
 
   test('acknowledge calls the API and drops the alert from the feed', () async {
-    final alerts = FakeAlertsRepository(alerts: [dangerAlert('Cash runway negative')]);
+    final alerts =
+        FakeAlertsRepository(alerts: [dangerAlert('Cash runway negative')]);
     final cubit = CommandCentreCubit(
       repository: FakeCommandCentreRepository(),
       alerts: alerts,

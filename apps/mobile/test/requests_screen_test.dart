@@ -26,7 +26,8 @@ void main() {
       attachments: FakeAttachmentsRepository(),
       outbox: outbox,
     );
-    final travel = TravelCubit(travelRepo ?? FakeTravelRepository(), outbox: outbox);
+    final travel =
+        TravelCubit(travelRepo ?? FakeTravelRepository(), outbox: outbox);
     final pettyCash = PettyCashCubit(
       repository: pettyRepo ?? FakePettyCashRepository(),
       attachments: FakeAttachmentsRepository(),
@@ -64,18 +65,23 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('shows tabs and a requisition with its status chip', (tester) async {
-    await pump(tester, reqRepo: FakeRequisitionsRepository(items: [draftRequisition()]));
+  testWidgets('shows tabs and a requisition with its status chip',
+      (tester) async {
+    await pump(tester,
+        reqRepo: FakeRequisitionsRepository(items: [draftRequisition()]));
 
     expect(find.text('Requisitions'), findsOneWidget);
     expect(find.text('Travel'), findsOneWidget);
     expect(find.text('Fuel top-up'), findsOneWidget);
     expect(find.text('Draft'), findsWidgets); // status chip
-    expect(find.text('New requisition'), findsOneWidget); // FAB label on the first tab
+    expect(find.text('New requisition'),
+        findsOneWidget); // FAB label on the first tab
   });
 
-  testWidgets('opening a draft shows the timeline and a submit action', (tester) async {
-    final repo = FakeRequisitionsRepository(items: [draftRequisition(id: 'r7')]);
+  testWidgets('opening a draft shows the timeline and a submit action',
+      (tester) async {
+    final repo =
+        FakeRequisitionsRepository(items: [draftRequisition(id: 'r7')]);
     await pump(tester, reqRepo: repo);
 
     await tester.tap(find.byType(ListTile).first);
@@ -95,8 +101,10 @@ void main() {
     expect(find.textContaining('No requests yet'), findsOneWidget);
   });
 
-  testWidgets('petty cash tab lists floats and hides the hub FAB', (tester) async {
-    await pump(tester, pettyRepo: FakePettyCashRepository(floatList: [usdFloat()]));
+  testWidgets('petty cash tab lists floats and hides the hub FAB',
+      (tester) async {
+    await pump(tester,
+        pettyRepo: FakePettyCashRepository(floatList: [usdFloat()]));
 
     await tester.tap(find.text('Petty Cash'));
     await tester.pumpAndSettle();

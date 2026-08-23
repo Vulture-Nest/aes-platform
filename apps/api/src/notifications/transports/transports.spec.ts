@@ -11,7 +11,15 @@ function configWith(notifications: AppConfig['notifications']): ConfigService<Ap
 }
 
 const EMPTY_NOTIFICATIONS: AppConfig['notifications'] = {
-  mail: { smtpUrl: null, host: null, port: null, secure: false, user: null, pass: null, from: null },
+  mail: {
+    smtpUrl: null,
+    host: null,
+    port: null,
+    secure: false,
+    user: null,
+    pass: null,
+    from: null,
+  },
   teamsWebhookUrl: null,
   fcmServiceAccountJson: null,
 };
@@ -38,7 +46,11 @@ describe('Notification transports — graceful no-op when unconfigured', () => {
     const t = new EmailTransport(
       configWith({
         ...EMPTY_NOTIFICATIONS,
-        mail: { ...EMPTY_NOTIFICATIONS.mail, host: 'smtp.example.com', from: 'AES <no-reply@aes.local>' },
+        mail: {
+          ...EMPTY_NOTIFICATIONS.mail,
+          host: 'smtp.example.com',
+          from: 'AES <no-reply@aes.local>',
+        },
       }),
     );
     expect(t.isEnabled()).toBe(true);
@@ -52,7 +64,10 @@ describe('Notification transports — graceful no-op when unconfigured', () => {
 
   it('TeamsTransport is enabled once TEAMS_WEBHOOK_URL is set', () => {
     const t = new TeamsTransport(
-      configWith({ ...EMPTY_NOTIFICATIONS, teamsWebhookUrl: 'https://outlook.office.com/webhook/x' }),
+      configWith({
+        ...EMPTY_NOTIFICATIONS,
+        teamsWebhookUrl: 'https://outlook.office.com/webhook/x',
+      }),
     );
     expect(t.isEnabled()).toBe(true);
   });

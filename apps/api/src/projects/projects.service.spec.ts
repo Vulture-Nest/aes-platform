@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- test mocks intentionally use `any` for loosely-typed Prisma stubs */
 import { Prisma } from '@prisma/client';
 import { ProjectsService } from './projects.service';
 
@@ -42,9 +43,7 @@ describe('ProjectsService.recomputeProject', () => {
   });
 
   it('does not update leaf nodes (only parents whose value changed)', async () => {
-    const nodes = [
-      { id: 'a', parentId: null, weight: decimal(1), percentComplete: decimal(40) },
-    ];
+    const nodes = [{ id: 'a', parentId: null, weight: decimal(1), percentComplete: decimal(40) }];
     const prisma = makePrisma(nodes);
     const service = new ProjectsService(prisma as any, audit as any);
 

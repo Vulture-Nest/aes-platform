@@ -13,7 +13,8 @@ class AttachmentsRepository {
   final Dio _dio;
 
   /// Upload [bytes] as base64; returns the storage key.
-  Future<String> upload(Uint8List bytes, {required String filename, required String contentType}) async {
+  Future<String> upload(Uint8List bytes,
+      {required String filename, required String contentType}) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/v1/attachments',

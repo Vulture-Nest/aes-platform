@@ -100,9 +100,7 @@ describe('BoardsService — confidentiality enforcement', () => {
         visibility: BoardVisibility.DIRECTOR_CONFIDENTIAL,
         members: [{ userId: 'd1' }],
       });
-      await expect(service.getBoard('b1', otherDirector)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(service.getBoard('b1', otherDirector)).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('member-restricted confidential board is visible to the named director', async () => {
@@ -127,9 +125,7 @@ describe('BoardsService — confidentiality enforcement', () => {
           board: { visibility: BoardVisibility.DIRECTOR_CONFIDENTIAL, members: [] },
         },
       });
-      await expect(service.listComments('c1', staff)).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(service.listComments('c1', staff)).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 

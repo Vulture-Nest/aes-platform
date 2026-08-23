@@ -17,7 +17,8 @@ class DashboardState extends Equatable {
 
   bool get hasDanger => dangerAlerts.isNotEmpty;
 
-  DashboardState copyWith({List<Alert>? alerts, bool? loading}) => DashboardState(
+  DashboardState copyWith({List<Alert>? alerts, bool? loading}) =>
+      DashboardState(
         alerts: alerts ?? this.alerts,
         loading: loading ?? this.loading,
       );

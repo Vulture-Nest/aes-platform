@@ -1,10 +1,5 @@
 import { BoardVisibility } from '@prisma/client';
-import {
-  canSeeConfidential,
-  isDirector,
-  isDirectorRole,
-  isSysAdmin,
-} from './confidentiality';
+import { canSeeConfidential, isDirector, isDirectorRole, isSysAdmin } from './confidentiality';
 
 const TEAM = { visibility: BoardVisibility.TEAM };
 const CONF = { visibility: BoardVisibility.DIRECTOR_CONFIDENTIAL };

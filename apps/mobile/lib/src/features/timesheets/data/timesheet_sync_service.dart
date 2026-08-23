@@ -7,7 +7,8 @@ import 'timesheets_repository.dart';
 
 /// Result of flushing the timesheet draft queue, for the UI to report.
 class TimesheetSyncSummary {
-  const TimesheetSyncSummary({this.synced = 0, this.failed = 0, this.rejected = 0});
+  const TimesheetSyncSummary(
+      {this.synced = 0, this.failed = 0, this.rejected = 0});
 
   /// Draft cells successfully pushed to the API.
   final int synced;
@@ -81,7 +82,8 @@ class TimesheetSyncService {
         final periodId = entry.key;
         final periodDrafts = entry.value;
         try {
-          await _repo.upsertEntries(periodId, [for (final d in periodDrafts) d.entry]);
+          await _repo
+              .upsertEntries(periodId, [for (final d in periodDrafts) d.entry]);
           if (periodDrafts.any((d) => d.submitAfter)) {
             await _repo.submit(periodId);
           }
@@ -89,7 +91,10 @@ class TimesheetSyncService {
           synced += periodDrafts.length;
         } on ApiException catch (e) {
           final status = e.statusCode;
-          if (status != null && status >= 400 && status < 500 && status != 429) {
+          if (status != null &&
+              status >= 400 &&
+              status < 500 &&
+              status != 429) {
             // Permanent rejection — drop and report (server-wins).
             await _store.removeForPeriod(periodId);
             rejected += periodDrafts.length;
@@ -99,7 +104,8 @@ class TimesheetSyncService {
           }
         }
       }
-      return TimesheetSyncSummary(synced: synced, failed: failed, rejected: rejected);
+      return TimesheetSyncSummary(
+          synced: synced, failed: failed, rejected: rejected);
     } finally {
       _flushing = false;
     }

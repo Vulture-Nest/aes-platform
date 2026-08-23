@@ -59,9 +59,7 @@ export class TeamsTransport implements NotificationTransport {
       }
       this.logger.log(`TEAMS delivered → ${notification.template} (${notification.severity})`);
     } catch (err) {
-      this.logger.error(
-        `TEAMS failed → ${notification.template} — ${(err as Error).message}`,
-      );
+      this.logger.error(`TEAMS failed → ${notification.template} — ${(err as Error).message}`);
     }
   }
 

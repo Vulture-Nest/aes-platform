@@ -55,5 +55,6 @@ class ApprovalItem extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, chainId, module, subjectId, step, amount, currency];
+  List<Object?> get props =>
+      [id, chainId, module, subjectId, step, amount, currency];
 }

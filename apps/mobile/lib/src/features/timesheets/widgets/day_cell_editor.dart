@@ -12,11 +12,16 @@ class HourCategory {
   final String short;
   final Color color;
 
-  static const normal = HourCategory('hoursNormal', 'Normal hours', 'N', Color(0xFF579A34));
-  static const ot15 = HourCategory('hoursOt15', 'Overtime @ 1.5×', 'OT1.5', Color(0xFFB7791F));
-  static const ot20 = HourCategory('hoursOt20', 'Overtime @ 2.0×', 'OT2', Color(0xFFC0392B));
-  static const ug = HourCategory('ugShift', 'Underground shift', 'UG', Color(0xFF6D4C41));
-  static const night = HourCategory('nightHours', 'Night hours', 'NGT', Color(0xFF3949AB));
+  static const normal =
+      HourCategory('hoursNormal', 'Normal hours', 'N', Color(0xFF579A34));
+  static const ot15 =
+      HourCategory('hoursOt15', 'Overtime @ 1.5×', 'OT1.5', Color(0xFFB7791F));
+  static const ot20 =
+      HourCategory('hoursOt20', 'Overtime @ 2.0×', 'OT2', Color(0xFFC0392B));
+  static const ug =
+      HourCategory('ugShift', 'Underground shift', 'UG', Color(0xFF6D4C41));
+  static const night =
+      HourCategory('nightHours', 'Night hours', 'NGT', Color(0xFF3949AB));
 
   static const all = [normal, ot15, ot20, ug, night];
 }
@@ -45,7 +50,8 @@ class DayCellEditor extends StatefulWidget {
     return showModalBottomSheet<TimesheetEntry>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => DayCellEditor(employeeName: employeeName, date: date, entry: entry),
+      builder: (_) =>
+          DayCellEditor(employeeName: employeeName, date: date, entry: entry),
     );
   }
 
@@ -75,7 +81,8 @@ class _DayCellEditorState extends State<DayCellEditor> {
     _remarks = TextEditingController(text: widget.entry.remarks ?? '');
   }
 
-  static String _fmt(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+  static String _fmt(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toString();
 
   @override
   void dispose() {
@@ -86,7 +93,8 @@ class _DayCellEditorState extends State<DayCellEditor> {
     super.dispose();
   }
 
-  double _read(String key) => double.tryParse(_controllers[key]!.text.trim()) ?? 0;
+  double _read(String key) =>
+      double.tryParse(_controllers[key]!.text.trim()) ?? 0;
 
   void _save() {
     final updated = TimesheetEntry(
@@ -118,7 +126,8 @@ class _DayCellEditorState extends State<DayCellEditor> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.employeeName, style: Theme.of(context).textTheme.titleLarge),
+            Text(widget.employeeName,
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 2),
             Text(dateLabel, style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 16),
@@ -128,7 +137,8 @@ class _DayCellEditorState extends State<DayCellEditor> {
             ],
             TextField(
               controller: _remarks,
-              decoration: const InputDecoration(labelText: 'Remarks (optional)'),
+              decoration:
+                  const InputDecoration(labelText: 'Remarks (optional)'),
               minLines: 1,
               maxLines: 2,
             ),
@@ -165,7 +175,10 @@ class _HourField extends StatelessWidget {
           ),
           child: Text(
             category.short,
-            style: TextStyle(color: category.color, fontWeight: FontWeight.w700, fontSize: 11),
+            style: TextStyle(
+                color: category.color,
+                fontWeight: FontWeight.w700,
+                fontSize: 11),
           ),
         ),
         const SizedBox(width: 12),
@@ -176,7 +189,9 @@ class _HourField extends StatelessWidget {
             controller: controller,
             textAlign: TextAlign.center,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+            ],
             decoration: const InputDecoration(hintText: '0', isDense: true),
           ),
         ),

@@ -6,7 +6,8 @@ import '../../../data/director_repository.dart';
 import '../../../models/director_withdrawal.dart';
 
 class DirectorState extends Equatable {
-  const DirectorState({this.loading = false, this.items = const [], this.error, this.busyId});
+  const DirectorState(
+      {this.loading = false, this.items = const [], this.error, this.busyId});
 
   final bool loading;
   final List<DirectorWithdrawal> items;
@@ -61,8 +62,10 @@ class DirectorCubit extends Cubit<DirectorState> {
 
   Future<String?> submit(String id) => _act(id, () => _repo.submit(id));
 
-  Future<String?> complete(String id, String method, String reference) =>
-      _act(id, () => _repo.complete(id, transferMethod: method, transferReference: reference));
+  Future<String?> complete(String id, String method, String reference) => _act(
+      id,
+      () => _repo.complete(id,
+          transferMethod: method, transferReference: reference));
 
   Future<String?> _act(String id, Future<void> Function() action) async {
     emit(state.copyWith(busyId: id, clearError: true));

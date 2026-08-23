@@ -45,7 +45,8 @@ class AuthUnauthenticated extends AuthState {
 /// Drives sign-in, session restore and sign-out. Tokens live in [TokenStore];
 /// user + roles are always fetched fresh from the API so RBAC is never stale.
 class AuthCubit extends Cubit<AuthState> {
-  AuthCubit({required AuthRepository authRepository, required TokenStore tokenStore})
+  AuthCubit(
+      {required AuthRepository authRepository, required TokenStore tokenStore})
       : _auth = authRepository,
         _tokens = tokenStore,
         super(const AuthUnknown());
@@ -96,7 +97,8 @@ class AuthCubit extends Cubit<AuthState> {
   /// Called by the API client when a token refresh ultimately fails mid-session.
   void sessionExpired() {
     if (state is! AuthUnauthenticated) {
-      emit(const AuthUnauthenticated(error: 'Your session has expired. Please sign in again.'));
+      emit(const AuthUnauthenticated(
+          error: 'Your session has expired. Please sign in again.'));
     }
   }
 }

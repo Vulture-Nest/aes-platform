@@ -65,7 +65,8 @@ class TravelRepository {
 
   Future<TravelRequest> create(NewTravel input) async {
     try {
-      final response = await _dio.post<Map<String, dynamic>>('/v1/travel', data: input.toJson());
+      final response = await _dio.post<Map<String, dynamic>>('/v1/travel',
+          data: input.toJson());
       return TravelRequest.fromJson(response.data!);
     } on DioException catch (error) {
       throw ApiException.fromDio(error);

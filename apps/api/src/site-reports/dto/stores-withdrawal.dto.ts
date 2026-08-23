@@ -1,13 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import {
-  IsDateString,
-  IsIn,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Min,
-} from 'class-validator';
+import { IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 export const STORES_ITEM_TYPES = ['FUEL', 'OIL', 'MATERIAL', 'TOOL'] as const;
 

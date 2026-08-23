@@ -74,7 +74,9 @@ class _BoardsScreenState extends State<BoardsScreen> {
           }
           if (state.boards.isEmpty) {
             return EmptyState(
-              icon: state.error != null ? Icons.cloud_off : Icons.dashboard_outlined,
+              icon: state.error != null
+                  ? Icons.cloud_off
+                  : Icons.dashboard_outlined,
               message: state.error ?? 'No boards yet — tap + to create one',
               isError: state.error != null,
             );
@@ -139,7 +141,8 @@ class VisibilityChip extends StatelessWidget {
         children: [
           const Icon(Icons.lock_outline, size: 14, color: AppTheme.danger),
           const SizedBox(width: 4),
-          StatusPill(label: visibility.label.toUpperCase(), color: AppTheme.danger),
+          StatusPill(
+              label: visibility.label.toUpperCase(), color: AppTheme.danger),
         ],
       );
     }

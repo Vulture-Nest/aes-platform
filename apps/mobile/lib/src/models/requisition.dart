@@ -25,8 +25,10 @@ class Requisition extends Equatable {
   final String? attachmentKey;
   final DateTime? createdAt;
 
-  static double _num(Object? v) => v == null ? 0 : double.tryParse(v.toString()) ?? 0;
-  static DateTime? _date(Object? v) => v == null ? null : DateTime.tryParse(v.toString());
+  static double _num(Object? v) =>
+      v == null ? 0 : double.tryParse(v.toString()) ?? 0;
+  static DateTime? _date(Object? v) =>
+      v == null ? null : DateTime.tryParse(v.toString());
 
   factory Requisition.fromJson(Map<String, dynamic> json) => Requisition(
         id: json['id'] as String,

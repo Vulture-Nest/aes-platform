@@ -88,10 +88,12 @@ class _TimesheetsScreenState extends State<TimesheetsScreen> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
             FilledButton(
-              onPressed: () =>
-                  Navigator.pop(context, '$year-${month.toString().padLeft(2, '0')}'),
+              onPressed: () => Navigator.pop(
+                  context, '$year-${month.toString().padLeft(2, '0')}'),
               child: const Text('Open'),
             ),
           ],
@@ -106,7 +108,8 @@ class _TimesheetsScreenState extends State<TimesheetsScreen> {
       ][m];
 
   void _openGrid(TimesheetPeriod period) {
-    Navigator.of(context).push(
+    Navigator.of(context)
+        .push(
       MaterialPageRoute(
         builder: (_) => BlocProvider(
           create: (_) => TimesheetGridCubit(
@@ -118,7 +121,8 @@ class _TimesheetsScreenState extends State<TimesheetsScreen> {
           child: TimesheetGridScreen(period: period),
         ),
       ),
-    ).then((_) {
+    )
+        .then((_) {
       if (mounted) context.read<TimesheetPeriodsCubit>().loadPeriods();
     });
   }
@@ -127,10 +131,14 @@ class _TimesheetsScreenState extends State<TimesheetsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: gradientAppBar('Timesheets'),
-      floatingActionButton: BlocBuilder<TimesheetPeriodsCubit, TimesheetPeriodsState>(
-        buildWhen: (a, b) => a.creating != b.creating || a.selectedSiteId != b.selectedSiteId,
+      floatingActionButton:
+          BlocBuilder<TimesheetPeriodsCubit, TimesheetPeriodsState>(
+        buildWhen: (a, b) =>
+            a.creating != b.creating || a.selectedSiteId != b.selectedSiteId,
         builder: (context, state) => FloatingActionButton.extended(
-          onPressed: (state.creating || state.selectedSiteId == null) ? null : _openPeriod,
+          onPressed: (state.creating || state.selectedSiteId == null)
+              ? null
+              : _openPeriod,
           icon: const Icon(Icons.add),
           label: const Text('Open month'),
         ),
@@ -142,7 +150,9 @@ class _TimesheetsScreenState extends State<TimesheetsScreen> {
           }
           if (state.sites.isEmpty) {
             return EmptyState(
-              icon: state.error != null ? Icons.cloud_off : Icons.location_off_outlined,
+              icon: state.error != null
+                  ? Icons.cloud_off
+                  : Icons.location_off_outlined,
               message: state.error ?? 'No sites available',
               isError: state.error != null,
             );
@@ -152,7 +162,8 @@ class _TimesheetsScreenState extends State<TimesheetsScreen> {
               _SitePicker(
                 sites: state.sites,
                 selectedId: state.selectedSiteId,
-                onChanged: (id) => context.read<TimesheetPeriodsCubit>().selectSite(id),
+                onChanged: (id) =>
+                    context.read<TimesheetPeriodsCubit>().selectSite(id),
               ),
               Expanded(child: _PeriodList(state: state, onOpen: _openGrid)),
             ],
@@ -164,7 +175,8 @@ class _TimesheetsScreenState extends State<TimesheetsScreen> {
 }
 
 class _SitePicker extends StatelessWidget {
-  const _SitePicker({required this.sites, required this.selectedId, required this.onChanged});
+  const _SitePicker(
+      {required this.sites, required this.selectedId, required this.onChanged});
 
   final List<TimesheetSite> sites;
   final String? selectedId;
@@ -176,8 +188,12 @@ class _SitePicker extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       child: DropdownButtonFormField<String>(
         initialValue: selectedId,
-        decoration: const InputDecoration(labelText: 'Site', prefixIcon: Icon(Icons.apartment)),
-        items: [for (final s in sites) DropdownMenuItem(value: s.id, child: Text(s.name))],
+        decoration: const InputDecoration(
+            labelText: 'Site', prefixIcon: Icon(Icons.apartment)),
+        items: [
+          for (final s in sites)
+            DropdownMenuItem(value: s.id, child: Text(s.name))
+        ],
         onChanged: (v) {
           if (v != null) onChanged(v);
         },
@@ -201,8 +217,11 @@ class _PeriodList extends StatelessWidget {
       onRefresh: () => context.read<TimesheetPeriodsCubit>().loadPeriods(),
       child: state.periods.isEmpty
           ? EmptyState(
-              icon: state.error != null ? Icons.cloud_off : Icons.event_note_outlined,
-              message: state.error ?? 'No timesheet periods yet — tap “Open month” to start',
+              icon: state.error != null
+                  ? Icons.cloud_off
+                  : Icons.event_note_outlined,
+              message: state.error ??
+                  'No timesheet periods yet — tap “Open month” to start',
               isError: state.error != null,
             )
           : ListView.builder(

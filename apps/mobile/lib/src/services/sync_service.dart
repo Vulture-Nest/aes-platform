@@ -17,7 +17,8 @@ class SyncConflict {
 }
 
 class SyncSummary {
-  const SyncSummary({this.synced = 0, this.failed = 0, this.conflicts = const []});
+  const SyncSummary(
+      {this.synced = 0, this.failed = 0, this.conflicts = const []});
 
   final int synced;
   final int failed;
@@ -81,13 +82,17 @@ class SyncService {
           synced++;
         } on ApiException catch (e) {
           final status = e.statusCode;
-          if (status != null && status >= 400 && status < 500 && status != 429) {
+          if (status != null &&
+              status >= 400 &&
+              status < 500 &&
+              status != 429) {
             // Permanent rejection — drop and report (server-wins).
             conflicts.add(SyncConflict(item, e.message));
             await _store.remove(item.id);
           } else {
             // Transient (offline / 5xx / rate-limit) — keep for the next flush.
-            await _store.update(item.copyWith(failed: true, lastError: e.message));
+            await _store
+                .update(item.copyWith(failed: true, lastError: e.message));
             failed++;
           }
         }
@@ -101,7 +106,8 @@ class SyncService {
   Future<void> _dispatch(OutboxItem item) async {
     switch (item.kind) {
       case OutboxKind.requisition:
-        final created = await _requisitions.create(NewRequisition.fromMap(item.payload));
+        final created =
+            await _requisitions.create(NewRequisition.fromMap(item.payload));
         if (item.submitAfter) await _requisitions.submit(created.id);
       case OutboxKind.travel:
         final created = await _travel.create(NewTravel.fromMap(item.payload));

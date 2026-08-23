@@ -23,7 +23,8 @@ class DirectorWithdrawal extends Equatable {
   final String? transferReference;
   final DateTime? createdAt;
 
-  static double _num(Object? v) => v == null ? 0 : double.tryParse(v.toString()) ?? 0;
+  static double _num(Object? v) =>
+      v == null ? 0 : double.tryParse(v.toString()) ?? 0;
 
   bool get isDraft => status == 'DRAFT';
   bool get awaitingTransfer => status == 'POSTED_AWAITING_TRANSFER';
@@ -33,7 +34,8 @@ class DirectorWithdrawal extends Equatable {
       .map((w) => w.isEmpty ? w : '${w[0]}${w.substring(1).toLowerCase()}')
       .join(' ');
 
-  factory DirectorWithdrawal.fromJson(Map<String, dynamic> json) => DirectorWithdrawal(
+  factory DirectorWithdrawal.fromJson(Map<String, dynamic> json) =>
+      DirectorWithdrawal(
         id: json['id'] as String,
         amount: _num(json['amount']),
         currency: json['currency'] as String? ?? 'USD',
@@ -41,7 +43,9 @@ class DirectorWithdrawal extends Equatable {
         reason: json['reason'] as String? ?? '',
         status: json['status'] as String? ?? 'DRAFT',
         transferReference: json['transferReference'] as String?,
-        createdAt: json['createdAt'] == null ? null : DateTime.tryParse(json['createdAt'].toString()),
+        createdAt: json['createdAt'] == null
+            ? null
+            : DateTime.tryParse(json['createdAt'].toString()),
       );
 
   @override

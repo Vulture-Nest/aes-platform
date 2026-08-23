@@ -126,7 +126,8 @@ class _ProjectHeader extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Overall progress', style: Theme.of(context).textTheme.labelLarge),
+            Text('Overall progress',
+                style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 10),
             Row(
               children: [
@@ -147,7 +148,8 @@ class _ProjectHeader extends StatelessWidget {
 
 /// A single WBS node row: type tag, title, its % and a slim bar; indented by depth.
 class _NodeTile extends StatelessWidget {
-  const _NodeTile({required this.node, required this.depth, required this.onTap});
+  const _NodeTile(
+      {required this.node, required this.depth, required this.onTap});
 
   final ProjectNode node;
   final int depth;
@@ -170,7 +172,8 @@ class _NodeTile extends StatelessWidget {
                 if (node.isComplete)
                   const Padding(
                     padding: EdgeInsets.only(right: 8),
-                    child: Icon(Icons.check_circle, color: Colors.green, size: 20),
+                    child:
+                        Icon(Icons.check_circle, color: Colors.green, size: 20),
                   ),
                 Expanded(
                   child: Column(
@@ -196,8 +199,10 @@ class _NodeTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text('${node.percentComplete.round()}%', style: Theme.of(context).textTheme.titleSmall),
-                Icon(Icons.chevron_right, color: onSurface.withValues(alpha: 0.4)),
+                Text('${node.percentComplete.round()}%',
+                    style: Theme.of(context).textTheme.titleSmall),
+                Icon(Icons.chevron_right,
+                    color: onSurface.withValues(alpha: 0.4)),
               ],
             ),
           ),

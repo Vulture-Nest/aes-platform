@@ -29,7 +29,9 @@ class TimesheetGridScreen extends StatelessWidget {
     ];
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(parts.isEmpty ? 'Nothing to sync' : parts.join(' · '))));
+      ..showSnackBar(SnackBar(
+          content:
+              Text(parts.isEmpty ? 'Nothing to sync' : parts.join(' · '))));
   }
 
   Future<void> _submit(BuildContext context) async {
@@ -44,8 +46,12 @@ class TimesheetGridScreen extends StatelessWidget {
           'You will not be able to edit entries after submitting.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Submit')),
         ],
       ),
     );
@@ -53,7 +59,8 @@ class TimesheetGridScreen extends StatelessWidget {
     final error = await cubit.submit();
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(error ?? 'Submitted for approval')));
+      ..showSnackBar(
+          SnackBar(content: Text(error ?? 'Submitted for approval')));
   }
 
   @override
@@ -109,7 +116,9 @@ class _SyncBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (state.pendingDrafts == 0 && !state.offline) return const SizedBox.shrink();
+    if (state.pendingDrafts == 0 && !state.offline) {
+      return const SizedBox.shrink();
+    }
     final label = state.pendingDrafts > 0
         ? '${state.pendingDrafts} day(s) saved offline'
         : 'Offline — edits will sync when connected';
@@ -119,11 +128,15 @@ class _SyncBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
-            Icon(state.offline ? Icons.cloud_off : Icons.cloud_upload_outlined, size: 20),
+            Icon(state.offline ? Icons.cloud_off : Icons.cloud_upload_outlined,
+                size: 20),
             const SizedBox(width: 12),
             Expanded(child: Text(label)),
             if (state.syncing)
-              const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2))
             else if (state.pendingDrafts > 0)
               TextButton(onPressed: onSync, child: const Text('Sync now')),
           ],
@@ -221,7 +234,10 @@ class _GridState extends State<_Grid> {
                 child: Row(
                   children: [
                     for (var d = 1; d <= days; d++)
-                      _HeaderCell(day: d, weekend: _dateFor(d).weekday >= 6, width: _dayW),
+                      _HeaderCell(
+                          day: d,
+                          weekend: _dateFor(d).weekday >= 6,
+                          width: _dayW),
                   ],
                 ),
               ),
@@ -243,7 +259,8 @@ class _GridState extends State<_Grid> {
                     for (final e in employees)
                       SizedBox(
                         height: _rowH,
-                        child: _NameCell(name: e.name, worksNo: e.worksNo, width: _nameW),
+                        child: _NameCell(
+                            name: e.name, worksNo: e.worksNo, width: _nameW),
                       ),
                   ],
                 ),
@@ -260,11 +277,13 @@ class _GridState extends State<_Grid> {
                               children: [
                                 for (var d = 1; d <= days; d++)
                                   _DayCell(
-                                    entry: widget.grid.entryFor(employee.id, _dateFor(d)),
+                                    entry: widget.grid
+                                        .entryFor(employee.id, _dateFor(d)),
                                     weekend: _dateFor(d).weekday >= 6,
                                     editable: widget.editable,
                                     width: _dayW,
-                                    onTap: () => _editCell(employee, _dateFor(d)),
+                                    onTap: () =>
+                                        _editCell(employee, _dateFor(d)),
                                   ),
                               ],
                             ),
@@ -278,7 +297,8 @@ class _GridState extends State<_Grid> {
                     for (final e in employees)
                       SizedBox(
                         height: _rowH,
-                        child: _TotalCell(value: widget.grid.totalFor(e.id), width: _totalW),
+                        child: _TotalCell(
+                            value: widget.grid.totalFor(e.id), width: _totalW),
                       ),
                   ],
                 ),
@@ -292,7 +312,8 @@ class _GridState extends State<_Grid> {
 }
 
 class _HeaderCell extends StatelessWidget {
-  const _HeaderCell({required this.day, required this.weekend, required this.width});
+  const _HeaderCell(
+      {required this.day, required this.weekend, required this.width});
 
   final int day;
   final bool weekend;
@@ -319,7 +340,8 @@ class _HeaderCell extends StatelessWidget {
 }
 
 class _NameCell extends StatelessWidget {
-  const _NameCell({required this.name, required this.worksNo, required this.width});
+  const _NameCell(
+      {required this.name, required this.worksNo, required this.width});
 
   final String name;
   final String? worksNo;
@@ -351,7 +373,10 @@ class _NameCell extends StatelessWidget {
               worksNo!,
               style: TextStyle(
                 fontSize: 11,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5),
               ),
             ),
         ],
@@ -390,7 +415,10 @@ class _DayCell extends StatelessWidget {
           color: has
               ? AppTheme.green.withValues(alpha: 0.16)
               : (weekend
-                  ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04)
+                  ? Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.04)
                   : null),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
@@ -412,7 +440,8 @@ class _DayCell extends StatelessWidget {
     );
   }
 
-  static String _fmt(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+  static String _fmt(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
 }
 
 class _TotalCell extends StatelessWidget {
@@ -427,7 +456,11 @@ class _TotalCell extends StatelessWidget {
       width: width,
       alignment: Alignment.center,
       child: Text(
-        value == 0 ? '—' : (value == value.roundToDouble() ? value.toInt().toString() : value.toStringAsFixed(1)),
+        value == 0
+            ? '—'
+            : (value == value.roundToDouble()
+                ? value.toInt().toString()
+                : value.toStringAsFixed(1)),
         style: const TextStyle(fontWeight: FontWeight.w700),
       ),
     );
@@ -459,7 +492,9 @@ class _BottomBar extends StatelessWidget {
                     ),
                   ),
                   FilledButton.icon(
-                    onPressed: (state.submitting || grid.capturedDays == 0) ? null : onSubmit,
+                    onPressed: (state.submitting || grid.capturedDays == 0)
+                        ? null
+                        : onSubmit,
                     icon: state.submitting
                         ? const SizedBox(
                             height: 18,

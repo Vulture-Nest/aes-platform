@@ -48,10 +48,14 @@ export class ReturnsService {
   ) {}
 
   /** Decorate a persisted return row with computed balance/status/days. */
-  private decorate<T extends { amountDue: Prisma.Decimal; amountPaid: Prisma.Decimal; filingDeadline: Date | null; status: string }>(
-    row: T,
-    now = new Date(),
-  ) {
+  private decorate<
+    T extends {
+      amountDue: Prisma.Decimal;
+      amountPaid: Prisma.Decimal;
+      filingDeadline: Date | null;
+      status: string;
+    },
+  >(row: T, now = new Date()) {
     const state = computeReturnState(
       { amountDue: row.amountDue, amountPaid: row.amountPaid, filingDeadline: row.filingDeadline },
       now,
@@ -123,13 +127,11 @@ export class ReturnsService {
       data.filingDeadline ?? defaultFilingDeadline(key.periodMonth, key.taxType);
 
     if (existing) {
-      const { status } = computeReturnState(
-        {
-          amountDue: data.amountDue,
-          amountPaid: existing.amountPaid,
-          filingDeadline,
-        },
-      );
+      const { status } = computeReturnState({
+        amountDue: data.amountDue,
+        amountPaid: existing.amountPaid,
+        filingDeadline,
+      });
       const updated = await this.prisma.statutoryReturn.update({
         where: { id: existing.id },
         data: {
@@ -285,13 +287,11 @@ export class ReturnsService {
       },
     });
 
-    const { status } = computeReturnState(
-      {
-        amountDue: existing.amountDue,
-        amountPaid: newPaid,
-        filingDeadline: existing.filingDeadline,
-      },
-    );
+    const { status } = computeReturnState({
+      amountDue: existing.amountDue,
+      amountPaid: newPaid,
+      filingDeadline: existing.filingDeadline,
+    });
 
     const updated = await this.prisma.statutoryReturn.update({
       where: { id },
@@ -329,7 +329,17 @@ export class ReturnsService {
     });
     const now = new Date();
 
-    const perPeriod: Record<string, { taxType: string; currency: string; due: number; paid: number; balance: number; status: string }[]> = {};
+    const perPeriod: Record<
+      string,
+      {
+        taxType: string;
+        currency: string;
+        due: number;
+        paid: number;
+        balance: number;
+        status: string;
+      }[]
+    > = {};
     const ytd = { due: 0, paid: 0, balance: 0 };
     const ytdByTaxType: Record<string, { due: number; paid: number; balance: number }> = {};
 

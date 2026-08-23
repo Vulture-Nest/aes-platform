@@ -76,7 +76,10 @@ export class CreateContractClaimDto {
   @Min(0)
   vatPaidToDate?: number;
 
-  @ApiPropertyOptional({ example: '2026-07-15', description: 'Date the claim was received/settled' })
+  @ApiPropertyOptional({
+    example: '2026-07-15',
+    description: 'Date the claim was received/settled',
+  })
   @IsOptional()
   @Type(() => Date)
   @IsDate()

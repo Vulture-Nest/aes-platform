@@ -447,7 +447,9 @@ export class PayrollService implements OnModuleInit {
       const employee = byId.get(line.employeeId);
       return {
         ...line,
-        employee: employee ? { ...employee, accountNo: this.crypto.maskAccountNo(employee.accountNo) } : null,
+        employee: employee
+          ? { ...employee, accountNo: this.crypto.maskAccountNo(employee.accountNo) }
+          : null,
       };
     });
 
@@ -986,9 +988,7 @@ export class PayrollService implements OnModuleInit {
     const mipf = employee.mipfMember
       ? this.employerStatutory.mipf({ gross: basicZwgFull, pct: zwg.mipfPct })
       : 0;
-    const mipfEe = employee.mipfMember
-      ? this.round2((basicZwgFull * zwg.mipfEePct) / 100)
-      : 0;
+    const mipfEe = employee.mipfMember ? this.round2((basicZwgFull * zwg.mipfEePct) / 100) : 0;
     const nec = employee.necMember
       ? this.employerStatutory.nec({ gross: basicZwgFull, pct: zwg.necPct })
       : 0;

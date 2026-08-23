@@ -17,14 +17,17 @@ class ApiException implements Exception {
       case DioExceptionType.receiveTimeout:
         return const ApiException('The server took too long to respond.');
       case DioExceptionType.connectionError:
-        return const ApiException('Cannot reach the server. Check your connection.');
+        return const ApiException(
+            'Cannot reach the server. Check your connection.');
       case DioExceptionType.badResponse:
         final status = error.response?.statusCode;
-        return ApiException(_messageFromBody(error.response?.data, status), statusCode: status);
+        return ApiException(_messageFromBody(error.response?.data, status),
+            statusCode: status);
       case DioExceptionType.cancel:
         return const ApiException('Request cancelled.');
       case DioExceptionType.badCertificate:
-        return const ApiException('The server certificate could not be verified.');
+        return const ApiException(
+            'The server certificate could not be verified.');
       case DioExceptionType.unknown:
       default:
         return const ApiException('Something went wrong. Please try again.');

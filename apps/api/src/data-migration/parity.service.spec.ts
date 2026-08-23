@@ -102,7 +102,12 @@ describe('ParityService', () => {
     stubMatching();
     health.compute.mockResolvedValue({
       verdict: 'ACT',
-      drivers: { totalCashReceived: 52463.42, receivables: 113972.08, taxLiability: 52062.83, loanBalance: 44000 },
+      drivers: {
+        totalCashReceived: 52463.42,
+        receivables: 113972.08,
+        taxLiability: 52062.83,
+        loanBalance: 44000,
+      },
     });
     const res = await service.check();
     const loan = res.checks.find((c) => c.name === 'Loan balance');
@@ -114,7 +119,12 @@ describe('ParityService', () => {
     stubMatching();
     health.compute.mockResolvedValue({
       verdict: 'HEALTHY',
-      drivers: { totalCashReceived: 52463.42, receivables: 113972.08, taxLiability: 52062.83, loanBalance: 44054.29 },
+      drivers: {
+        totalCashReceived: 52463.42,
+        receivables: 113972.08,
+        taxLiability: 52062.83,
+        loanBalance: 44054.29,
+      },
     });
     const res = await service.check();
     expect(res.verdictPass).toBe(false);

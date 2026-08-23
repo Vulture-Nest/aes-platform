@@ -47,7 +47,8 @@ class SqfliteOutboxStore implements OutboxStore {
   @override
   Future<void> enqueue(OutboxItem item) async {
     final db = await _db;
-    await db.insert(_table, item.toRow(), conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(_table, item.toRow(),
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   @override
@@ -60,7 +61,8 @@ class SqfliteOutboxStore implements OutboxStore {
   @override
   Future<void> update(OutboxItem item) async {
     final db = await _db;
-    await db.update(_table, item.toRow(), where: 'id = ?', whereArgs: [item.id]);
+    await db
+        .update(_table, item.toRow(), where: 'id = ?', whereArgs: [item.id]);
   }
 
   @override

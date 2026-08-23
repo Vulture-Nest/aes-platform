@@ -1,15 +1,10 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import {
-  IsDateString,
-  IsInt,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Min,
-} from 'class-validator';
+import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 export class CreatePpeRequirementDto {
-  @ApiPropertyOptional({ description: 'Role this requirement applies to (role- or employee-scoped)' })
+  @ApiPropertyOptional({
+    description: 'Role this requirement applies to (role- or employee-scoped)',
+  })
   @IsOptional()
   @IsString()
   role?: string;
@@ -56,7 +51,9 @@ export class CreatePpeIssueDto {
   @IsString()
   size?: string;
 
-  @ApiPropertyOptional({ description: 'Replacement-due date (ISO); computed from lifespan when omitted' })
+  @ApiPropertyOptional({
+    description: 'Replacement-due date (ISO); computed from lifespan when omitted',
+  })
   @IsOptional()
   @IsDateString()
   replacementDue?: string;
@@ -89,12 +86,15 @@ export class ListPpeIssuesQueryDto {
 }
 
 export class PpeComplianceQueryDto {
-  @ApiPropertyOptional({ description: 'Restrict to a site (via that site\'s employees)' })
+  @ApiPropertyOptional({ description: "Restrict to a site (via that site's employees)" })
   @IsOptional()
   @IsUUID()
   siteId?: string;
 
-  @ApiPropertyOptional({ description: 'Days ahead within which a replacement counts as expiring', default: 30 })
+  @ApiPropertyOptional({
+    description: 'Days ahead within which a replacement counts as expiring',
+    default: 30,
+  })
   @IsOptional()
   @IsInt()
   @Min(0)

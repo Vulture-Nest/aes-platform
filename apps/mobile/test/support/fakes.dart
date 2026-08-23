@@ -44,7 +44,8 @@ const siteClerk = AuthUser(
 /// Hand-rolled fake so tests avoid the network. The [Dio] passed to super is
 /// never used because every method is overridden.
 class FakeAuthRepository extends AuthRepository {
-  FakeAuthRepository({this.user = financeDirector, this.failLogin = false}) : super(Dio());
+  FakeAuthRepository({this.user = financeDirector, this.failLogin = false})
+      : super(Dio());
 
   final AuthUser user;
   final bool failLogin;
@@ -80,7 +81,9 @@ class FakeAlertsRepository extends AlertsRepository {
 }
 
 class FakeCommandCentreRepository extends CommandCentreRepository {
-  FakeCommandCentreRepository([Map<String, dynamic>? raw]) : raw = raw ?? _default, super(Dio());
+  FakeCommandCentreRepository([Map<String, dynamic>? raw])
+      : raw = raw ?? _default,
+        super(Dio());
 
   final Map<String, dynamic> raw;
 
@@ -101,7 +104,11 @@ class FakeCommandCentreRepository extends CommandCentreRepository {
     'pendingObligations': {
       'usdEquivalent': {'obligations': 1450, 'unfundedGap': 2660.32},
     },
-    'performance': {'bookedOrderValue': 255115, 'operatingProfit': 13000, 'margin': 0.6495},
+    'performance': {
+      'bookedOrderValue': 255115,
+      'operatingProfit': 13000,
+      'margin': 0.6495
+    },
     'taxExposure': {
       'assessmentTotals': {'totalWithInterest': 0},
     },
@@ -119,17 +126,20 @@ Alert dangerAlert(String message) => Alert(
     );
 
 class FakeApprovalsRepository extends ApprovalsRepository {
-  FakeApprovalsRepository({this.items = const [], this.failDecide = false}) : super(Dio());
+  FakeApprovalsRepository({this.items = const [], this.failDecide = false})
+      : super(Dio());
 
   List<ApprovalItem> items;
   final bool failDecide;
-  final List<({String id, ApprovalDecision decision, String? comment})> decisions = [];
+  final List<({String id, ApprovalDecision decision, String? comment})>
+      decisions = [];
 
   @override
   Future<List<ApprovalItem>> inbox() async => items;
 
   @override
-  Future<void> decide(String approvalId, ApprovalDecision decision, {String? comment}) async {
+  Future<void> decide(String approvalId, ApprovalDecision decision,
+      {String? comment}) async {
     if (failDecide) {
       throw const ApiException('Cannot record decision', statusCode: 409);
     }
@@ -145,7 +155,8 @@ class DenyBiometric implements BiometricAuthenticator {
   Future<bool> confirm(String reason) async => false;
 }
 
-ApprovalItem moneyApproval({String id = 'ap-money', double amount = 500}) => ApprovalItem(
+ApprovalItem moneyApproval({String id = 'ap-money', double amount = 500}) =>
+    ApprovalItem(
       id: id,
       chainId: 'c1',
       module: 'requisition',
@@ -169,23 +180,27 @@ ApprovalItem nonMoneyApproval({String id = 'ap-ts'}) => ApprovalItem(
     );
 
 class FakeAttachmentsRepository extends AttachmentsRepository {
-  FakeAttachmentsRepository({this.key = 'attachments/uuid/receipt.jpg'}) : super(Dio());
+  FakeAttachmentsRepository({this.key = 'attachments/uuid/receipt.jpg'})
+      : super(Dio());
 
   final String key;
   int uploads = 0;
 
   @override
-  Future<String> upload(Uint8List bytes, {required String filename, required String contentType}) async {
+  Future<String> upload(Uint8List bytes,
+      {required String filename, required String contentType}) async {
     uploads++;
     return key;
   }
 }
 
 /// A connectivity failure (no status code) — what the offline path keys on.
-const offlineError = ApiException('Cannot reach the server. Check your connection.');
+const offlineError =
+    ApiException('Cannot reach the server. Check your connection.');
 
 class FakeRequisitionsRepository extends RequisitionsRepository {
-  FakeRequisitionsRepository({this.items = const [], this.offline = false}) : super(Dio());
+  FakeRequisitionsRepository({this.items = const [], this.offline = false})
+      : super(Dio());
 
   List<Requisition> items;
   final bool offline;
@@ -215,7 +230,8 @@ class FakeRequisitionsRepository extends RequisitionsRepository {
 }
 
 class FakeTravelRepository extends TravelRepository {
-  FakeTravelRepository({this.items = const [], this.offline = false}) : super(Dio());
+  FakeTravelRepository({this.items = const [], this.offline = false})
+      : super(Dio());
 
   List<TravelRequest> items;
   final bool offline;
@@ -261,7 +277,8 @@ class FakeReceiptCapture implements ReceiptCapture {
   }
 }
 
-Requisition draftRequisition({String id = 'r1', String status = 'DRAFT'}) => Requisition(
+Requisition draftRequisition({String id = 'r1', String status = 'DRAFT'}) =>
+    Requisition(
       id: id,
       purpose: 'Fuel top-up',
       amount: 500,
@@ -276,13 +293,18 @@ CapturedReceipt fakeCaptured() => CapturedReceipt(
     );
 
 class FakePettyCashRepository extends PettyCashRepository {
-  FakePettyCashRepository({this.floatList = const [], this.txnList = const [], this.offline = false})
+  FakePettyCashRepository(
+      {this.floatList = const [],
+      this.txnList = const [],
+      this.offline = false})
       : super(Dio());
 
   List<PettyCashFloat> floatList;
   List<PettyCashTxn> txnList;
   final bool offline;
-  final List<({String floatId, double amount, String purpose, String? receiptKey})> withdrawals = [];
+  final List<
+          ({String floatId, double amount, String purpose, String? receiptKey})>
+      withdrawals = [];
 
   @override
   Future<List<PettyCashFloat>> floats() async => floatList;
@@ -298,7 +320,12 @@ class FakePettyCashRepository extends PettyCashRepository {
     String? receiptKey,
   }) async {
     if (offline) throw offlineError;
-    withdrawals.add((floatId: floatId, amount: amount, purpose: purpose, receiptKey: receiptKey));
+    withdrawals.add((
+      floatId: floatId,
+      amount: amount,
+      purpose: purpose,
+      receiptKey: receiptKey
+    ));
     final txn = PettyCashTxn(
       id: 'txn-${withdrawals.length}',
       type: 'WITHDRAWAL',
@@ -313,7 +340,8 @@ class FakePettyCashRepository extends PettyCashRepository {
   }
 }
 
-PettyCashFloat usdFloat({String id = 'f1', bool locked = false}) => PettyCashFloat(
+PettyCashFloat usdFloat({String id = 'f1', bool locked = false}) =>
+    PettyCashFloat(
       id: id,
       currency: 'USD',
       floatAmount: 500,
@@ -351,7 +379,9 @@ class FakeOrdersRepository extends OrdersRepository {
   }
 }
 
-Order openOrder({String id = 'o1', bool serviced = false, double value = 1000}) => Order(
+Order openOrder(
+        {String id = 'o1', bool serviced = false, double value = 1000}) =>
+    Order(
       id: id,
       reference: 'ORD-$id',
       clientId: 'c1',
@@ -388,11 +418,15 @@ class FakeDirectorRepository extends DirectorRepository {
   Future<void> submit(String id) async => submitted.add(id);
 
   @override
-  Future<void> complete(String id, {required String transferMethod, required String transferReference}) async =>
+  Future<void> complete(String id,
+          {required String transferMethod,
+          required String transferReference}) async =>
       completed.add((id: id, method: transferMethod, ref: transferReference));
 }
 
-DirectorWithdrawal draftWithdrawal({String id = 'dw1', String status = 'DRAFT'}) => DirectorWithdrawal(
+DirectorWithdrawal draftWithdrawal(
+        {String id = 'dw1', String status = 'DRAFT'}) =>
+    DirectorWithdrawal(
       id: id,
       amount: 2000,
       currency: 'USD',

@@ -53,6 +53,13 @@ class TimesheetPeriodsState extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [loadingSites, loadingPeriods, creating, sites, selectedSiteId, periods, error];
+  List<Object?> get props => [
+        loadingSites,
+        loadingPeriods,
+        creating,
+        sites,
+        selectedSiteId,
+        periods,
+        error
+      ];
 }

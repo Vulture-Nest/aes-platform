@@ -19,7 +19,9 @@ class TimesheetEmployee extends Equatable {
     final full = '$first $last'.trim();
     return TimesheetEmployee(
       id: json['id'] as String,
-      name: full.isEmpty ? (json['worksNo'] as String? ?? json['id'] as String) : full,
+      name: full.isEmpty
+          ? (json['worksNo'] as String? ?? json['id'] as String)
+          : full,
       worksNo: json['worksNo'] as String?,
     );
   }

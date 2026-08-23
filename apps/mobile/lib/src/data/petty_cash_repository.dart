@@ -23,7 +23,8 @@ class PettyCashRepository {
 
   Future<List<PettyCashTxn>> txns(String floatId) async {
     try {
-      final response = await _dio.get<List<dynamic>>('/v1/petty-cash/floats/$floatId/txns');
+      final response =
+          await _dio.get<List<dynamic>>('/v1/petty-cash/floats/$floatId/txns');
       return (response.data ?? [])
           .map((j) => PettyCashTxn.fromJson(j as Map<String, dynamic>))
           .toList();

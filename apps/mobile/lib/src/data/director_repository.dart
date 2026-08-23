@@ -33,7 +33,8 @@ class DirectorRepository {
 
   Future<List<DirectorWithdrawal>> list() async {
     try {
-      final response = await _dio.get<List<dynamic>>('/v1/director-withdrawals');
+      final response =
+          await _dio.get<List<dynamic>>('/v1/director-withdrawals');
       return (response.data ?? [])
           .map((j) => DirectorWithdrawal.fromJson(j as Map<String, dynamic>))
           .toList();
@@ -44,8 +45,9 @@ class DirectorRepository {
 
   Future<DirectorWithdrawal> create(NewWithdrawal input) async {
     try {
-      final response =
-          await _dio.post<Map<String, dynamic>>('/v1/director-withdrawals', data: input.toJson());
+      final response = await _dio.post<Map<String, dynamic>>(
+          '/v1/director-withdrawals',
+          data: input.toJson());
       return DirectorWithdrawal.fromJson(response.data!);
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
@@ -54,17 +56,23 @@ class DirectorRepository {
 
   Future<void> submit(String id) async {
     try {
-      await _dio.post<Map<String, dynamic>>('/v1/director-withdrawals/$id/submit');
+      await _dio
+          .post<Map<String, dynamic>>('/v1/director-withdrawals/$id/submit');
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
     }
   }
 
-  Future<void> complete(String id, {required String transferMethod, required String transferReference}) async {
+  Future<void> complete(String id,
+      {required String transferMethod,
+      required String transferReference}) async {
     try {
       await _dio.post<Map<String, dynamic>>(
         '/v1/director-withdrawals/$id/complete',
-        data: {'transferMethod': transferMethod, 'transferReference': transferReference},
+        data: {
+          'transferMethod': transferMethod,
+          'transferReference': transferReference
+        },
       );
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
