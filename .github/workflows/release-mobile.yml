@@ -88,7 +88,10 @@ jobs:
           echo "track=$TRACK"                    >> "$GITHUB_OUTPUT"
           echo "Releasing $NAME (versionCode ${{ github.run_number }}) to $TRACK"
 
-      - run: flutter pub get
+      # --enforce-lockfile makes a release build fail rather than silently
+      # resolving different package versions than were tested. Requires
+      # pubspec.lock to be committed, which it is.
+      - run: flutter pub get --enforce-lockfile
 
       # A release that fails its own tests should never reach a device.
       - run: flutter analyze

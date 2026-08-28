@@ -4,7 +4,9 @@
 .flutter-plugins-dependencies
 .packages
 build/
-pubspec.lock
+# pubspec.lock IS committed. This is an application, not a library: the lockfile
+# is what makes a release build reproducible, so CI resolves the same package
+# versions that were tested rather than whatever is newest at build time.
 
 # Generated
 **/*.g.dart
