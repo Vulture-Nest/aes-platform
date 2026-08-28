@@ -1,4 +1,4 @@
-package com.example.aes_mobile
+package org.vulturenest.aes
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

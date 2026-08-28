@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.aes_mobile"
+    namespace = "org.vulturenest.aes"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.aes_mobile"
+        applicationId = "org.vulturenest.aes"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
