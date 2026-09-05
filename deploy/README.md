@@ -3,38 +3,39 @@
 Target: **images built & pushed by GitHub Actions → pulled onto a DigitalOcean droplet → DO Managed PostgreSQL.**
 One droplet dedicated to AES; the database is a **dedicated `aes` database on the shared managed cluster** (the same cluster other projects use — separate database + user, so the data is isolated).
 
-> **Dormant by design.** No droplet exists yet, so the deploy pipeline ships OFF:
-> it is manual-only (`workflow_dispatch`) and a `guard` job fails fast unless the
-> repo **variable** `DEPLOY_ENABLED == "true"`. CI (lint/test/build) is independent
-> and safe to run anytime.
+> **Continuous deployment.** `deploy.yml` and `release-mobile.yml` both run
+> automatically now — see [Current state](#current-state) below. CI
+> (lint/test/build) has always been independent and safe to run anytime.
+
+## Current state
+
+| Pipeline | File | Trigger | Status |
+|---|---|---|---|
+| **CI** | `.github/workflows/ci.yml` | every push/PR to `main` | ✅ Active |
+| **Deploy** (api, admin, web) | `.github/workflows/deploy.yml` | every push to `main`, or manual dispatch | ✅ Active |
+| **Release Mobile** (AES Operations app) | `.github/workflows/release-mobile.yml` | every push to `main` touching `apps/mobile/` → `internal` Play track; a `mobile-v*` tag or manual dispatch → any track | ✅ Active |
+
+Merging to `main` therefore ships automatically. The `deploy.yml` `guard` job
+still fails fast unless the repository variable `DEPLOY_ENABLED == "true"` —
+that's the kill-switch if you need to pause backend/web auto-deploys without
+touching the workflow file. Mobile has no separate switch; see
+[Pausing deploys](#pausing-deploys).
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `github-workflows/ci.yml` | Lint/test/build for **api, admin, web, mobile** on every PR/push. |
-| `github-workflows/deploy.yml` | Dormant. Build+push api/admin/web images, roll out on the droplet, migrate. |
-| `compose.prod.yml` | Runs the prebuilt images on the droplet (api, admin, web, redis, nginx). Postgres is external/managed. |
-| `nginx/` | Reverse proxy: host routing (`api.` / `admin.` / `app.` + IP fallback), rate limits, TLS mounts. |
-| `server-setup.sh` | One-time droplet bootstrap (deploy user, Docker, UFW/fail2ban, swap, SSH hardening). |
-| `.env.production.example` | Template for the droplet-local `/opt/aes/.env` (DB URL, JWT, storage). |
-
-## Activating the workflows
-
-The YAML lives here (not `.github/workflows/`) because the push token **lacks the `workflow` scope**. To turn CI/CD on:
-
-```bash
-mkdir -p .github/workflows
-git mv deploy/github-workflows/ci.yml     .github/workflows/ci.yml
-git mv deploy/github-workflows/deploy.yml .github/workflows/deploy.yml
-# commit & push with a workflow-scoped token (or add via the GitHub web UI)
-```
-
-CI runs immediately. **Deploy stays dormant** until you set `DEPLOY_ENABLED=true` (below).
+| `.github/workflows/ci.yml` | Lint/test/build for **api, admin, web, mobile** on every PR/push. |
+| `.github/workflows/deploy.yml` | Build+push api/admin/web images, roll out on the droplet, migrate. |
+| `.github/workflows/release-mobile.yml` | Build a signed AAB and publish to Google Play. |
+| `deploy/compose.prod.yml` | Runs the prebuilt images on the droplet (api, admin, web, redis, nginx). Postgres is external/managed. |
+| `deploy/nginx/` | Reverse proxy: host routing (`api.` / `admin.` / `app.` + IP fallback), rate limits, TLS mounts. |
+| `deploy/server-setup.sh` | One-time droplet bootstrap (deploy user, Docker, UFW/fail2ban, swap, SSH hardening). |
+| `deploy/.env.production.example` | Template for the droplet-local `/opt/aes/.env` (DB URL, JWT, storage). |
 
 ## GitHub secrets & variables (Settings → Secrets and variables → Actions)
 
-**Secrets:**
+**Secrets (deploy.yml):**
 
 | Secret | Notes |
 |--------|-------|
@@ -44,14 +45,21 @@ CI runs immediately. **Deploy stays dormant** until you set `DEPLOY_ENABLED=true
 | `DO_USER` | SSH user (`deploy`). |
 | `DO_SSH_KEY` | Private half of the CI deploy key (public half in the droplet's `authorized_keys`). |
 
+**Secrets (release-mobile.yml):**
+
+| Secret | Notes |
+|--------|-------|
+| `ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD` | Upload keystore for signing the release AAB. |
+| `PLAY_SERVICE_ACCOUNT_JSON` | Google Play service-account key (Play Developer API access). |
+
 **Variable:**
 
 | Variable | Value |
 |----------|-------|
-| `DEPLOY_ENABLED` | `true` to arm deploys. Absent/anything-else keeps the pipeline dormant. |
+| `DEPLOY_ENABLED` | `true` to allow `deploy.yml` to actually reach the droplet. Absent/anything-else fails the `guard` job fast — no secret is read and no host is contacted. |
 
 > DB URL, JWT secret and storage keys are **not** GitHub secrets — they live in the
-> droplet's `/opt/aes/.env` (see `.env.production.example`), so production secrets
+> droplet's `/opt/aes/.env` (see `deploy/.env.production.example`), so production secrets
 > never leave the host.
 
 ## One-time infra setup
@@ -61,12 +69,33 @@ CI runs immediately. **Deploy stays dormant** until you set `DEPLOY_ENABLED=true
    ```bash
    ssh root@<DROPLET_IP> 'bash -s' < deploy/server-setup.sh
    ```
-3. **Droplet env** — create `/opt/aes/.env` from `.env.production.example` (real `DATABASE_URL`, `JWT_SECRET`, storage, `REGISTRY`).
-4. **DNS** — point `api.`, `admin.`, `app.` (and apex) at the droplet IP; replace `aes.example.com` in `nginx/conf.d/default.conf`. (Before DNS, the IP serves web at `/` and the API at `/api/`.)
+3. **Droplet env** — create `/opt/aes/.env` from `deploy/.env.production.example` (real `DATABASE_URL`, `JWT_SECRET`, storage, `REGISTRY`).
+4. **DNS** — point `api.`, `admin.`, `app.` (and apex) at the droplet IP; replace `aes.example.com` in `deploy/nginx/conf.d/default.conf`. (Before DNS, the IP serves web at `/` and the API at `/api/`.)
 
-## Deploy
+## Mobile releases
 
-Set `DEPLOY_ENABLED=true`, then **Actions → Deploy → Run workflow**. It builds/pushes the three images, ships compose + nginx, `docker compose pull && up -d`, and the api container migrates the managed DB on start.
+`release-mobile.yml` publishes `org.vulturenest.aes` (flavor `prod`,
+`lib/main_prod.dart`):
+
+- **Push to `main` touching `apps/mobile/`** — version name from
+  `apps/mobile/pubspec.yaml`, versionCode from `github.run_number` (monotonic
+  — Play never rejects it), always `internal` track (no review, invisible to
+  real users).
+- **Push a `mobile-v1.2.0` tag**, or **manual dispatch** picking
+  `version`/`track` — the way to promote a proven internal build to
+  `alpha`/`beta`/`production`.
+
+New apps need a closed test with 12+ opted-in testers before Play allows
+applying for production access — a Google policy gate independent of this
+pipeline. `internal` has no such requirement.
+
+## Pausing deploys
+
+- **Backend/web**: set `DEPLOY_ENABLED` to anything other than `true` (or
+  delete it).
+- **Mobile**: remove the `branches: [main]` entry under `on.push` in
+  `release-mobile.yml` if you need to stop auto-publishing while keeping
+  tag/manual releases available.
 
 ## Local testing (no server needed)
 
