@@ -1,13 +1,10 @@
 name: Deploy
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DORMANT until the droplet exists. This workflow NEVER runs on push/merge — it
-# is manual-only (workflow_dispatch) AND the `guard` job fails fast unless the
-# repository variable DEPLOY_ENABLED == "true". No secret is read and no host is
-# contacted while dormant. See deploy/README.md for the activation runbook.
-#
-# ACTIVATION: move this file to .github/workflows/deploy.yml with a workflow-scoped
-# token (the push token used for this repo lacks the `workflow` scope).
+# Runs automatically on every merge to main (continuous deployment), and can
+# also be run manually. The `guard` job fails fast unless the repository
+# variable DEPLOY_ENABLED == "true" — flip that off to pause auto-deploys
+# without touching this file.
 #
 # Builds api + admin + web images, pushes them to the registry, then rolls them
 # out on the DigitalOcean droplet via docker compose. Postgres is DO Managed
@@ -17,6 +14,8 @@ name: Deploy
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:

@@ -2,12 +2,16 @@ name: Release Mobile
 
 # Builds a signed Android App Bundle and uploads it to Google Play.
 #
-# Trigger: push a tag such as `mobile-v1.2.0`, or run manually from the Actions
-# tab to pick the version and track yourself.
+# Trigger: automatically on every merge to main that touches apps/mobile/
+# (published to the `internal` track — no Google review, invisible to real
+# users); or push a tag such as `mobile-v1.2.0`; or run manually from the
+# Actions tab to pick the version and track yourself (e.g. to promote to
+# production).
 #
 #   git tag mobile-v1.2.0 && git push origin mobile-v1.2.0
 #
-# versionName comes from the tag; versionCode comes from the workflow run number,
+# versionName comes from the tag (tag pushes) or straight from pubspec.yaml
+# (plain merges to main); versionCode comes from the workflow run number,
 # which is monotonic per repository — Play requires a strictly increasing value.
 #
 # Required repository secrets:
@@ -22,6 +26,7 @@ name: Release Mobile
 
 on:
   push:
+    branches: [main]
     tags:
       - 'mobile-v*'
   workflow_dispatch:
@@ -48,8 +53,39 @@ env:
   PACKAGE_NAME: org.vulturenest.aes
 
 jobs:
+  # This repo is a monorepo (backend + web + mobile). Tag pushes and manual
+  # runs always mean "release the app" — but a plain merge to main might not
+  # have touched apps/mobile/ at all, and publishing a new internal build for
+  # e.g. a backend-only change would just churn Play's release history.
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.decide.outputs.proceed }}
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'push' && github.ref_type == 'branch'
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name == 'push' && github.ref_type == 'branch'
+        with:
+          filters: |
+            mobile:
+              - 'apps/mobile/**'
+      - id: decide
+        run: |
+          if [ "${{ github.event_name }}" != "push" ] || [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "proceed=${{ steps.filter.outputs.mobile }}" >> "$GITHUB_OUTPUT"
+            if [ "${{ steps.filter.outputs.mobile }}" != "true" ]; then
+              echo "No changes under apps/mobile/ in this merge — skipping mobile release."
+            fi
+          fi
+
   release:
     name: Build & publish (AES Operations)
+    needs: gate
+    if: needs.gate.outputs.proceed == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -75,8 +111,14 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             NAME="${{ inputs.version }}"
             TRACK="${{ inputs.track }}"
-          else
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
             NAME="${GITHUB_REF_NAME#mobile-v}"
+            TRACK="internal"
+          else
+            # Plain merge to main: no tag, no manual input — take the version
+            # name straight from pubspec.yaml. Always internal (no review, not
+            # visible to real users); promote via tag or manual dispatch.
+            NAME=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
             TRACK="internal"
           fi
           if ! printf '%s' "$NAME" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
