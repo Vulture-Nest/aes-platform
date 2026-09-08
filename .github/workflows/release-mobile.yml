@@ -3,10 +3,10 @@ name: Release Mobile
 # Builds a signed Android App Bundle and uploads it to Google Play.
 #
 # Trigger: automatically on every merge to main that touches apps/mobile/
-# (published to the `internal` track — no Google review, invisible to real
-# users); or push a tag such as `mobile-v1.2.0`; or run manually from the
-# Actions tab to pick the version and track yourself (e.g. to promote to
-# production).
+# (published to both the `internal` and `alpha` [Closed testing] tracks — no
+# Google review, invisible outside those tester lists); or push a tag such as
+# `mobile-v1.2.0` (same two tracks); or run manually from the Actions tab to
+# pick the version and a single track yourself (e.g. to promote to production).
 #
 #   git tag mobile-v1.2.0 && git push origin mobile-v1.2.0
 #
@@ -111,15 +111,19 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             NAME="${{ inputs.version }}"
             TRACK="${{ inputs.track }}"
+            EXTRA_TRACK=""
           elif [ "${{ github.ref_type }}" = "tag" ]; then
             NAME="${GITHUB_REF_NAME#mobile-v}"
             TRACK="internal"
+            EXTRA_TRACK="alpha"
           else
             # Plain merge to main: no tag, no manual input — take the version
-            # name straight from pubspec.yaml. Always internal (no review, not
-            # visible to real users); promote via tag or manual dispatch.
+            # name straight from pubspec.yaml. Every automatic release (tag or
+            # plain merge) goes out to both internal and closed testing (alpha)
+            # so external testers see it too; promote further via manual dispatch.
             NAME=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' pubspec.yaml)
             TRACK="internal"
+            EXTRA_TRACK="alpha"
           fi
           if ! printf '%s' "$NAME" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "::error::Version '$NAME' is not semver (expected e.g. 1.2.0)"
@@ -128,7 +132,12 @@ jobs:
           echo "name=$NAME"                      >> "$GITHUB_OUTPUT"
           echo "code=${{ github.run_number }}"   >> "$GITHUB_OUTPUT"
           echo "track=$TRACK"                    >> "$GITHUB_OUTPUT"
-          echo "Releasing $NAME (versionCode ${{ github.run_number }}) to $TRACK"
+          echo "extra_track=$EXTRA_TRACK"        >> "$GITHUB_OUTPUT"
+          if [ -n "$EXTRA_TRACK" ]; then
+            echo "Releasing $NAME (versionCode ${{ github.run_number }}) to $TRACK and $EXTRA_TRACK"
+          else
+            echo "Releasing $NAME (versionCode ${{ github.run_number }}) to $TRACK"
+          fi
 
       # --enforce-lockfile makes a release build fail rather than silently
       # resolving different package versions than were tested. Requires
@@ -181,7 +190,7 @@ jobs:
           path: apps/mobile/build/app/outputs/bundle/prodRelease/app-prod-release.aab
           retention-days: 90
 
-      - name: Upload to Google Play
+      - name: Upload to Google Play (${{ steps.version.outputs.track }})
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -190,9 +199,28 @@ jobs:
           track: ${{ steps.version.outputs.track }}
           status: completed
 
+      # Every automatic release (tag or plain merge) also goes to closed
+      # testing (alpha) so external testers get it, not just the internal
+      # list — a second call because the action only takes one track per run.
+      # Same bundle, same versionCode; Play accepts the same build on more
+      # than one track.
+      - name: Upload to Google Play (${{ steps.version.outputs.extra_track }})
+        if: steps.version.outputs.extra_track != ''
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          releaseFiles: apps/mobile/build/app/outputs/bundle/prodRelease/app-prod-release.aab
+          track: ${{ steps.version.outputs.extra_track }}
+          status: completed
+
       - name: Summary
         if: always()
         run: |
+          TRACKS="${{ steps.version.outputs.track }}"
+          if [ -n "${{ steps.version.outputs.extra_track }}" ]; then
+            TRACKS="$TRACKS, ${{ steps.version.outputs.extra_track }}"
+          fi
           {
             echo "### AES Operations"
             echo ""
@@ -201,5 +229,5 @@ jobs:
             echo "| Package | \`${{ env.PACKAGE_NAME }}\` |"
             echo "| Version | ${{ steps.version.outputs.name }} |"
             echo "| Version code | ${{ steps.version.outputs.code }} |"
-            echo "| Track | ${{ steps.version.outputs.track }} |"
+            echo "| Track(s) | $TRACKS |"
           } >> "$GITHUB_STEP_SUMMARY"
