@@ -190,6 +190,8 @@ jobs:
       # was already used by the first call ("Version code N has already been
       # used"), even for a different track.
       - name: Upload to Google Play (${{ steps.version.outputs.tracks }})
+        id: play_multi
+        continue-on-error: true
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -198,9 +200,35 @@ jobs:
           tracks: ${{ steps.version.outputs.tracks }}
           status: completed
 
+      # A track that Play doesn't consider ready yet (e.g. alpha/Closed
+      # testing before its Store listing / App content / target audience are
+      # filled in — "Only releases with status draft may be created on draft
+      # app") fails the WHOLE multi-track edit above, internal included. Fall
+      # back to internal alone so that, at minimum, the pipeline that used to
+      # work on its own keeps working while Play Console setup catches up.
+      - name: Warn on multi-track failure
+        if: steps.play_multi.outcome == 'failure'
+        run: echo "::warning::Multi-track Play upload (${{ steps.version.outputs.tracks }}) failed — see the previous step's log. Falling back to internal-only. This is very likely a Play Console app-readiness gate (Store listing / App content / target audience / data safety not yet complete) blocking a non-internal track, not a build problem."
+
+      - name: Upload to Google Play (internal — fallback)
+        id: play_internal_fallback
+        if: steps.play_multi.outcome == 'failure'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          releaseFiles: apps/mobile/build/app/outputs/bundle/prodRelease/app-prod-release.aab
+          tracks: internal
+          status: completed
+
       - name: Summary
         if: always()
         run: |
+          if [ "${{ steps.play_multi.outcome }}" = "success" ]; then
+            ACTUAL="${{ steps.version.outputs.tracks }}"
+          else
+            ACTUAL="internal only (fallback — ${{ steps.version.outputs.tracks }} failed; check Play Console readiness for the other track(s))"
+          fi
           {
             echo "### AES Operations"
             echo ""
@@ -209,5 +237,5 @@ jobs:
             echo "| Package | \`${{ env.PACKAGE_NAME }}\` |"
             echo "| Version | ${{ steps.version.outputs.name }} |"
             echo "| Version code | ${{ steps.version.outputs.code }} |"
-            echo "| Track(s) | ${{ steps.version.outputs.tracks }} |"
+            echo "| Track(s) | $ACTUAL |"
           } >> "$GITHUB_STEP_SUMMARY"
